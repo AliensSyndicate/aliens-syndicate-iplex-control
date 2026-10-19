@@ -1,0 +1,5 @@
+{
+  "score": 5,
+  "summary": "Nas regras locais auditadas, a leitura administrativa e do catálogo depende de identidade e vínculo familiar, sem condição de assinatura. Dados privados da assinatura permanecem legíveis apenas pelo administrador. Escritas privilegiadas e acesso direto a segredos, tokens e Storage são negados aos clientes. Os testes de regras nos emuladores confirmam ausência de escalada por create/update/delete e por flags de assinatura. O escopo é a política local de acesso, não uma certificação do ambiente de produção.",
+  "findings": []
+}

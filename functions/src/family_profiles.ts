@@ -1,0 +1,254 @@
+import {DocumentReference, FieldValue, getFirestore, Transaction} from 'firebase-admin/firestore';
+import {randomInt, randomUUID} from 'node:crypto';
+import {z} from 'zod';
+import {addMember, DomainError, hash, idSchema, nameSchema} from './domain';
+import {limitIdentityAttempts, PUBLIC_CODE_ALPHABET} from './account_identity';
+
+/**
+ * Media profiles are independent of Firebase accounts:
+ *  families/{fid}/profiles/{pid}   type admin|regular|kids|guest, optional linkedUid
+ *  families/{fid}/profile_links/{uid} -> {profileId}   one profile per account per family
+ * Limits: one admin profile, four associates (regular + kids, legacy untyped
+ * profiles count as regular) and one optional guest with the fixed id "guest".
+ */
+export type ProfileType = 'admin' | 'regular' | 'kids' | 'guest';
+export type DataCategory = 'favorites' | 'watched' | 'progress';
+export const DATA_CATEGORIES: DataCategory[] = ['favorites', 'watched', 'progress'];
+export const CATEGORY_COLLECTION: Record<DataCategory, string> = {favorites: 'favorites', watched: 'watched', progress: 'watch_progress'};
+const LEGACY_TOP_LEVEL: Partial<Record<DataCategory, string>> = {favorites: 'profile_favorites', progress: 'profile_progress'};
+export const MAX_ASSOCIATES = 4;
+export const GUEST_ID = 'guest';
+export const ADMIN_PROFILE_ID = 'admin';
+const LINK_CODE_MS = 10 * 60000;
+const CLEAR_STALE_MS = 120000;
+const PAGE = 400;
+export const LINK_CODE = /^[A-Z0-9]{8}$/;
+export const spaceSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}:(channel|movie|series)$/);
+
+export type Permissions = {allSpaces: boolean; spaces: string[]};
+export type ProfileView = {id: string; name: string; type: ProfileType; linkedUid: string | null; enabled: boolean;
+  permissions: Permissions; generations: Record<DataCategory, number>; permissionsVersion: number};
+
+export function profileView(id: string, data: FirebaseFirestore.DocumentData): ProfileView {
+  const type = (['admin', 'regular', 'kids', 'guest'] as const).includes(data.type) ? data.type as ProfileType : 'regular';
+  return {
+    id, name: String(data.name ?? ''), type, linkedUid: data.linkedUid ?? null, enabled: data.enabled !== false,
+    permissions: {allSpaces: data.permissions?.allSpaces !== false, spaces: Array.isArray(data.permissions?.spaces) ? data.permissions.spaces : []},
+    generations: {favorites: data.generations?.favorites ?? 0, watched: data.generations?.watched ?? 0, progress: data.generations?.progress ?? 0},
+    permissionsVersion: data.permissionsVersion ?? 0,
+  };
+}
+const isAssociate = (data: FirebaseFirestore.DocumentData) => !['admin', 'guest'].includes(data.type);
+const require_ = (ok: unknown, code = 'permission-denied'): void => { if (!ok) throw new DomainError(code); };
+
+export type Scope = {fid: string; ref: DocumentReference; data: FirebaseFirestore.DocumentData; initialize: () => void};
+export type ScopeResolver = (tx: Transaction, admin: boolean, create: boolean) => Promise<Scope>;
+const familyOnly = (scope: Scope) => require_(scope.data.kind !== 'personalIptv', 'family-required');
+
+export async function associateCount(tx: Transaction, family: DocumentReference) {
+  return (await tx.get(family.collection('profiles'))).docs.filter(d => isAssociate(d.data())).length;
+}
+
+/** Admin profile created with the family; linked to the administrator account. */
+export function writeAdminProfile(tx: Transaction, family: DocumentReference, uid: string, name: string, now: number) {
+  tx.set(family.collection('profiles').doc(ADMIN_PROFILE_ID), {
+    name: name || 'Admin', type: 'admin', linkedUid: uid, enabled: true, familyId: family.id,
+    permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now,
+  });
+  tx.set(family.collection('profile_links').doc(uid), {profileId: ADMIN_PROFILE_ID, linkedAt: now});
+}
+
+/** New associate profile linked to an account accepted through the membership flow. */
+export async function linkedAssociateForAccount(tx: Transaction, family: DocumentReference, uid: string, name: string, now: number) {
+  const link = await tx.get(family.collection('profile_links').doc(uid));
+  if (link.exists) return () => {};
+  require_((await associateCount(tx, family)) < MAX_ASSOCIATES, 'family-limit');
+  return () => {
+    const ref = family.collection('profiles').doc();
+    tx.set(ref, {name: name || 'Associado', type: 'regular', linkedUid: uid, linkedAt: now, enabled: true, familyId: family.id,
+      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
+    tx.set(family.collection('profile_links').doc(uid), {profileId: ref.id, linkedAt: now});
+  };
+}
+
+/** Account removal from the family keeps the profile and its data; only the link goes. */
+export async function unlinkAccountProfiles(tx: Transaction, family: DocumentReference, uid: string) {
+  const link = await tx.get(family.collection('profile_links').doc(uid));
+  const profileId = link.data()?.profileId as string | undefined;
+  return () => {
+    if (profileId) tx.set(family.collection('profiles').doc(profileId), {linkedUid: null, updatedAt: Date.now()}, {merge: true});
+    tx.delete(family.collection('profile_links').doc(uid));
+  };
+}
+
+export async function familyProfiles(action: string, p: Record<string, unknown>, uid: string, resolve: ScopeResolver): Promise<unknown> {
+  const db = getFirestore(), now = Date.now();
+  if (action === 'saveProfile') return db.runTransaction(async tx => {
+    const f = await resolve(tx, true, true);
+    const requestId = p.requestId === undefined ? undefined : idSchema.parse(p.requestId);
+    const id = p.id ? idSchema.parse(p.id) : requestId ? `p_${hash(`${f.fid}:${requestId}`).slice(0, 32)}` : randomUUID();
+    const ref = f.ref.collection('profiles').doc(id), snap = await tx.get(ref), name = nameSchema.parse(p.name);
+    const requested = p.type === undefined ? undefined : z.enum(['regular', 'kids']).parse(p.type);
+    if (snap.exists) {
+      const current = profileView(id, snap.data()!);
+      // Type is fixed at creation: switching kids -> regular would lift the mandatory restriction.
+      require_(requested === undefined || requested === current.type, 'profile-type-immutable');
+      if (!requestId || p.id) tx.update(ref, {name, updatedAt: now});
+      return {id};
+    }
+    // Reserved ids are only created by setGuestEnabled / createFamily.
+    require_(id !== GUEST_ID && id !== ADMIN_PROFILE_ID, 'invalid-argument');
+    require_((await associateCount(tx, f.ref)) < MAX_ASSOCIATES, 'profile-limit');
+    f.initialize();
+    tx.set(ref, {name, type: requested ?? 'regular', linkedUid: null, enabled: true, familyId: f.fid, ownerId: f.data.ownerId ?? f.data.adminId,
+      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
+    return {id};
+  });
+
+  if (action === 'setGuestEnabled') return db.runTransaction(async tx => {
+    const f = await resolve(tx, true, false); familyOnly(f);
+    const enabled = z.boolean().parse(p.enabled), ref = f.ref.collection('profiles').doc(GUEST_ID), snap = await tx.get(ref);
+    if (snap.exists) tx.update(ref, {enabled, updatedAt: now});
+    else tx.set(ref, {name: nameSchema.parse(p.name), type: 'guest', linkedUid: null, enabled, familyId: f.fid,
+      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
+    return {id: GUEST_ID, enabled};
+  });
+
+  if (action === 'setProfilePermissions') return db.runTransaction(async tx => {
+    const f = await resolve(tx, true, false);
+    const ref = f.ref.collection('profiles').doc(idSchema.parse(p.profileId)), snap = await tx.get(ref);
+    require_(snap.exists, 'not-found');
+    const current = profileView(ref.id, snap.data()!);
+    require_(current.type !== 'admin', 'administrator-protected');
+    const allSpaces = z.boolean().parse(p.allSpaces), spaces = Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces ?? [])));
+    tx.update(ref, {permissions: {allSpaces, spaces}, permissionsVersion: current.permissionsVersion + 1, updatedAt: now});
+    return {ok: true, permissionsVersion: current.permissionsVersion + 1};
+  });
+
+  if (action === 'createProfileLinkCode') return db.runTransaction(async tx => {
+    const f = await resolve(tx, true, false); familyOnly(f);
+    const ref = f.ref.collection('profiles').doc(idSchema.parse(p.profileId)), pointer = f.ref.collection('private').doc(`profile_link_${ref.id}`);
+    const [snap, previous] = await tx.getAll(ref, pointer);
+    require_(snap!.exists, 'not-found');
+    const profile = profileView(ref.id, snap!.data()!);
+    require_(profile.type === 'regular' || profile.type === 'kids', 'profile-not-linkable');
+    require_(!profile.linkedUid, 'profile-already-linked');
+    const code = Array.from({length: 8}, () => PUBLIC_CODE_ALPHABET[randomInt(PUBLIC_CODE_ALPHABET.length)]).join('');
+    const expiresAt = now + LINK_CODE_MS;
+    if (previous!.data()?.codeHash) tx.set(db.doc(`profile_link_codes/${previous!.data()!.codeHash}`), {used: true, revokedAt: now}, {merge: true});
+    tx.set(db.doc(`profile_link_codes/${hash(code)}`), {familyId: f.fid, profileId: ref.id, issuerUid: uid, expiresAt, used: false, createdAt: now});
+    tx.set(pointer, {codeHash: hash(code), expiresAt});
+    return {code, expiresAt};
+  });
+
+  if (action === 'redeemProfileLink') {
+    // Every attempt is charged before reading: codes are short and guessable.
+    await limitIdentityAttempts(uid, 'profile-link');
+    const code = z.string().trim().toUpperCase().regex(LINK_CODE).parse(p.code);
+    return db.runTransaction(async tx => {
+      const codeRef = db.doc(`profile_link_codes/${hash(code)}`), entry = (await tx.get(codeRef)).data();
+      require_(entry, 'invalid-token');
+      const family = db.doc(`families/${entry!.familyId}`), profileRef = family.collection('profiles').doc(entry!.profileId);
+      const [f, profileSnap, link, user] = await tx.getAll(family, profileRef, family.collection('profile_links').doc(uid), db.doc(`users/${uid}`));
+      const fd = f!.data(), profile = profileSnap!.exists ? profileView(profileRef.id, profileSnap!.data()!) : undefined;
+      if (profile?.linkedUid === uid && entry!.used) return {familyId: family.id, profileId: profileRef.id};
+      require_(!entry!.used && entry!.expiresAt > now, 'link-code-expired');
+      require_(fd && !fd.deleting && fd.kind !== 'personalIptv' && fd.members?.[entry!.issuerUid] === 'admin' && profile, 'link-code-expired');
+      require_(user!.exists, 'account-unavailable');
+      require_((fd!.adminUid ?? fd!.adminId) !== uid && !link!.exists, 'account-already-linked');
+      require_(!profile!.linkedUid && (profile!.type === 'regular' || profile!.type === 'kids'), 'profile-already-linked');
+      if (!fd!.members?.[uid]) {
+        tx.update(family, {members: addMember(fd!.members ?? {}, uid)});
+        tx.update(user!.ref, {familyIds: FieldValue.arrayUnion(...[user!.data()?.familyId, family.id].filter(Boolean))});
+        tx.set(family.collection('members').doc(uid), {uid, name: user!.data()?.name ?? '', role: 'member'});
+      }
+      // Same profile id: favorites, history, progress and permissions are untouched.
+      tx.update(profileRef, {linkedUid: uid, linkedAt: now, updatedAt: now});
+      tx.set(family.collection('profile_links').doc(uid), {profileId: profileRef.id, linkedAt: now});
+      tx.update(codeRef, {used: true, redeemedByUid: uid, redeemedAt: now});
+      tx.delete(family.collection('private').doc(`profile_link_${profileRef.id}`));
+      return {familyId: family.id, profileId: profileRef.id};
+    });
+  }
+
+  if (action === 'unlinkProfileAccount') return db.runTransaction(async tx => {
+    const f = await resolve(tx, true, false); familyOnly(f);
+    const ref = f.ref.collection('profiles').doc(idSchema.parse(p.profileId)), snap = await tx.get(ref);
+    require_(snap.exists, 'not-found');
+    const profile = profileView(ref.id, snap.data()!);
+    require_(profile.type !== 'admin', 'administrator-protected');
+    if (!profile.linkedUid) return {ok: true};
+    tx.update(ref, {linkedUid: null, updatedAt: now});
+    tx.delete(f.ref.collection('profile_links').doc(profile.linkedUid));
+    return {ok: true};
+  });
+
+  if (action === 'clearProfileData') return clearProfileData(p, resolve);
+  throw new DomainError('invalid-action');
+}
+
+/**
+ * Destructive clear, backend only. The category generation is bumped before any
+ * delete, so writes carrying an older generation (offline devices) are rejected
+ * and cannot restore the data. Deletion is paginated; a job document blocks
+ * concurrent clears and lets a retry with the same requestId resume or no-op.
+ */
+async function clearProfileData(p: Record<string, unknown>, resolve: ScopeResolver) {
+  const db = getFirestore(), now = Date.now();
+  const profileId = idSchema.parse(p.profileId), category = z.enum(['favorites', 'watched', 'progress']).parse(p.category);
+  const requestId = idSchema.parse(p.requestId);
+  const started = await db.runTransaction(async tx => {
+    const f = await resolve(tx, true, false);
+    const profileRef = f.ref.collection('profiles').doc(profileId), jobRef = f.ref.collection('profile_clear_jobs').doc(`${profileId}_${category}`);
+    const [snap, job] = await tx.getAll(profileRef, jobRef);
+    require_(snap!.exists, 'not-found');
+    const profile = profileView(profileId, snap!.data()!), current = job!.data();
+    require_(profile.type !== 'guest', 'guest-not-persisted');
+    if (current?.requestId === requestId) {
+      if (current.status === 'completed') return {fid: f.fid, profileRef, jobRef, generation: current.generation as number, done: true};
+      tx.update(jobRef, {status: 'running', updatedAt: now});
+      return {fid: f.fid, profileRef, jobRef, generation: current.generation as number, done: false};
+    }
+    require_(!(current?.status === 'running' && current.updatedAt > now - CLEAR_STALE_MS), 'clear-in-progress');
+    const generation = profile.generations[category] + 1;
+    tx.update(profileRef, {[`generations.${category}`]: generation, updatedAt: now});
+    tx.set(jobRef, {requestId, profileId, category, generation, status: 'running', startedAt: now, updatedAt: now, deleted: 0});
+    return {fid: f.fid, profileRef, jobRef, generation, done: false};
+  });
+  if (started.done) return {ok: true, generation: started.generation};
+  try {
+    let deleted = await deleteOlder(started.profileRef.collection(CATEGORY_COLLECTION[category]), started.generation);
+    const legacy = LEGACY_TOP_LEVEL[category];
+    if (legacy) deleted += await deleteOlder(db.collection(legacy).where('familyId', '==', started.fid).where('profileId', '==', profileId), started.generation);
+    await started.jobRef.update({status: 'completed', completedAt: Date.now(), updatedAt: Date.now(), deleted: FieldValue.increment(deleted)});
+    return {ok: true, generation: started.generation, deleted};
+  } catch (error) {
+    await started.jobRef.update({status: 'failed', updatedAt: Date.now()}).catch(() => {});
+    throw new DomainError('clear-failed');
+  }
+}
+
+async function deleteOlder(query: FirebaseFirestore.Query, generation: number) {
+  let deleted = 0, cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  for (;;) {
+    let page = query.orderBy('__name__').limit(PAGE);
+    if (cursor) page = page.startAfter(cursor);
+    const rows = await page.get();
+    if (rows.empty) return deleted;
+    const batch = getFirestore().batch();
+    let pending = 0;
+    for (const row of rows.docs) if ((row.data().generation ?? 0) < generation) { batch.delete(row.ref); pending++; }
+    if (pending) await batch.commit();
+    deleted += pending; cursor = rows.docs[rows.docs.length - 1];
+    if (rows.size < PAGE) return deleted;
+  }
+}
+
+/** Writes of personal media data: guest never persists; stale generations are rejected. */
+export function requireWritableGeneration(profile: ProfileView, category: DataCategory, value: unknown) {
+  require_(profile.type !== 'guest', 'guest-not-persisted');
+  require_(value !== undefined && value !== null, 'generation-required');
+  const generation = z.number().int().min(0).parse(value);
+  require_(generation === profile.generations[category], 'stale-generation');
+  return generation;
+}

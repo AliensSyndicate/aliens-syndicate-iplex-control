@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>59148444884-m1qt3d4rd3r945p91g21odhqkr0rdsdk.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.59148444884-m1qt3d4rd3r945p91g21odhqkr0rdsdk</string>
+	<key>API_KEY</key>
+	<string>AIzaSyAzqxL1VUZSFEoSMcQG1Pr1ly2pbNkAZIk</string>
+	<key>GCM_SENDER_ID</key>
+	<string>59148444884</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.aliensSyndicateIplexFlutter</string>
+	<key>PROJECT_ID</key>
+	<string>iplex-2c8fc</string>
+	<key>STORAGE_BUCKET</key>
+	<string>iplex-2c8fc.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:59148444884:ios:b93088246a1e2dc2f20741</string>
+	<key>DATABASE_URL</key>
+	<string>https://iplex-2c8fc-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>

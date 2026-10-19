@@ -1,0 +1,263 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Identity and authorization helpers
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function person() {
+      return isAuth() && !('deviceId' in request.auth.token);
+    }
+
+    // Family ACLs are backend-owned. A stale migration mirror never grants access.
+    function isFamilyMember(fid) {
+      return person() && exists(/databases/$(database)/documents/families/$(fid))
+        && !get(/databases/$(database)/documents/families/$(fid)).data.get('deleting', false)
+        && (get(/databases/$(database)/documents/families/$(fid)).data.get('kind', '') != 'personalIptv'
+          || get(/databases/$(database)/documents/families/$(fid)).data.get('ownerId', '') == request.auth.uid)
+        && request.auth.uid in get(/databases/$(database)/documents/families/$(fid)).data.get('members', {});
+    }
+    function isFamilyAdmin(fid) {
+      return isFamilyMember(fid) && get(/databases/$(database)/documents/families/$(fid)).data.get('adminUid',
+        get(/databases/$(database)/documents/families/$(fid)).data.get('adminId', '')) == request.auth.uid;
+    }
+    function isPlayer(fid, did) {
+      return isAuth() && request.auth.uid == 'tv_' + did
+        && request.auth.token.get('familyId', '') == fid && request.auth.token.get('deviceId', '') == did
+        && exists(/databases/$(database)/documents/families/$(fid)/devices/$(did))
+        && !get(/databases/$(database)/documents/families/$(fid)).data.get('deleting', false);
+    }
+    function isFamilyPlayer(fid) {
+      return isAuth() && isPlayer(fid, request.auth.token.get('deviceId', ''));
+    }
+    function canReadLegacyCatalog(fid, data) {
+      let source = get(/databases/$(database)/documents/families/$(fid)/sources/$(data.sourceId));
+      let grant = /databases/$(database)/documents/families/$(fid)/source_access/$(data.sourceId + '_' + request.auth.uid);
+      return isFamilyMember(fid) && source.data.version == data.version && source.data.get('enabled', true)
+        && (!source.data.get('isProtected', false) || (exists(grant)
+          && get(grant).data.revision == source.data.revision && get(grant).data.expiresAt > request.time.toMillis()));
+    }
+
+    // -------------------------------------------------------------
+    // 1. TOP-LEVEL COLLECTIONS
+    // -------------------------------------------------------------
+
+    // users/{uid}
+    match /users/{uid} {
+      allow read: if person() && request.auth.uid == uid;
+
+      // Client-editable metadata: strings bounded; relationship fields immutable.
+      function validUserMetadata() {
+        return request.resource.data.uid == uid
+          && request.resource.data.get('name', '') is string && request.resource.data.get('name', '').size() <= 300
+          && request.resource.data.get('displayName', '') is string && request.resource.data.get('displayName', '').size() <= 300
+          && request.resource.data.get('email', '') is string && request.resource.data.get('email', '').size() <= 320
+          && request.resource.data.get('locale', 'system') in ['system','en','pt_BR','es']
+          && request.resource.data.get('status', 'active') in ['active']
+          && request.resource.data.get('updatedAt', 0) is number;
+      }
+      allow create: if person() && request.auth.uid == uid && validUserMetadata()
+        && request.resource.data.keys().hasOnly(['uid','displayName','name','email','locale','status','updatedAt']);
+      allow update: if person() && request.auth.uid == uid && validUserMetadata()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','name','email','locale','status','updatedAt']);
+      allow delete: if false;
+      match /fcm_tokens/{tokenId} { allow read, write: if false; }
+      match /sync_notifications/{jobId} {
+        allow read: if person() && request.auth.uid == uid;
+        allow update: if person() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['delivered','deliveredAt'])
+          && request.resource.data.delivered == true && request.resource.data.deliveredAt == request.time;
+        allow create, delete: if false;
+      }
+    }
+
+    // family_requests: server-owned addressed requests; no bearer invitation.
+    match /family_requests/{id} {
+      allow read: if person() && resource.data.recipientUid == request.auth.uid;
+      allow write: if false;
+    }
+    match /public_user_codes/{code} { allow read, write: if false; }
+    match /profile_link_codes/{codeHash} { allow read, write: if false; }
+    match /identity_attempts/{uid} { allow read, write: if false; }
+
+    // families/{familyId}
+    match /families/{familyId} {
+      allow read: if isFamilyMember(familyId);
+      allow write: if false; // Mutations strictly managed via backend transactions
+
+      // Legacy subcollections for seamless migration
+      match /members/{uid} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if false;
+      }
+      // Media profiles: listeners on the phone and on the family's paired TVs are the
+      // sync channel (generations, permissions, guest state). Writes are backend-only.
+      match /profiles/{pid} {
+        allow read: if isFamilyMember(familyId) || isFamilyPlayer(familyId);
+        allow write: if false;
+        match /{collection}/{id} {
+          allow read: if (isFamilyMember(familyId) || isFamilyPlayer(familyId))
+            && collection in ['favorites', 'watch_progress', 'watched'];
+          allow write: if false;
+        }
+      }
+      match /profile_links/{uid} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if false;
+      }
+      match /profile_clear_jobs/{jobId} {
+        allow read: if isFamilyAdmin(familyId);
+        allow write: if false;
+      }
+      match /devices/{did} {
+        allow read: if isFamilyMember(familyId) || isPlayer(familyId, did);
+        allow write: if false;
+        match /commands/{cid} {
+          allow read: if isFamilyMember(familyId) || isPlayer(familyId, did);
+          allow write: if false;
+        }
+      }
+      match /sources/{sid} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if false;
+      }
+      match /catalog/{cid} {
+        allow read: if canReadLegacyCatalog(familyId, resource.data);
+        allow write: if false;
+      }
+      match /source_access/{aid} {
+        allow read: if isFamilyMember(familyId);
+        allow write: if false;
+      }
+      match /private/{id} {
+        allow read: if isFamilyAdmin(familyId) && id == 'subscription';
+        allow write: if false;
+      }
+    }
+
+    // family_members/{membershipId}
+    match /family_members/{membershipId} {
+      allow read: if isFamilyMember(resource.data.familyId);
+      allow write: if false; // Only backend transactions can assign/remove memberships
+    }
+
+    // profiles/{profileId}
+    match /profiles/{profileId} {
+      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow write: if false; // Managed via callable backend
+    }
+
+    // devices/{deviceId}
+    match /devices/{deviceId} {
+      allow read: if isFamilyMember(resource.data.familyId) ||
+        isPlayer(resource.data.familyId, deviceId);
+      allow write: if false; // Paired and updated via backend
+    }
+
+    // iptv_sources/{sourceId}
+    match /iptv_sources/{sourceId} {
+      allow read: if isFamilyMember(resource.data.familyId);
+      allow write: if false; // Managed via callable backend (saveSource, syncSource, deleteSource)
+    }
+
+    // iptv_sync_jobs/{jobId}
+    match /iptv_sync_jobs/{jobId} {
+      allow read: if person() && resource.data.requestedByUid == request.auth.uid && isFamilyMember(resource.data.familyId);
+      allow write: if false; // Created and updated only by backend ingestion tasks
+    }
+
+    // catalogs/{catalogId}
+    match /catalogs/{catalogId} {
+      allow read: if false; // Only source-authorized backend access
+      allow write: if false;
+    }
+
+    // iptv_catalogs/{catalogId}
+    match /iptv_catalogs/{catalogId} {
+      allow read: if false; // Only source-authorized backend access
+      allow write: if false;
+    }
+
+    // user_notifications/{notificationId}
+    match /user_notifications/{notificationId} {
+      allow read: if person() && resource.data.recipientUid == request.auth.uid;
+      allow update: if person() && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['delivered','deliveredAt'])
+        && request.resource.data.delivered == true;
+      allow create, delete: if false;
+    }
+
+    // device_push_tokens/{tokenId}
+    match /device_push_tokens/{tokenId} {
+      allow read, write: if false;
+    }
+
+    // subscriptions/{subscriptionId}
+    match /subscriptions/{subscriptionId} {
+      allow read: if isFamilyAdmin(resource.data.familyId);
+      allow write: if false; // Payment & trial validation strictly backend-only
+    }
+
+    // playback_sessions/{sessionId}
+    match /playback_sessions/{sessionId} {
+      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow write: if false; // Leases acquired, heartbeat, released exclusively via backend transactions
+    }
+
+    // profile_favorites/{favoriteId}
+    match /profile_favorites/{favoriteId} {
+      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow write: if false; // Managed via callable backend
+    }
+
+    // profile_progress/{progressId}
+    match /profile_progress/{progressId} {
+      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow write: if false; // Managed via callable backend
+    }
+
+    // Internal secrets and link tokens (NO client access)
+    match /servers/{serverId} {
+      allow read, write: if false;
+    }
+
+    match /source_secrets/{id} {
+      allow read, write: if false;
+    }
+
+    match /link_tokens/{tokenHash} {
+      allow read, write: if false;
+    }
+
+    match /device_pairing_sessions/{sessionId} {
+      allow read, write: if false;
+    }
+
+    match /device_pairing_codes/{codeHash} {
+      allow read, write: if false;
+    }
+
+    match /deletion_jobs/{id} {
+      allow read, write: if false;
+    }
+
+    match /iptv_cleanup/{id} {
+      allow read, write: if false;
+    }
+
+    match /iptv_requests/{id} {
+      allow read, write: if false;
+    }
+
+    // Payments: checkout switch and verified Play purchase tokens are backend-only.
+    match /app_config/{id} { allow read, write: if false; }
+    match /play_purchases/{tokenHash} { allow read, write: if false; }
+
+    // Fallback catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

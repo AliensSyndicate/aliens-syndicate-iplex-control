@@ -1,0 +1,107 @@
+{
+  "project_info": {
+    "project_number": "59148444884",
+    "firebase_url": "https://iplex-2c8fc-default-rtdb.firebaseio.com",
+    "project_id": "iplex-2c8fc",
+    "storage_bucket": "iplex-2c8fc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:59148444884:android:c2af001a99cf61f6f20741",
+        "android_client_info": {
+          "package_name": "com.alienssyndicate.iplex_control"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "59148444884-iatuikct3l25vjgodop4mf6l3c7hkp0h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.alienssyndicate.iplex_control",
+            "certificate_hash": "e5ae48e8f707603274d4876b3202da2136de33db"
+          }
+        },
+        {
+          "client_id": "59148444884-m06g0bu6ku2do0mv0ch9docflfjv8emc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.alienssyndicate.iplex_control",
+            "certificate_hash": "a6ed3cfedb5727ed7f0d96ef1d79583d6807a1ec"
+          }
+        },
+        {
+          "client_id": "59148444884-8baaa8slbvov2dhg7d5ig3kv4gnkgv37.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjzONIdVWTosu8CTQThhJ9VvVoSblw0LU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "59148444884-8baaa8slbvov2dhg7d5ig3kv4gnkgv37.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "59148444884-m1qt3d4rd3r945p91g21odhqkr0rdsdk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.aliensSyndicateIplexFlutter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:59148444884:android:8c492132b31f7f99f20741",
+        "android_client_info": {
+          "package_name": "com.example.aliens_syndicate_iplex_control"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "59148444884-cq8ouo6q9ml174bn515m4f3bsr34n4q5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.aliens_syndicate_iplex_control",
+            "certificate_hash": "a6ed3cfedb5727ed7f0d96ef1d79583d6807a1ec"
+          }
+        },
+        {
+          "client_id": "59148444884-8baaa8slbvov2dhg7d5ig3kv4gnkgv37.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjzONIdVWTosu8CTQThhJ9VvVoSblw0LU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "59148444884-8baaa8slbvov2dhg7d5ig3kv4gnkgv37.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "59148444884-m1qt3d4rd3r945p91g21odhqkr0rdsdk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.aliensSyndicateIplexFlutter"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

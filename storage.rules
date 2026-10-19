@@ -1,0 +1,8 @@
+rules_version = '2';
+service firebase.storage {
+ match /b/{bucket}/o {
+  // All catalog downloads are mediated by the authenticated backend.
+  // No client can list shared versions, encrypted credentials or raw catalogs.
+  match /{allPaths=**} { allow read, write: if false; }
+ }
+}

@@ -1,0 +1,61 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/payments/subscription_checkout.dart';
+import 'bottom_navigation.dart';
+
+class MainShell extends StatelessWidget {
+  const MainShell({super.key, required this.shell});
+  final StatefulNavigationShell shell;
+
+  static const _rootRoutes = {
+    '/home',
+    '/users',
+    '/devices',
+    '/iptv',
+    '/account',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+    final isRoot = _rootRoutes.contains(location);
+
+    return Scaffold(
+      extendBody: true,
+      body: Stack(
+        children: [
+          shell,
+          const _PurchaseUpdates(),
+          if (isRoot)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: BottomNavigation(
+                selected: shell.currentIndex,
+                onSelected: (i) =>
+                    shell.goBranch(i, initialLocation: i == shell.currentIndex),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Keeps the store's purchase stream observed for the whole session (when
+/// checkout is allowed), so purchases that complete later are verified and
+/// acknowledged without waiting for the subscription page to be opened.
+class _PurchaseUpdates extends ConsumerWidget {
+  const _PurchaseUpdates();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(paymentsConfigProvider).asData?.value.checkoutAllowed == true) {
+      ref.watch(checkoutControllerProvider);
+    }
+    return const SizedBox.shrink();
+  }
+}
