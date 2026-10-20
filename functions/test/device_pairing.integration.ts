@@ -37,7 +37,7 @@ test('real backend session: QR inspect, link without family, rename, unlink, rep
  await assert.rejects(execute('inspectPairingSession',{token:session.token,contextFamilyId:null},a),/pairing-expired/);
  await execute('renameDevice',{id:linked.id,name:'Quarto',contextFamilyId:null},a);
  assert.equal((await getFirestore().doc(`devices/${linked.id}`).get()).data()!.displayName,'Quarto');
- const player:Identity={uid:`tv_${linked.id}`,deviceId:linked.id,familyId:scope};
+ const player:Identity={uid:`tv_${linked.id}`,deviceId:linked.id,familyId:scope,credentialVersion:(await getFirestore().doc(`families/${scope}/devices/${linked.id}`).get()).data()?.credentialVersion};
  await execute('deleteDevice',{id:linked.id,contextFamilyId:null},a);
  assert.equal((await getFirestore().doc(`devices/${linked.id}`).get()).data()!.status,'unlinked');
  await assert.rejects(execute('heartbeat',{sessionId:'x',profileId:'p'},player),/device-revoked/);

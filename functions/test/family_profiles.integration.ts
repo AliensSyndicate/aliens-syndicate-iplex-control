@@ -20,7 +20,7 @@ const profiles=(fid:string)=>db().collection(`families/${fid}/profiles`);
 async function tv(admin:Identity,fid:string):Promise<Identity>{
  const s=await execute('beginDevicePair',{name:'TV'},undefined) as {token:string};
  const d=await execute('linkDevice',{token:s.token,contextFamilyId:fid},admin) as {id:string};
- return {uid:`tv_${d.id}`,deviceId:d.id,familyId:fid};
+ return {uid:`tv_${d.id}`,deviceId:d.id,familyId:fid,credentialVersion:(await getFirestore().doc(`families/${fid}/devices/${d.id}`).get()).data()?.credentialVersion};
 }
 async function seed(ref:FirebaseFirestore.CollectionReference,count:number,extra:Record<string,unknown>={}){
  for(let i=0;i<count;i+=400){const b=db().batch();for(let j=i;j<Math.min(count,i+400);j++)b.set(ref.doc(`c${j}`),{contentId:`c${j}`,...extra});await b.commit();}

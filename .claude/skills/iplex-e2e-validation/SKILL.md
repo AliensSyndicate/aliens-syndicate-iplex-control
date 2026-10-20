@@ -44,6 +44,21 @@ flutter run -d <device> --dart-define=USE_EMULATORS=true --dart-define=FIREBASE_
 Debug iOS builds must be launched by `flutter run` (a bare install does not start).
 The simulator has no camera: use the manual code path for pairing.
 
+## 6. Cross-project (Control ↔ iPlex Web ↔ Samsung shell)
+Run the emulators with both codebases (Control `functions/` + iPlex Web
+`functions/`, hosts `0.0.0.0`), the Web with `vite --mode emulator` (browser)
+or `vite build --mode emulator` served on the LAN with CORS on
+`/iplex-web.json` (TV: `npm run tv -- --env development --target http://<mac>:5050/`
+in the App repo). Then drive the phone side:
+```bash
+cd functions && npx tsx scripts/e2e_tv.ts setup
+npx tsx scripts/e2e_tv.ts tvcode          # code shown by the TV
+npx tsx scripts/e2e_tv.ts link <code>
+npx tsx scripts/e2e_tv.ts play "<title>"  # follows pending → delivered → started
+npx tsx scripts/e2e_tv.ts unlink
+```
+Restore the TV to production afterwards (`npm run tv` in the App repo).
+
 ## Reporting
 Classify each flow as validated, implemented-without-external-validation, or
 blocked; never mark a scenario validated that was not executed.

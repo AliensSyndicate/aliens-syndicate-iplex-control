@@ -169,15 +169,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lastSeen => 'Última conexión';
 
   @override
-  String get remote => 'Control remoto';
-
-  @override
-  String get remoteSubtitle => 'Controla tu iPlex Player';
-
-  @override
-  String get remoteUnavailable => 'Conecta tu Player para usar el control.';
-
-  @override
   String get up => 'Arriba';
 
   @override
@@ -194,9 +185,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get back => 'Volver';
-
-  @override
-  String get playPause => 'Reproducir / pausar';
 
   @override
   String get sent => 'Enviado al Player';
@@ -1300,4 +1288,148 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errorPurchaseUsed =>
       'Esta compra ya está vinculada a otra familia.';
+
+  @override
+  String get watchOnTv => 'Ver en la TV';
+
+  @override
+  String get chooseTv => 'Elige la TV';
+
+  @override
+  String get noTvLinked => 'Ninguna TV vinculada';
+
+  @override
+  String get noTvLinkedBody =>
+      'Vincula una TV en Dispositivos para iniciar títulos en ella desde aquí.';
+
+  @override
+  String get tvNotReady =>
+      'Abre iPlex en la TV y elige un perfil para recibir la solicitud.';
+
+  @override
+  String get chooseEpisode => 'Elige el episodio';
+
+  @override
+  String seasonNumber(int number) {
+    return 'Temporada $number';
+  }
+
+  @override
+  String episodeNumber(String number) {
+    return 'E$number';
+  }
+
+  @override
+  String get noEpisodes => 'Esta serie aún no tiene episodios disponibles.';
+
+  @override
+  String sendingToTv(String tv) {
+    return 'Enviando a $tv…';
+  }
+
+  @override
+  String tvReceivedRequest(String tv) {
+    return '$tv recibió la solicitud.';
+  }
+
+  @override
+  String waitingTvConfirmation(String tv) {
+    return 'Esperando confirmación en $tv: ya hay una reproducción en curso.';
+  }
+
+  @override
+  String playingOnTv(String tv) {
+    return 'Reproduciendo en $tv.';
+  }
+
+  @override
+  String openedOnTv(String tv) {
+    return 'Abierto en $tv. Elige el episodio con el control de la TV.';
+  }
+
+  @override
+  String get tvKeptCurrent => 'La TV mantuvo la reproducción actual.';
+
+  @override
+  String get tvNoAnswer =>
+      'Nadie confirmó en la TV. La reproducción actual continúa.';
+
+  @override
+  String get tvDidNotRespond =>
+      'La TV no respondió. Comprueba que iPlex esté abierto en ella e inténtalo de nuevo.';
+
+  @override
+  String get playRequestExpired =>
+      'La solicitud expiró antes de llegar a la TV. Inténtalo de nuevo.';
+
+  @override
+  String get playRequestSuperseded =>
+      'Una solicitud más reciente reemplazó a esta.';
+
+  @override
+  String get playRequestFailed => 'La TV no pudo reproducir este título.';
+
+  @override
+  String get contentNotAllowedOnTv =>
+      'Este título no está disponible para el perfil en uso en la TV.';
+
+  @override
+  String get sourceProtectedOnTv =>
+      'Esta fuente está protegida por PIN y aún no puede reproducirse en la TV.';
+
+  @override
+  String get streamUnavailableOnTv =>
+      'La fuente IPTV no liberó este título ahora. Inténtalo más tarde.';
+
+  @override
+  String get formatUnsupportedOnTv =>
+      'La TV no puede reproducir el formato de este título.';
+
+  @override
+  String get episodeRequired => 'Elige un episodio para ver en la TV.';
+
+  @override
+  String get deviceNotFound => 'Esta TV ya no está vinculada.';
+
+  @override
+  String get tvDone => 'Listo';
+
+  @override
+  String get parentalControl => 'Control parental';
+
+  @override
+  String get parentalControlBody =>
+      'Cuando la familia tiene un perfil infantil, los perfiles adultos solo se abren en la TV con el PIN parental. El servidor de iPlex verifica el PIN.';
+
+  @override
+  String get parentalPinConfigured => 'PIN parental definido';
+
+  @override
+  String get parentalPinMissing => 'PIN parental no definido';
+
+  @override
+  String get parentalPinMissingKids =>
+      'Hay un perfil infantil: los perfiles adultos quedan bloqueados en la TV hasta que definas el PIN.';
+
+  @override
+  String get setParentalPin => 'Definir PIN';
+
+  @override
+  String get changeParentalPin => 'Cambiar PIN';
+
+  @override
+  String get removeParentalPin => 'Quitar PIN';
+
+  @override
+  String get removeParentalPinBody =>
+      'Mientras haya un perfil infantil, los perfiles adultos quedarán bloqueados en la TV.';
+
+  @override
+  String get parentalPinLength => 'Usa 4 dígitos.';
+
+  @override
+  String get parentalPinSaved => 'PIN parental guardado.';
+
+  @override
+  String get parentalPinRemoved => 'PIN parental quitado.';
 }

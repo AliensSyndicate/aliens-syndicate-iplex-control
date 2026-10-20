@@ -15,6 +15,7 @@ class UsersPage extends ConsumerWidget {
     final l = context.l;
     final hasFamily = ref.watch(accountProvider.select((a) => a.asData?.value?.familyId != null));
     final hasGuest = ref.watch(entriesProvider('profiles')).asData?.value.any((p) => p.id == 'guest') ?? true;
+    final admin = ref.watch(adminProvider);
     return PageTemplate(
       title: l.familyTitle,
       hasBottomNav: true,
@@ -75,6 +76,13 @@ class UsersPage extends ConsumerWidget {
             icon: AppIcons.users,
             onTap: () => context.push('/family'),
           ),
+          if (hasFamily && admin)
+            EntryTile(
+              key: const Key('parental-control'),
+              title: l.parentalControl,
+              icon: AppIcons.lock,
+              onTap: () => context.push('/users/parental'),
+            ),
           SectionHeader(l.family),
           EntriesView(
             collection: 'members',

@@ -15,7 +15,6 @@ import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dar
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/remote_control/remote_directional_pad.dart';
 import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -218,44 +217,6 @@ void main() {
       expect(tester.takeException(), null);
     },
   );
-  testWidgets('remote circular pad emits only the five directional actions', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1.0;
-    tester.view.physicalSize = const Size(390, 844);
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
-    final commands = <RemoteCommand>[];
-    await tester.pumpWidget(
-      host(
-        RepaintBoundary(
-          key: const Key('capture'),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: RemoteDirectionalPad(onCommand: commands.add),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    for (final button in find.byType(CircularButton).evaluate()) {
-      await tester.tap(find.byWidget(button.widget));
-      await tester.pumpAndSettle();
-    }
-    expect(commands.toSet(), {
-      RemoteCommand.up,
-      RemoteCommand.down,
-      RemoteCommand.left,
-      RemoteCommand.right,
-      RemoteCommand.ok,
-    });
-    await screenshot(tester, 'directional-pad');
-    expect(tester.takeException(), null);
-  });
   for (final page in [
     const UsersPage(),
     const DevicesPage(),
@@ -345,7 +306,7 @@ void main() {
       UncontrolledProviderScope(container: container, child: const IplexApp()),
     );
     await tester.pumpAndSettle();
-    container.read(routerProvider).go('/devices/private/remote');
+    container.read(routerProvider).go('/devices/private');
     await tester.pumpAndSettle();
     expect(find.byType(LoginPage), findsOneWidget);
   });

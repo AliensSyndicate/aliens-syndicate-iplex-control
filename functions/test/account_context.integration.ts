@@ -45,7 +45,7 @@ test('personal TV CRUD is free, isolated, unlimited and starts exactly one seven
  await execute('deleteDevice',{id:ds[0]!.id,contextFamilyId:null},a);
  await pair(a);assert.equal((await sub.get()).data()!.trialStartedAt,initial.trialStartedAt);
  const profile=await execute('saveProfile',{name:'Personal',contextFamilyId:null},a) as {id:string};
- const player={uid:`tv_${ds[1]!.id}`,deviceId:ds[1]!.id,familyId:scope};
+ const player={uid:`tv_${ds[1]!.id}`,deviceId:ds[1]!.id,familyId:scope,credentialVersion:(await getFirestore().doc(`families/${scope}/devices/${ds[1]!.id}`).get()).data()?.credentialVersion};
  await assert.rejects(execute('acquireSession',{profileId:profile.id},player),/subscription-required/);
 });
 

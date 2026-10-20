@@ -44,9 +44,13 @@ class Family {
     required this.adminId,
     required this.members,
     this.name = '',
+    this.parentalPinConfigured = false,
   });
   final String id, adminId, name;
   final Map<String, String> members;
+
+  /// The family has a parental PIN (the hash stays backend-only).
+  final bool parentalPinConfigured;
   bool isAdmin(String uid) => adminId == uid && members[uid] == 'admin';
 }
 
@@ -77,5 +81,3 @@ class AppFailure implements Exception {
   final String code;
   final Map<String, dynamic> details;
 }
-
-enum RemoteCommand { up, down, left, right, ok, back, playPause }

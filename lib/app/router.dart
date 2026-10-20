@@ -15,6 +15,7 @@ import '../features/manager/family_page.dart';
 import '../features/manager/information_page.dart';
 import '../features/manager/invite_page.dart';
 import '../features/manager/name_form.dart';
+import '../features/manager/parental_control_page.dart';
 import '../features/manager/profile_data_page.dart';
 import '../features/manager/scan_page.dart';
 import '../features/manager/settings_page.dart';
@@ -25,7 +26,6 @@ import '../features/manager/subscription_page.dart';
 import '../features/manager/users_page.dart';
 import '../features/legal/domain/enums/legal_document_type.dart';
 import '../features/legal/presentation/pages/legal_webview_page.dart';
-import '../features/remote_control/remote_page.dart';
 import '../features/iptv/presentation/controllers/iptv_notification_controller.dart';
 import '../features/devices/presentation/pages/device_add_page.dart';
 import '../features/devices/presentation/pages/device_confirm_pairing_page.dart';
@@ -278,6 +278,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   GoRoute(
+                    path: 'parental',
+                    pageBuilder: (c, s) => _appPage(
+                      key: s.pageKey,
+                      child: const ParentalControlPage(),
+                    ),
+                  ),
+                  GoRoute(
                     path: 'member/:id',
                     pageBuilder: (c, s) => _appPage(
                       key: s.pageKey,
@@ -426,13 +433,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                             id: s.pathParameters['id'],
                             initial: s.extra as String? ?? '',
                           ),
-                        ),
-                      ),
-                      GoRoute(
-                        path: 'remote',
-                        pageBuilder: (c, s) => _appPage(
-                          key: s.pageKey,
-                          child: RemotePage(deviceId: s.pathParameters['id']!),
                         ),
                       ),
                     ],

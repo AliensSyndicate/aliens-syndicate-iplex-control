@@ -12,6 +12,7 @@ import {defineSecret} from 'firebase-functions/params';
 import {ZodError} from 'zod';
 import {DomainError} from './domain';
 import {execute,Identity} from './service';
+import {firestoreQuota,runPlayer,PLAYER_PUBLIC_ACTIONS,consumePlayerRequest} from './player';
 import {scheduleDailySync, DAILY_SCHEDULE, DAILY_TIME_ZONE} from './iptv_jobs';
 import {dispatchSyncCompletionNotification, retryPushNotifications} from './iptv_notifications';
 import {syncDueSources, syncIptvCatalog} from './iptv_sync';
@@ -24,16 +25,37 @@ const enforceAppCheck=process.env.FUNCTIONS_EMULATOR!=='true';
 export const manager=onCall({region:'us-central1',enforceAppCheck,memory:'1GiB',cpu:1,concurrency:8,secrets:[credentialKey],timeoutSeconds:60},async request=>{
  try {
   const token=request.auth?.token;
-  const actor:Identity|undefined=request.auth?{uid:request.auth.uid,deviceId:token?.deviceId as string|undefined,familyId:token?.familyId as string|undefined,authTime:token?.auth_time}:undefined;
+  const actor:Identity|undefined=request.auth?{uid:request.auth.uid,deviceId:token?.deviceId as string|undefined,familyId:token?.familyId as string|undefined,credentialVersion:token?.credentialVersion as string|undefined,authTime:token?.auth_time}:undefined;
   const result=await execute(request.data?.action,request.data?.payload??{},actor,credentialKey.value());
   return result;
  }catch(error){
-  if(error instanceof ZodError)throw new HttpsError('invalid-argument','invalid-input');
-  if(error instanceof DomainError)throw new HttpsError(error.code==='unauthenticated'?'unauthenticated':error.code==='permission-denied'?'permission-denied':'failed-precondition',error.code,error.details);
-  // Never forward provider URLs, credentials, SDK errors or token-bearing payloads.
-  throw new HttpsError('internal','operation-failed');
+  throw httpsErrorFrom(error);
  }
 });
+// iPlex Web on Smart TVs (no App Check: reCAPTCHA is incompatible with Tizen 5.5).
+// Closed list of Player actions, device credential required, same execute() rules.
+export const player=onCall({region:'us-central1',enforceAppCheck:false,memory:'1GiB',cpu:1,concurrency:8,secrets:[credentialKey],timeoutSeconds:60},async request=>{
+ try {
+  let verified=request.auth;
+  if(!PLAYER_PUBLIC_ACTIONS.has(request.data?.action)){
+   const bearer=/^Bearer (.+)$/.exec(request.rawRequest.get('authorization')??'')?.[1];
+   if(!bearer)throw new DomainError('unauthenticated');
+   try{const token=await getAuth().verifyIdToken(bearer,true);verified={uid:token.uid,token,rawToken:bearer};}
+   catch{throw new DomainError('device-revoked');}
+  }
+  return await runPlayer({action:request.data?.action,payload:request.data?.payload,auth:verified?{uid:verified.uid,token:verified.token as Record<string,unknown>}:undefined,ip:request.rawRequest?.ip},
+   credentialKey.value(),{execute,quota:firestoreQuota,consume:consumePlayerRequest,now:Date.now});
+ }catch(error){
+  throw httpsErrorFrom(error);
+ }
+});
+function httpsErrorFrom(error:unknown):HttpsError {
+ if(error instanceof HttpsError)return error;
+ if(error instanceof ZodError)return new HttpsError('invalid-argument','invalid-input');
+ if(error instanceof DomainError)return new HttpsError(error.code==='unauthenticated'?'unauthenticated':error.code==='permission-denied'?'permission-denied':'failed-precondition',error.code,error.details);
+ // Never forward provider URLs, credentials, SDK errors or token-bearing payloads.
+ return new HttpsError('internal','operation-failed');
+}
 export const synchronizeCatalogs=onSchedule({schedule:DAILY_SCHEDULE,timeZone:DAILY_TIME_ZONE,region:'us-central1',timeoutSeconds:60},()=>scheduleDailySync());
 export const recoverIptvJobs=onSchedule({schedule:'every 1 minutes',region:'us-central1',secrets:[credentialKey],timeoutSeconds:540,memory:'1GiB',maxInstances:1},()=>syncDueSources(credentialKey.value()));
 export const deliverIptvNotification=onDocumentWritten({document:'users/{uid}/sync_notifications/{jobId}',region:'us-central1',retry:true,maxInstances:2},async event=>{

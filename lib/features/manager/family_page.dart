@@ -63,7 +63,9 @@ class FamilyPage extends ConsumerWidget {
               icon: AppIcons.link,
               onTap: () => context.push('/family/link-profile'),
             ),
-            if (ids.length > 1) ...[
+            // Also with a single family when none is active (accounts that accepted
+            // a membership before the backend started activating the first family).
+            if (ids.length > 1 || (ids.isNotEmpty && !hasFamily)) ...[
               for (final id in ids)
                 ref.watch(availableFamilyProvider(id)).when(
                   loading: () => const AppLoadingSkeleton(rows: 1),

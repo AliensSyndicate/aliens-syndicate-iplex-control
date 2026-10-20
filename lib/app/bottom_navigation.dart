@@ -23,7 +23,7 @@ class BottomNavigation extends StatelessWidget {
         ];
     return Container(
       decoration: const BoxDecoration(
-        color: AppColors.backgroundPrimary,
+        color: Colors.transparent,
         borderRadius: BorderRadius.zero,
       ),
       child: SafeArea(

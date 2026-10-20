@@ -72,7 +72,9 @@ export async function familyMembership(action:string,p:Record<string,unknown>,a:
       const writeProfile=await linkedAssociateForAccount(tx,fr,a.uid,u!.data()?.name??'',now);
       tx.update(fr,{members});
       writeProfile();
-      tx.update(ur,{familyIds:FieldValue.arrayUnion(...[u!.data()?.familyId,fr.id].filter(Boolean))});
+      // First family of an account becomes its active context; otherwise the Control
+      // only lists families when there are two or more and the accepted one is unreachable.
+      tx.update(ur,{familyIds:FieldValue.arrayUnion(...[u!.data()?.familyId,fr.id].filter(Boolean)),...(u!.data()?.familyId?{}:{familyId:fr.id})});
       tx.set(fr.collection('members').doc(a.uid),{uid:a.uid,name:u!.data()?.name??'',role:'member'});
     }
     tx.update(ref,{status:accept?'accepted':'declined',respondedAt:now});

@@ -8,7 +8,6 @@ import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_deta
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/remote_control/remote_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -75,7 +74,6 @@ void main() {
     (name: 'account', page: const AccountPage(), tab: 4),
     (name: 'settings', page: const SettingsPage(), tab: null),
     (name: 'source-form', page: const IptvSourceForm(), tab: null),
-    (name: 'remote', page: const RemotePage(deviceId: 'tv'), tab: null),
   ];
   for (final page in pages) {
     testWidgets('graphite ${page.name} at phone size', (tester) async {
@@ -101,28 +99,6 @@ void main() {
       await fixtures.screenshot(tester, page.name);
     });
   }
-  testWidgets('remote remains scrollable on a short landscape phone', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(740, 360);
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
-    await tester.pumpWidget(
-      fixtures.host(
-        const RemotePage(deviceId: 'tv'),
-        repo: VisualRepository(),
-        size: const Size(740, 360),
-        scale: 1.5,
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), null);
-    await tester.ensureVisible(find.byTooltip('Play / pause'));
-    expect(tester.takeException(), null);
-  });
   testWidgets('graphite iptv-empty at phone size', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(390, 844);

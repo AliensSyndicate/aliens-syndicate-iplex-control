@@ -27,7 +27,10 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == 'tv_' + did
         && request.auth.token.get('familyId', '') == fid && request.auth.token.get('deviceId', '') == did
         && exists(/databases/$(database)/documents/families/$(fid)/devices/$(did))
-        && !get(/databases/$(database)/documents/families/$(fid)).data.get('deleting', false);
+        && !get(/databases/$(database)/documents/families/$(fid)).data.get('deleting', false)
+        // Re-pairing issues a new credential version; older TV credentials stop working.
+        && get(/databases/$(database)/documents/families/$(fid)/devices/$(did)).data.get('credentialVersion', '')
+          == request.auth.token.get('credentialVersion', '');
     }
     function isFamilyPlayer(fid) {
       return isAuth() && isPlayer(fid, request.auth.token.get('deviceId', ''));
@@ -95,10 +98,10 @@ service cloud.firestore {
       // Media profiles: listeners on the phone and on the family's paired TVs are the
       // sync channel (generations, permissions, guest state). Writes are backend-only.
       match /profiles/{pid} {
-        allow read: if isFamilyMember(familyId) || isFamilyPlayer(familyId);
+        allow read: if isFamilyMember(familyId);
         allow write: if false;
         match /{collection}/{id} {
-          allow read: if (isFamilyMember(familyId) || isFamilyPlayer(familyId))
+          allow read: if (isFamilyMember(familyId))
             && collection in ['favorites', 'watch_progress', 'watched'];
           allow write: if false;
         }
@@ -114,8 +117,13 @@ service cloud.firestore {
       match /devices/{did} {
         allow read: if isFamilyMember(familyId) || isPlayer(familyId, did);
         allow write: if false;
-        match /commands/{cid} {
-          allow read: if isFamilyMember(familyId) || isPlayer(familyId, did);
+        // Remote play requests (Control → TV). The TV listens to its own pending
+        // requests; the requesting account follows its own; the administrator sees all.
+        // Writes are backend-only (requestPlayback, claimPlayRequest, updatePlayRequest).
+        match /play_requests/{rid} {
+          allow read: if isPlayer(familyId, did)
+            || (isFamilyMember(familyId) && resource.data.requesterUid == request.auth.uid)
+            || isFamilyAdmin(familyId);
           allow write: if false;
         }
       }
@@ -145,7 +153,7 @@ service cloud.firestore {
 
     // profiles/{profileId}
     match /profiles/{profileId} {
-      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow read: if isFamilyMember(resource.data.familyId);
       allow write: if false; // Managed via callable backend
     }
 
@@ -202,19 +210,19 @@ service cloud.firestore {
 
     // playback_sessions/{sessionId}
     match /playback_sessions/{sessionId} {
-      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow read: if isFamilyMember(resource.data.familyId);
       allow write: if false; // Leases acquired, heartbeat, released exclusively via backend transactions
     }
 
     // profile_favorites/{favoriteId}
     match /profile_favorites/{favoriteId} {
-      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow read: if isFamilyMember(resource.data.familyId);
       allow write: if false; // Managed via callable backend
     }
 
     // profile_progress/{progressId}
     match /profile_progress/{progressId} {
-      allow read: if isFamilyMember(resource.data.familyId) || isFamilyPlayer(resource.data.familyId);
+      allow read: if isFamilyMember(resource.data.familyId);
       allow write: if false; // Managed via callable backend
     }
 

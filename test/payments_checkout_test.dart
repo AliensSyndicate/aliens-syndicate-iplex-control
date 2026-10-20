@@ -52,8 +52,9 @@ class _Repo implements ManagerRepository {
         'obfuscatedAccountId': 'acc',
       };
     }
-    if (action == 'verifyPlayPurchase' && verifyFailure != null)
+    if (action == 'verifyPlayPurchase' && verifyFailure != null) {
       throw verifyFailure!;
+    }
     return {'status': 'active'};
   }
 

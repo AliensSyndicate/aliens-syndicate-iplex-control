@@ -400,24 +400,6 @@ abstract class AppLocalizations {
   /// **'Last connection'**
   String get lastSeen;
 
-  /// No description provided for @remote.
-  ///
-  /// In en, this message translates to:
-  /// **'Remote control'**
-  String get remote;
-
-  /// No description provided for @remoteSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Control your iPlex Player'**
-  String get remoteSubtitle;
-
-  /// No description provided for @remoteUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect your Player to use the remote.'**
-  String get remoteUnavailable;
-
   /// No description provided for @up.
   ///
   /// In en, this message translates to:
@@ -453,12 +435,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back'**
   String get back;
-
-  /// No description provided for @playPause.
-  ///
-  /// In en, this message translates to:
-  /// **'Play / pause'**
-  String get playPause;
 
   /// No description provided for @sent.
   ///
@@ -2397,6 +2373,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This purchase is already linked to another family.'**
   String get errorPurchaseUsed;
+
+  /// No description provided for @watchOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch on TV'**
+  String get watchOnTv;
+
+  /// No description provided for @chooseTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the TV'**
+  String get chooseTv;
+
+  /// No description provided for @noTvLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'No linked TV'**
+  String get noTvLinked;
+
+  /// No description provided for @noTvLinkedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Link a TV in Devices to start titles on it from here.'**
+  String get noTvLinkedBody;
+
+  /// No description provided for @tvNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Open iPlex on the TV and choose a profile to receive the request.'**
+  String get tvNotReady;
+
+  /// No description provided for @chooseEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the episode'**
+  String get chooseEpisode;
+
+  /// No description provided for @seasonNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Season {number}'**
+  String seasonNumber(int number);
+
+  /// No description provided for @episodeNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'E{number}'**
+  String episodeNumber(String number);
+
+  /// No description provided for @noEpisodes.
+  ///
+  /// In en, this message translates to:
+  /// **'No episodes are available for this series yet.'**
+  String get noEpisodes;
+
+  /// No description provided for @sendingToTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending to {tv}…'**
+  String sendingToTv(String tv);
+
+  /// No description provided for @tvReceivedRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'{tv} received the request.'**
+  String tvReceivedRequest(String tv);
+
+  /// No description provided for @waitingTvConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for confirmation on {tv}: something is already playing there.'**
+  String waitingTvConfirmation(String tv);
+
+  /// No description provided for @playingOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing on {tv}.'**
+  String playingOnTv(String tv);
+
+  /// No description provided for @openedOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened on {tv}. Choose the episode with the TV remote.'**
+  String openedOnTv(String tv);
+
+  /// No description provided for @tvKeptCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'The TV kept the current playback.'**
+  String get tvKeptCurrent;
+
+  /// No description provided for @tvNoAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody confirmed on the TV. The current playback continues.'**
+  String get tvNoAnswer;
+
+  /// No description provided for @tvDidNotRespond.
+  ///
+  /// In en, this message translates to:
+  /// **'The TV did not respond. Check that iPlex is open on it and try again.'**
+  String get tvDidNotRespond;
+
+  /// No description provided for @playRequestExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The request expired before reaching the TV. Try again.'**
+  String get playRequestExpired;
+
+  /// No description provided for @playRequestSuperseded.
+  ///
+  /// In en, this message translates to:
+  /// **'A newer request replaced this one.'**
+  String get playRequestSuperseded;
+
+  /// No description provided for @playRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The TV could not play this title.'**
+  String get playRequestFailed;
+
+  /// No description provided for @contentNotAllowedOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'This title is not available for the profile in use on the TV.'**
+  String get contentNotAllowedOnTv;
+
+  /// No description provided for @sourceProtectedOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'This source is PIN-protected and cannot be played on the TV yet.'**
+  String get sourceProtectedOnTv;
+
+  /// No description provided for @streamUnavailableOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'The IPTV source did not release this title now. Try again later.'**
+  String get streamUnavailableOnTv;
+
+  /// No description provided for @formatUnsupportedOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'The TV cannot play the format of this title.'**
+  String get formatUnsupportedOnTv;
+
+  /// No description provided for @episodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an episode to watch on the TV.'**
+  String get episodeRequired;
+
+  /// No description provided for @deviceNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This TV is no longer linked.'**
+  String get deviceNotFound;
+
+  /// No description provided for @tvDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get tvDone;
+
+  /// No description provided for @parentalControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental control'**
+  String get parentalControl;
+
+  /// No description provided for @parentalControlBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When the family has a kids profile, adult profiles only open on the TV with the parental PIN. The PIN is checked by the iPlex server.'**
+  String get parentalControlBody;
+
+  /// No description provided for @parentalPinConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental PIN set'**
+  String get parentalPinConfigured;
+
+  /// No description provided for @parentalPinMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental PIN not set'**
+  String get parentalPinMissing;
+
+  /// No description provided for @parentalPinMissingKids.
+  ///
+  /// In en, this message translates to:
+  /// **'There is a kids profile: adult profiles stay locked on the TV until you set the PIN.'**
+  String get parentalPinMissingKids;
+
+  /// No description provided for @setParentalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Set PIN'**
+  String get setParentalPin;
+
+  /// No description provided for @changeParentalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get changeParentalPin;
+
+  /// No description provided for @removeParentalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove PIN'**
+  String get removeParentalPin;
+
+  /// No description provided for @removeParentalPinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'While there is a kids profile, adult profiles will stay locked on the TV.'**
+  String get removeParentalPinBody;
+
+  /// No description provided for @parentalPinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 4 digits.'**
+  String get parentalPinLength;
+
+  /// No description provided for @parentalPinSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental PIN saved.'**
+  String get parentalPinSaved;
+
+  /// No description provided for @parentalPinRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental PIN removed.'**
+  String get parentalPinRemoved;
 }
 
 class _AppLocalizationsDelegate

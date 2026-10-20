@@ -37,27 +37,6 @@ class _DeviceStatusRow extends ConsumerWidget {
   }
 }
 
-class _DeviceRemoteAction extends ConsumerWidget {
-  const _DeviceRemoteAction({required this.entry});
-  final Entry entry;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l = context.l;
-    final isOnline = ref.watch(
-      clockProvider.select(
-        (time) => entry.onlineAt(time.value ?? DateTime.now()),
-      ),
-    );
-    if (!isOnline) return const SizedBox.shrink();
-    return AppButton(
-      label: l.remote,
-      icon: AppIcons.devices,
-      onPressed: () => context.push('/devices/${entry.id}/remote'),
-    );
-  }
-}
-
 class DetailPage extends ConsumerStatefulWidget {
   const DetailPage({super.key, required this.collection, required this.id});
   final String collection, id;
@@ -97,7 +76,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
     }
     final l = context.l,
         key = (collection: widget.collection, id: widget.id),
-        admin = (widget.collection == 'members' ? ref.watch(adminProvider) : ref.watch(canManageResourcesProvider));
+        admin = (widget.collection == 'members'
+            ? ref.watch(adminProvider)
+            : ref.watch(canManageResourcesProvider));
     return Scaffold(
       body: ref
           .watch(entryProvider(key))
@@ -145,8 +126,6 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: AppTokens.xl),
-                      _DeviceRemoteAction(entry: e),
                     ],
                     if (widget.collection == 'sources') ...[
                       AppSurface(

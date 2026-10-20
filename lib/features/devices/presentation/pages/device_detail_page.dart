@@ -161,14 +161,6 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                     ),
                   ),
                 ),
-                if (isOnline) ...[
-                  const SizedBox(height: AppSpacing.xl),
-                  AppButton(
-                    label: l.remote,
-                    icon: AppIcons.devices,
-                    onPressed: () => context.push('/devices/${device.id}/remote'),
-                  ),
-                ],
                 if (admin) ...[
                   const SizedBox(height: AppSpacing.md),
                   AppButton(

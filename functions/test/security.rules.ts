@@ -110,7 +110,7 @@ test('media profiles sync to members and the family TV; clear jobs, links and li
   }))await setDoc(doc(db,path),data);
  });
  const tvDb=env.authenticatedContext('tv_tv',{deviceId:'tv',familyId:'f'}).firestore();
- for(const path of ['families/f/profiles/joao','families/f/profiles/joao/favorites/c1','families/f/profiles/joao/watched/c2'])await assertSucceeds(getDoc(doc(tvDb,path)));
+ for(const path of ['families/f/profiles/joao','families/f/profiles/joao/favorites/c1','families/f/profiles/joao/watched/c2'])await assertFails(getDoc(doc(tvDb,path)));
  await assertFails(getDoc(doc(tvDb,'families/g/profiles/x')));
  await assertFails(setDoc(doc(tvDb,'families/f/profiles/joao/favorites/c9'),{contentId:'c9',generation:0}));
  await assertFails(setDoc(doc(tvDb,'families/f/profiles/joao'),{generations:{favorites:0}},{merge:true}));
@@ -123,4 +123,33 @@ test('media profiles sync to members and the family TV; clear jobs, links and li
  await assertFails(deleteDoc(doc(admin,'families/f/profiles/joao/favorites/c1')));
  for(const db of [admin,member,tvDb])await assertFails(getDoc(doc(db,'profile_link_codes/h')));
  await assertFails(getDoc(doc(env.authenticatedContext('outsider').firestore(),'families/f/profiles/joao')));
+});
+
+test('play requests: the TV reads only its own (current credential); the requester follows its own; nobody writes',async()=>{
+ await env.withSecurityRulesDisabled(async c=>{
+  const db=c.firestore();
+  for(const [path,data] of Object.entries({
+   'families/f/devices/tv2':{name:'Quarto',credentialVersion:'cv2'},
+   'families/f/devices/tv2/play_requests/r1':{requesterUid:'member',status:'pending',deviceId:'tv2'},
+   'families/f/devices/tv/play_requests/r2':{requesterUid:'admin',status:'pending',deviceId:'tv'},
+  }))await setDoc(doc(db,path),data);
+ });
+ const tv2=env.authenticatedContext('tv_tv2',{deviceId:'tv2',familyId:'f',credentialVersion:'cv2'}).firestore();
+ await assertSucceeds(getDoc(doc(tv2,'families/f/devices/tv2/play_requests/r1')));
+ await assertSucceeds(getDocs(collection(tv2,'families/f/devices/tv2/play_requests')));
+ await assertFails(getDoc(doc(tv2,'families/f/devices/tv/play_requests/r2')));
+ await assertFails(setDoc(doc(tv2,'families/f/devices/tv2/play_requests/r1'),{status:'started'}));
+ // A TV credential from before re-pairing (old credentialVersion) is refused.
+ const stale=env.authenticatedContext('tv_tv2',{deviceId:'tv2',familyId:'f',credentialVersion:'old'}).firestore();
+ await assertFails(getDoc(doc(stale,'families/f/devices/tv2/play_requests/r1')));
+ const member=env.authenticatedContext('member').firestore();
+ await assertSucceeds(getDoc(doc(member,'families/f/devices/tv2/play_requests/r1')));
+ await assertFails(getDoc(doc(member,'families/f/devices/tv/play_requests/r2')));
+ await assertFails(setDoc(doc(member,'families/f/devices/tv2/play_requests/new'),{requesterUid:'member',status:'pending'}));
+ const admin=env.authenticatedContext('admin').firestore();
+ await assertSucceeds(getDoc(doc(admin,'families/f/devices/tv2/play_requests/r1')));
+ await assertFails(getDoc(doc(env.authenticatedContext('outsider').firestore(),'families/f/devices/tv2/play_requests/r1')));
+ // The parental PIN hash is never readable by any client.
+ await env.withSecurityRulesDisabled(c=>setDoc(doc(c.firestore(),'families/f/private/parental'),{pinHash:'x',salt:'y'}));
+ for(const db of [admin,member,tv2])await assertFails(getDoc(doc(db,'families/f/private/parental')));
 });

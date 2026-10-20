@@ -50,16 +50,12 @@
   "online": "Online",
   "offline": "Offline",
   "lastSeen": "Last connection",
-  "remote": "Remote control",
-  "remoteSubtitle": "Control your iPlex Player",
-  "remoteUnavailable": "Connect your Player to use the remote.",
   "up": "Up",
   "down": "Down",
   "left": "Left",
   "right": "Right",
   "ok": "OK",
   "back": "Back",
-  "playPause": "Play / pause",
   "sent": "Sent to Player",
   "acknowledged": "Received by Player",
   "noAcknowledgement": "Player did not confirm receipt.",
@@ -483,5 +479,93 @@
   "errorPaymentsDisabled": "Subscriptions aren't available yet.",
   "errorPurchaseInvalid": "The purchase couldn't be validated with Google Play.",
   "errorPurchaseAccount": "This purchase belongs to another account.",
-  "errorPurchaseUsed": "This purchase is already linked to another family."
+  "errorPurchaseUsed": "This purchase is already linked to another family.",
+  "watchOnTv": "Watch on TV",
+  "chooseTv": "Choose the TV",
+  "noTvLinked": "No linked TV",
+  "noTvLinkedBody": "Link a TV in Devices to start titles on it from here.",
+  "tvNotReady": "Open iPlex on the TV and choose a profile to receive the request.",
+  "chooseEpisode": "Choose the episode",
+  "seasonNumber": "Season {number}",
+  "@seasonNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "episodeNumber": "E{number}",
+  "@episodeNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "noEpisodes": "No episodes are available for this series yet.",
+  "sendingToTv": "Sending to {tv}…",
+  "@sendingToTv": {
+    "placeholders": {
+      "tv": {
+        "type": "String"
+      }
+    }
+  },
+  "tvReceivedRequest": "{tv} received the request.",
+  "@tvReceivedRequest": {
+    "placeholders": {
+      "tv": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingTvConfirmation": "Waiting for confirmation on {tv}: something is already playing there.",
+  "@waitingTvConfirmation": {
+    "placeholders": {
+      "tv": {
+        "type": "String"
+      }
+    }
+  },
+  "playingOnTv": "Playing on {tv}.",
+  "@playingOnTv": {
+    "placeholders": {
+      "tv": {
+        "type": "String"
+      }
+    }
+  },
+  "openedOnTv": "Opened on {tv}. Choose the episode with the TV remote.",
+  "@openedOnTv": {
+    "placeholders": {
+      "tv": {
+        "type": "String"
+      }
+    }
+  },
+  "tvKeptCurrent": "The TV kept the current playback.",
+  "tvNoAnswer": "Nobody confirmed on the TV. The current playback continues.",
+  "tvDidNotRespond": "The TV did not respond. Check that iPlex is open on it and try again.",
+  "playRequestExpired": "The request expired before reaching the TV. Try again.",
+  "playRequestSuperseded": "A newer request replaced this one.",
+  "playRequestFailed": "The TV could not play this title.",
+  "contentNotAllowedOnTv": "This title is not available for the profile in use on the TV.",
+  "sourceProtectedOnTv": "This source is PIN-protected and cannot be played on the TV yet.",
+  "streamUnavailableOnTv": "The IPTV source did not release this title now. Try again later.",
+  "formatUnsupportedOnTv": "The TV cannot play the format of this title.",
+  "episodeRequired": "Choose an episode to watch on the TV.",
+  "deviceNotFound": "This TV is no longer linked.",
+  "tvDone": "Done",
+  "parentalControl": "Parental control",
+  "parentalControlBody": "When the family has a kids profile, adult profiles only open on the TV with the parental PIN. The PIN is checked by the iPlex server.",
+  "parentalPinConfigured": "Parental PIN set",
+  "parentalPinMissing": "Parental PIN not set",
+  "parentalPinMissingKids": "There is a kids profile: adult profiles stay locked on the TV until you set the PIN.",
+  "setParentalPin": "Set PIN",
+  "changeParentalPin": "Change PIN",
+  "removeParentalPin": "Remove PIN",
+  "removeParentalPinBody": "While there is a kids profile, adult profiles will stay locked on the TV.",
+  "parentalPinLength": "Use 4 digits.",
+  "parentalPinSaved": "Parental PIN saved.",
+  "parentalPinRemoved": "Parental PIN removed."
 }

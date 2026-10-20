@@ -28,7 +28,7 @@ test('first TV starts trial once; four concurrent session acquisitions allow onl
  for(const d of (await getFirestore().collection(`families/${fid}/profiles`).get()).docs)if(!['admin','guest'].includes(d.data().type))await d.ref.delete();
  for(let i=0;i<4;i++){
   const token=await execute('beginDevicePair',{name:`TV ${i}`},undefined) as any;const d=await execute('linkDevice',{token:token.token},admin) as any;
-  identities.push({uid:`tv_${d.id}`,deviceId:d.id,familyId:fid});await execute('saveProfile',{id:`p${i}`,name:`Profile ${i}`},admin);
+  identities.push({uid:`tv_${d.id}`,deviceId:d.id,familyId:fid,credentialVersion:(await getFirestore().doc(`families/${fid}/devices/${d.id}`).get()).data()?.credentialVersion});await execute('saveProfile',{id:`p${i}`,name:`Profile ${i}`},admin);
  }
  const before=(await getFirestore().doc(`families/${fid}/private/subscription`).get()).data()!;
  const result=await Promise.allSettled(identities.map((actor,i)=>execute('acquireSession',{profileId:`p${i}`},actor)));
@@ -37,11 +37,11 @@ test('first TV starts trial once; four concurrent session acquisitions allow onl
  const linked=await execute('beginDevicePair',{name:'Extra TV'},undefined) as any;await execute('linkDevice',{token:linked.token},admin);
  assert.equal((await getFirestore().doc(`families/${fid}/private/subscription`).get()).data()?.trialStartedAt,before.trialStartedAt);
 });
-test('profile concurrency admits one owner and remote cannot use a stale session',async()=>{
+test('profile concurrency admits one owner and remote key commands do not exist',async()=>{
  await getFirestore().doc(`families/${fid}`).update({leases:[]});
- const ds=await getFirestore().collection(`families/${fid}/devices`).limit(2).get();const actors=ds.docs.map(d=>({uid:`tv_${d.id}`,deviceId:d.id,familyId:fid}));
+ const ds=await getFirestore().collection(`families/${fid}/devices`).limit(2).get();const actors=ds.docs.map(d=>({uid:`tv_${d.id}`,deviceId:d.id,familyId:fid,credentialVersion:d.data().credentialVersion}));
  const result=await Promise.allSettled(actors.map(a=>execute('acquireSession',{profileId:'p0'},a)));assert.equal(result.filter(x=>x.status==='fulfilled').length,1);
- await assert.rejects(execute('sendCommand',{deviceId:actors[0]!.deviceId,sessionId:'stale',commandId:'cmd',commandType:'up'},admin),/device-offline/);
+ await assert.rejects(execute('sendCommand',{deviceId:actors[0]!.deviceId,sessionId:'stale',commandId:'cmd',commandType:'up'},admin),/invalid-action/);
 });
 test('preferences and favorites persist and source credentials stay encrypted',async()=>{
  await execute('savePreferences',{locale:'pt_BR'},admin);assert.equal((await getFirestore().doc('users/owner').get()).data()?.locale,'pt_BR');

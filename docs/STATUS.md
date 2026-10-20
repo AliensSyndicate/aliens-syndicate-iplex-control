@@ -1,5 +1,18 @@
 # Estado de implementação e validação — 19/10/2026
 
+## Atualização 20/10/2026 — integração Control ↔ Web ↔ App (sem deploy, commit ou push)
+
+Contratos v1 em [CONTRACTS.md](CONTRACTS.md). Relatório completo, matriz e plano de implantação/rollback em `aliens-syndicate-iplex-web/docs/INTEGRACAO-2026-10-20.md`.
+
+- **Controle remoto removido** (tela, rota, `sendCommand`/`ackCommand`, regras de `commands`). O Control não pausa, avança, para nem navega a TV.
+- **Assistir na TV** (`features/watch_on_tv/`): busca na Home → título → escolha da TV (e do episódio, em séries) → `requestPlayback` → status ao vivo do pedido (`play_requests`). Backend em `functions/src/play_requests.ts`.
+- **PIN parental** (`functions/src/parental.ts`, tela Família › Controle parental): hash scrypt, 5 tentativas por TV, aplicado no `acquireSession`.
+- **Desvinculação imediata**: revogação do refresh token + marcador para o ouvinte da TV (≈1 s na Samsung).
+- **EPG na TV**: `readSourceEpg` liberado na `player`.
+- Correções: favorito pelo Control sem `generation` (sempre rejeitado); primeira família aceita não virava contexto ativo (conta ficava sem acesso à família).
+
+Validação: 79 unitários, 14 de regras e 62 de integração (backend); `flutter analyze` limpo e 235 testes Flutter; E2E com emuladores + iPlex Web + Samsung UN65TU7020 (Tizen 5.5) + Control no iPhone 17 Pro Simulator (ver relatório). Ferramenta: `functions/scripts/e2e_tv.ts`.
+
 ## Atualização — perfis familiares, visitante, infantil e limpeza de dados
 
 Perfis de mídia independentes de conta (1 administrador, 4 associados, visitante opcional), vinculação posterior por código temporário de uso único, permissões por fonte × tipo de conteúdo, perfil infantil restrito no backend, três limpezas independentes com confirmação e exclusão real no Firestore, gerações contra restauração offline. Detalhes e contrato do Player em [Perfis familiares](FAMILY_PROFILES.md).

@@ -236,8 +236,11 @@ export async function deleteIptvSource(payload: Record<string, unknown>, actor: 
 /** Bounded EPG read; no bearer Storage URL or provider credentials reach clients. */
 export async function readIptvEpg(payload: Record<string, unknown>, actor: Identity) {
   const id = idSchema.parse(payload.id), channelId = z.string().min(1).max(300).parse(payload.channelId);
+  // A paired TV is authorized first (credential, lease, subscription, profile visibility of the channel).
+  if (actor.deviceId) await assertChannelVisible(actor, id, channelId);
+  const scope = async (tx: Transaction) => actor.deviceId ? {fid: actor.familyId!, ref: db().doc(`families/${actor.familyId}`)} : iptvWorkspace(tx, actor, false, false);
   const binding = await db().runTransaction(async tx => {
-    const f = await iptvWorkspace(tx, actor, false, false), source = await tx.get(f.ref.collection('sources').doc(id));
+    const f = await scope(tx), source = await tx.get(f.ref.collection('sources').doc(id));
     requireValue(source.exists, 'not-found');
     await requireSourceAccess(tx, source.ref, source.data()!, actor.uid);
     return {fid: f.fid, version: source.data()!.epgVersion};
@@ -250,7 +253,7 @@ export async function readIptvEpg(payload: Record<string, unknown>, actor: Ident
     .filter(row => row.channelId === channelId && row.endAt > now).sort((a, b) => a.startAt - b.startAt).slice(0, 100);
   // Recheck after I/O: membership, PIN or published version may have changed.
   await db().runTransaction(async tx => {
-    const f = await iptvWorkspace(tx, actor, false, false), source = await tx.get(f.ref.collection('sources').doc(id));
+    const f = await scope(tx), source = await tx.get(f.ref.collection('sources').doc(id));
     requireValue(f.fid === binding.fid && source.data()?.epgVersion === binding.version, 'source-conflict');
     await requireSourceAccess(tx, source.ref, source.data()!, actor.uid);
   });

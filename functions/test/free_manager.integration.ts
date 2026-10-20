@@ -27,7 +27,7 @@ async function fixture(){
 async function link(actor:Identity,fid:string){
   const {token}=await execute('beginDevicePair',{name:'Free TV'},undefined) as {token:string};
   const {id}=await execute('linkDevice',{token},actor) as {id:string};
-  return {uid:`tv_${id}`,familyId:fid,deviceId:id} satisfies Identity;
+  return {uid:`tv_${id}`,familyId:fid,deviceId:id,credentialVersion:(await getFirestore().doc(`families/${fid}/devices/${id}`).get()).data()?.credentialVersion} satisfies Identity;
 }
 const expired:Subscription={status:'expired',trialStartedAt:1,trialEndsAt:2,paidUntil:2};
 
@@ -115,8 +115,8 @@ for(const status of ['trial','active','cancelled'] as const){
     const lease=await execute('acquireSession',{profileId:'p'},device) as {id:string};
     assert.ok(lease.id);
     await f.subscription.set(expired);
-    // Remote administration depends on its technical session, not payment.
-    await execute('sendCommand',{deviceId:device.deviceId,sessionId:lease.id,commandId:'free-control',commandType:'up'},f.actor);
+    // The Control is not a remote control: key/transport commands do not exist.
+    await assert.rejects(execute('sendCommand',{deviceId:device.deviceId,sessionId:lease.id,commandId:'free-control',commandType:'up'},f.actor),/invalid-action/);
     await assert.rejects(execute('heartbeat',{sessionId:lease.id},device),/subscription-required/);
     await execute('releaseSession',{sessionId:lease.id},device);
     await execute('saveProfile',{id:'another',name:'Still free'},f.actor);

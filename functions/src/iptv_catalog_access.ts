@@ -8,7 +8,7 @@ import {requireSourceAccess} from './iptv_sources';
 import {findM3uStream, playlistBody, Source, validateXtream, xtreamUrl} from './iptv_ingestion';
 import {xtreamBase} from './iptv_server';
 import {lookup} from 'node:dns/promises';
-import type {Identity} from './service';
+import {activePlayer,type Identity} from './service';
 import {classifyAudience} from './content_audience';
 import {profileView, ProfileView} from './family_profiles';
 
@@ -56,6 +56,7 @@ async function authorize(actor:Identity,id:string,playback=false,requestedProfil
       if(!family?.exists||family.data()?.deleting||!device?.exists)throw new DomainError('device-revoked');
       if(!canStartPlayback(subscription?.data() as any,Date.now()))throw new DomainError('subscription-required');
       if(!family.data()?.leases?.some((l:any)=>l.deviceId===actor.deviceId&&l.expiresAt>Date.now()))throw new DomainError('session-expired');
+      if(device.data()?.credentialVersion&&device.data()?.credentialVersion!==actor.credentialVersion)throw new DomainError('device-revoked');
       familyData=family.data();
     }else {
       const scope=await iptvWorkspace(tx,actor,false,false);fid=scope.fid;familyData=scope.data;
@@ -162,9 +163,8 @@ export async function listProfileSpaces(input:Record<string,unknown>,actor:Ident
     if(actor.deviceId){
       if(actor.uid!==`tv_${actor.deviceId}`||!actor.familyId)throw new DomainError('permission-denied');
       fid=actor.familyId;
-      const [family,device]=await tx.getAll(db.doc(`families/${fid}`),db.doc(`families/${fid}/devices/${actor.deviceId}`));
-      if(!family?.exists||family.data()?.deleting||!device?.exists)throw new DomainError('device-revoked');
-      familyData=family.data();
+      const context=await activePlayer(tx,actor,input.profileId);
+      familyData=context.data;
     } else {const scope=await iptvWorkspace(tx,actor,false,false);fid=scope.fid;familyData=scope.data;}
     const viewer=await resolveViewer(tx,actor,fid,familyData,input.profileId);
     const sources=(await tx.get(db.collection(`families/${fid}/sources`))).docs.filter(d=>d.data().enabled&&d.data().version);
@@ -185,4 +185,45 @@ export async function assertChannelVisible(actor:Identity,sourceId:string,channe
   if(!access.viewer)return;
   const catalog=await load(access.data.version);
   if(!catalog.items.some(i=>i.kind==='channel'&&i.epgId===channelId&&canSee(access.viewer,sourceId,i)))throw new DomainError('not-found');
+}
+
+/** TMDB only enriches a catalog item the current leased profile can see. */
+export async function authorizeMetadata(input:Record<string,unknown>,actor:Identity) {
+ const sourceId=idSchema.parse(input.sourceId),itemId=idSchema.parse(input.itemId);
+ const access=await authorize(actor,sourceId),catalog=await load(access.data.version);
+ const item=catalog.items.find(i=>hash(`${sourceId}:${i.id}`)===itemId||i.id===itemId);
+ if(!item||item.kind==='channel'||!canSee(access.viewer,sourceId,item))throw new DomainError('not-found');
+ const latest=await authorize(actor,sourceId);
+ if(latest.data.version!==access.data.version||!canSee(latest.viewer,sourceId,item))throw new DomainError('source-conflict');
+ return {kind:item.kind,title:item.title,year:item.year??null};
+}
+
+/** Remote play requests: the item exists in the published catalog and the actor's
+ * profile (person) or the TV's leased profile (device) may see it. */
+export async function playableItem(actor:Identity,sourceId:string,itemId:string) {
+ const access=await authorize(actor,sourceId),catalog=await load(access.data.version);
+ const item=catalog.items.find(i=>hash(`${sourceId}:${i.id}`)===itemId);
+ if(!item||!canSee(access.viewer,sourceId,item))throw new DomainError('not-found');
+ return {fid:access.fid,kind:item.kind,title:item.title};
+}
+
+/** Library reads are now server-authorized; direct Firestore access is closed. */
+export async function readPlayerLibrary(input:Record<string,unknown>,actor:Identity) {
+ const db=getFirestore(),context=await db.runTransaction(tx=>activePlayer(tx,actor,input.profileId));
+ if(context.view.type==='guest')return {favorites:[],progress:[],watched:[]};
+ const allowed=new Set<string>();
+ const sources=await context.ref.collection('sources').where('enabled','==',true).get();
+ for(const source of sources.docs){
+  try{
+   const access=await authorize(actor,source.id),catalog=await load(access.data.version);
+   for(const item of catalog.items)if(canSee(access.viewer,source.id,item))allowed.add(hash(`${source.id}:${item.id}`));
+  }catch(e){if(!(e instanceof DomainError)||!['not-found','pin-required'].includes(e.code))throw e;}
+ }
+ const profile=context.ref.collection('profiles').doc(context.view.id);
+ const read=async(name:string,order:string)=> (await profile.collection(name).orderBy(order,'desc').limit(100).get()).docs
+  .map(d=>d.data()).filter(d=>typeof d.contentId==='string'&&allowed.has(d.contentId.replace(/_e[A-Za-z0-9_-]+$/,'')));
+ const [favorites,progress,watched]=await Promise.all([read('favorites','updatedAt'),read('watch_progress','updatedAt'),read('watched','completedAt')]);
+ const latest=await db.runTransaction(tx=>activePlayer(tx,actor,input.profileId));
+ if(latest.view.permissionsVersion!==context.view.permissionsVersion)throw new DomainError('source-conflict');
+ return {favorites,progress,watched};
 }

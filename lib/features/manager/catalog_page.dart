@@ -10,6 +10,7 @@ import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import 'widgets/entries_view.dart';
 import 'widgets/home_welcome_state.dart';
+import '../watch_on_tv/watch_on_tv_sheet.dart';
 
 class CatalogPageView extends ConsumerStatefulWidget {
   const CatalogPageView({super.key});
@@ -90,7 +91,7 @@ class _CatalogPageViewState extends ConsumerState<CatalogPageView> {
   }
 
   Future<void> favorite(Entry entry) async {
-    final id = await showModalBottomSheet<String>(
+    final profile = await showModalBottomSheet<Entry>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -123,7 +124,7 @@ class _CatalogPageViewState extends ConsumerState<CatalogPageView> {
                     ...profiles.map(
                       (profile) => EntryTile(
                         title: profile.name,
-                        onTap: () => Navigator.pop(c, profile.id),
+                        onTap: () => Navigator.pop(c, profile),
                       ),
                     ),
                   ],
@@ -134,12 +135,17 @@ class _CatalogPageViewState extends ConsumerState<CatalogPageView> {
         ),
       ),
     );
-    if (id == null) return;
+    if (profile == null) return;
     try {
+      // Writes carry the profile's current generation: a cleared list is never restored.
+      final generations = profile.data['generations'];
       await ref.read(repositoryProvider).mutate('favorite', {
-        'profileId': id,
+        'profileId': profile.id,
         'contentId': entry.id,
         'title': entry.name,
+        'generation': generations is Map
+            ? (generations['favorites'] as num?)?.toInt() ?? 0
+            : 0,
       });
     } catch (e) {
       if (mounted) showFailure(context, e);
@@ -331,6 +337,16 @@ class _CatalogPageViewState extends ConsumerState<CatalogPageView> {
                                               .titleLarge,
                                         ),
                                         const SizedBox(height: AppTokens.lg),
+                                        AppButton(
+                                          key: const Key('watch-on-tv'),
+                                          label: l.watchOnTv,
+                                          icon: AppIcons.devices,
+                                          onPressed: () {
+                                            Navigator.pop(c);
+                                            showWatchOnTv(context, entry);
+                                          },
+                                        ),
+                                        const SizedBox(height: AppTokens.md),
                                         AppButton(
                                           label: l.favorite,
                                           icon: AppIcons.favorite,

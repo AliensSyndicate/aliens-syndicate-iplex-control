@@ -54,6 +54,8 @@ class FirebaseManagerRepository implements ManagerRepository {
           adminId: rawAdmin as String,
           name: d['name'] as String? ?? '',
           members: rawMembers,
+          parentalPinConfigured:
+              (d['parental'] as Map?)?['pinConfigured'] == true,
         );
       });
   @override

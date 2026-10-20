@@ -14,7 +14,9 @@ import {iptvWorkspace} from './iptv_workspace';
 import {z} from 'zod';
 import {saveIptvSource, syncIptvSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
 import {acquire, addMember, canStartPlayback, DomainError, hash, idSchema, Lease, LEASE_MS, nameSchema, newToken, pinSchema, seal, sourceInputSchema, sourceSchema, startTrial, Subscription, TOKEN_MS, tokenSchema, unseal} from './domain';
-export type Identity = {uid:string; deviceId?:string; familyId?:string; authTime?:number; contextFamilyId?:string|null};
+import {familyHasKids, isAdultProfile, manageParentalPin, parentalGate, PIN_SESSION_MS, verifyProfilePin} from './parental';
+import {claimPlayRequest, pendingPointer, requestPlayback, UNLINK_MARKER, updatePlayRequest} from './play_requests';
+export type Identity = {uid:string; deviceId?:string; familyId?:string; credentialVersion?:string; authTime?:number; contextFamilyId?:string|null};
 const db=()=>getFirestore();
 const required=(ok:unknown,code='permission-denied'):void=>{if(!ok)throw new DomainError(code);};
 async function family(tx:Transaction,actor:Identity,admin=false,create=false) {
@@ -23,13 +25,28 @@ async function family(tx:Transaction,actor:Identity,admin=false,create=false) {
  const requested=actor.contextFamilyId===undefined?u.data()?.familyId:actor.contextFamilyId;
  return iptvWorkspace(tx,{...actor,contextFamilyId:requested??null},create,admin);
 }
-async function player(tx:Transaction,actor:Identity) {
+export async function playerContext(tx:Transaction,actor:Identity) {
  required(actor.deviceId && actor.familyId && actor.uid === `tv_${actor.deviceId}`);
  const ref=db().doc(`families/${actor.familyId}`), device=db().doc(`families/${actor.familyId}/devices/${actor.deviceId}`);
  const [f,d,s]=await tx.getAll(ref,device,db().doc(`families/${actor.familyId}/private/subscription`));
  required(f!.exists&&d!.exists&&!f!.data()?.deleting,'device-revoked');
+ required(!d!.data()?.credentialVersion||d!.data()?.credentialVersion===actor.credentialVersion,'device-revoked');
  return {ref,device,fid:actor.familyId!,data:f!.data()!,deviceData:d!.data()!,subscription:s!.data() as Subscription | undefined};
 }
+
+export async function activePlayer(tx:Transaction,actor:Identity,requested?:unknown) {
+ const context=await playerContext(tx,actor), now=Date.now();
+ required(canStartPlayback(context.subscription,now),'subscription-required');
+ const lease=((context.data.leases??[]) as Lease[]).find(l=>l.deviceId===actor.deviceId&&l.expiresAt>now);
+ required(lease,'session-expired');
+ required(requested===undefined||requested===lease!.profileId,'permission-denied');
+ const profile=await tx.get(context.ref.collection('profiles').doc(lease!.profileId));
+ required(profile.exists,'profile-unavailable');
+ const view=profileView(profile.id,profile.data()!);
+ required(view.enabled,'profile-disabled');
+ return {...context,view};
+}
+
 export async function execute(action:string,input:unknown,actor:Identity|undefined,key=''):Promise<unknown> {
  const p=z.record(z.unknown()).parse(input); const now=Date.now();
  if(action==='beginDevicePair') {
@@ -38,6 +55,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   const nativeDeviceId=typeof p.nativeDeviceId==='string'?p.nativeDeviceId.trim():undefined;
   const canonicalId=nativeDeviceId?calculateCanonicalDeviceId(platform,nativeDeviceId):randomUUID();
   const fingerprint=nativeDeviceId?calculateIdentityFingerprint(platform,nativeDeviceId):'';
+  for(let attempt=0;attempt<8;attempt++){
   const pairingCode=generatePairingCode();
   const tokenHash=hash(token);
   const sessionData={
@@ -58,25 +76,37 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
    expiresAt:now+TOKEN_MS,
    used:false,
    claimed:false,
-   createdAt:now
+   createdAt:now,
+   expireAt:new Date(now+TOKEN_MS)
   };
-  await Promise.all([
-   db().doc(`link_tokens/${tokenHash}`).set(sessionData),
-   db().doc(`device_pairing_sessions/${tokenHash}`).set(sessionData),
-   db().doc(`device_pairing_codes/${pairingCode.hash}`).set({tokenHash,expiresAt:now+TOKEN_MS})
-  ]);
+  const reserved=await db().runTransaction(async tx=>{
+   const codeRef=db().doc(`device_pairing_codes/${pairingCode.hash}`);
+   if(((await tx.get(codeRef)).data()?.expiresAt??0)>now)return false;
+   tx.create(db().doc(`link_tokens/${tokenHash}`),sessionData);
+   tx.create(db().doc(`device_pairing_sessions/${tokenHash}`),sessionData);
+   tx.set(codeRef,{tokenHash,expiresAt:now+TOKEN_MS,expireAt:new Date(now+TOKEN_MS)});
+   return true;
+  });
+  if(!reserved)continue;
   return {token,code:pairingCode.code,formattedCode:pairingCode.formatted,deviceId:canonicalId,expiresAt:now+TOKEN_MS};
+  }
+  throw new DomainError('rate-limited');
  }
  if(action==='finishDevicePair') {
   const token=tokenSchema.parse(p.token), ref=db().doc(`link_tokens/${hash(token)}`);
   const data=await db().runTransaction(async tx=>{
-   const snap=await tx.get(ref), d=snap.data(); required(d&&d.kind==='device'&&d.expiresAt>now&&d.used&&!d.claimed,'invalid-token');
+   const snap=await tx.get(ref), d=snap.data();
+   required(d&&d.kind==='device','invalid-token');
+   required(d!.expiresAt>now,'pairing-expired');
+   required(d!.used&&!d!.claimed,'invalid-token');
+   const device=await tx.get(db().doc(`families/${d!.familyId}/devices/${d!.deviceId}`));
+   required(device.exists&&device.data()?.credentialVersion===d!.credentialVersion,'device-revoked');
    tx.update(ref,{claimed:true});
    tx.set(db().doc(`device_pairing_sessions/${hash(token)}`),{claimed:true,completedAt:now},{merge:true});
    return d!;
   });
   // A failed token mint requires pairing again; tokens are never reusable.
-  return {customToken:await getAuth().createCustomToken(`tv_${data.deviceId}`,{deviceId:data.deviceId,familyId:data.familyId})};
+  return {customToken:await getAuth().createCustomToken(`tv_${data.deviceId}`,{deviceId:data.deviceId,familyId:data.familyId,credentialVersion:data.credentialVersion})};
  }
  required(actor,'unauthenticated'); const a:Identity={...actor!,
   ...(!actor!.deviceId&&Object.prototype.hasOwnProperty.call(p,'contextFamilyId')?
@@ -120,11 +150,26 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   return {id:target.id};
  }
  if(action==='listPlayerProfiles')return db().runTransaction(async tx=>{
-  const f=await player(tx,a);
+  const f=await playerContext(tx,a);
   const docs=(await tx.get(f.ref.collection('profiles'))).docs,rows=docs.map(d=>profileView(d.id,d.data())),profilesDeleting=docs.map(d=>d.data().deleting===true);
+  const kids=rows.some((x,i)=>x.type==='kids'&&!profilesDeleting[i]);
+  const pinConfigured=(await tx.get(f.ref.collection('private').doc('parental'))).exists;
   // A disabled guest keeps its configuration but is not offered on the TV.
-  return {profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion}))};
+  // pinRequired is informative for the interface; acquireSession enforces it.
+  return {parentalPin:{configured:pinConfigured},profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion,pinRequired:kids&&isAdultProfile(x)}))};
  });
+ if(action==='verifyProfilePin'){
+  const f=await db().runTransaction(tx=>playerContext(tx,a));
+  return verifyProfilePin(p,{ref:f.ref,device:f.device,fid:f.fid,deviceId:a.deviceId!});
+ }
+ if(action==='setParentalPin'||action==='clearParentalPin')return db().runTransaction(async tx=>{
+  required(!a.deviceId);
+  const f=await family(tx,a,true);
+  return manageParentalPin(action,p,a.uid,f,tx);
+ });
+ if(action==='requestPlayback')return requestPlayback(p,a,tx=>family(tx,a));
+ if(action==='claimPlayRequest')return claimPlayRequest(p,a);
+ if(action==='updatePlayRequest')return updatePlayRequest(p,a);
  if(action==='listProfileSpaces')return listProfileSpaces(p,a);
  if(action==='getPaymentsConfig'){required(!a.deviceId);return {...await paymentsConfig(a.uid),obfuscatedAccountId:obfuscatedAccount(a.uid)};}
  if(action==='verifyPlayPurchase'){
@@ -179,6 +224,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
    currentFamilyId: isSameFamily ? currentFamilyId : null,
   };
  }
+ if(action==='linkDevice'&&typeof p.code==='string'){required(!a.deviceId);await limitIdentityAttempts(a.uid,'pairing');}
  if(action==='linkDevice')return db().runTransaction(async tx=>{
   const f=await family(tx,a,true,true);
   let tokenHash: string | undefined;
@@ -205,7 +251,9 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   }
 
   const legacyRef = f.ref.collection('devices').doc(canonicalId);
+  const credentialVersion=randomUUID();
   const deviceData = {
+   credentialVersion,
    deviceId: canonicalId,
    familyId: f.fid,
    ownerId: f.data.ownerId??f.data.adminId,
@@ -230,14 +278,17 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   };
 
   f.initialize();
+  tx.delete(legacyRef.collection('play_requests').doc(UNLINK_MARKER));
   tx.set(topRef, deviceData, {merge: true});
   tx.set(legacyRef, deviceData, {merge: true});
-  tx.update(tr, {used: true, familyId: f.fid, deviceId: canonicalId, claimedByUid: a.uid, completedAt: now});
-  tx.set(db().doc(`device_pairing_sessions/${tokenHash}`), {used: true, familyId: f.fid, deviceId: canonicalId, claimedByUid: a.uid, completedAt: now}, {merge: true});
+  tx.set(f.ref,{leases:((f.data.leases??[]) as Lease[]).filter(l=>l.deviceId!==canonicalId)},{merge:true});
+  tx.update(tr, {used: true, credentialVersion, familyId: f.fid, deviceId: canonicalId, claimedByUid: a.uid, completedAt: now});
+  tx.set(db().doc(`device_pairing_sessions/${tokenHash}`), {used: true, credentialVersion, familyId: f.fid, deviceId: canonicalId, claimedByUid: a.uid, completedAt: now}, {merge: true});
   tx.set(sr, startTrial(s!.data() as Subscription, now));
   return {id: canonicalId, displayName: deviceData.displayName, platform: deviceData.platform, status: 'linked'};
  });
- if(action==='renameDevice'||action==='deleteDevice')return db().runTransaction(async tx=>{
+ if(action==='renameDevice'||action==='deleteDevice'){
+  const result=await db().runTransaction(async tx=>{
   const f=await family(tx,a,true),id=idSchema.parse(p.id);
   const legacyRef=f.ref.collection('devices').doc(id);
   const topRef=db().doc(`devices/${id}`);
@@ -251,38 +302,43 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
    if (topSnap!.exists) tx.update(topRef, {name: newName, displayName: newName, updatedAt: now});
   } else {
    if (d!.exists) tx.delete(legacyRef);
+   // Open TV listeners are not re-evaluated by the rules when the device document goes:
+   // this marker reaches them at once so the TV re-checks its credential (signal only).
+   tx.set(legacyRef.collection('play_requests').doc(UNLINK_MARKER), {schemaVersion: 1, status: 'revoked', deviceId: id, createdAt: now, expiresAt: now + 60_000, expireAt: new Date(now + 86_400_000)});
    if (topSnap!.exists) tx.set(topRef, {status: 'unlinked', familyId: FieldValue.delete(), updatedAt: now}, {merge: true});
    tx.update(f.ref, {leases: ((f.data.leases??[]) as Lease[]).filter(x=>x.deviceId!==id)});
   }
   return {ok:true};
- });
+  });
+  // Unlink: the device document is gone (every protected call fails with device-revoked);
+  // revoking the refresh token also makes verifyIdToken(checkRevoked) fail at once.
+  if(action==='deleteDevice')await getAuth().revokeRefreshTokens(`tv_${idSchema.parse(p.id)}`).catch(e=>{if(e?.code!=='auth/user-not-found')console.warn('deleteDevice: refresh token revocation failed');});
+  return result;
+ }
  if(action==='acquireSession'||action==='heartbeat'||action==='releaseSession')return db().runTransaction(async tx=>{
-  const f=await player(tx,a);let leases=((f.data.leases??[]) as Lease[]).filter(x=>x.expiresAt>now);
+  const f=await playerContext(tx,a);let leases=((f.data.leases??[]) as Lease[]).filter(x=>x.expiresAt>now);
   if(action==='acquireSession') {
    if(!canStartPlayback(f.subscription,now))throw new DomainError('subscription-required',{plansRoute:'/account/subscription'});
-   const profileId=idSchema.parse(p.profileId);const profile=await tx.get(f.ref.collection('profiles').doc(profileId));required(profile.exists,'not-found');
-   required(profileView(profileId,profile.data()!).enabled,'profile-disabled');
+   const profileId=idSchema.parse(p.profileId);const profile=await tx.get(f.ref.collection('profiles').doc(profileId));required(profile.exists&&profile.data()?.deleting!==true,'not-found');
+   const view=profileView(profileId,profile.data()!);
+   required(view.enabled,'profile-disabled');
+   // Parental control: adult profile + kids profile in the family ⇒ PIN verified by the backend.
+   const gate=parentalGate(view,await familyHasKids(tx,f.ref),f.deviceData,now);
    const lease={id:randomUUID(),deviceId:a.deviceId!,deviceName:f.deviceData.name,profileId,expiresAt:now+LEASE_MS};leases=acquire(leases,lease,now);
-   tx.update(f.ref,{leases});tx.update(f.device,{sessionId:lease.id,lastSeenAt:now,onlineUntil:lease.expiresAt});return lease;
+   tx.update(f.ref,{leases});tx.update(f.device,{sessionId:lease.id,lastSeenAt:now,onlineUntil:lease.expiresAt,...gate});return lease;
   }
   const sessionId=idSchema.parse(p.sessionId), current=leases.find(x=>x.deviceId===a.deviceId&&x.id===sessionId);required(current,'session-expired');
-  if(action==='releaseSession')leases=leases.filter(x=>x.id!==sessionId);
-  else {if(!canStartPlayback(f.subscription,now))throw new DomainError('subscription-required',{plansRoute:'/account/subscription'});leases=leases.map(x=>x.id===sessionId?{...x,expiresAt:now+LEASE_MS}:x);}
-  tx.update(f.ref,{leases});tx.update(f.device,{sessionId:action==='releaseSession'?null:sessionId,lastSeenAt:now,onlineUntil:action==='releaseSession'?0:now+LEASE_MS});return {ok:true};
- });
- if(action==='sendCommand')return db().runTransaction(async tx=>{
-  const f=await family(tx,a),id=idSchema.parse(p.deviceId),sessionId=idSchema.parse(p.sessionId),commandId=idSchema.parse(p.commandId);
-  const type=z.enum(['up','down','left','right','ok','back','playPause']).parse(p.commandType);
-  const device=f.ref.collection('devices').doc(id),ref=device.collection('commands').doc(commandId);
-  const [d,c]=await tx.getAll(device,ref);required(d!.exists,'not-found');
-  required(((f.data.leases??[]) as Lease[]).some(x=>x.deviceId===id&&x.id===sessionId&&x.expiresAt>now),'device-offline');
-  if(c!.exists){required(c!.data()?.senderId===a.uid&&c!.data()?.sessionId===sessionId&&c!.data()?.commandType===type,'invalid-command');return {commandId};}
-  required(now-(d!.data()?.lastCommandAt??0)>=80,'rate-limited');
-  tx.create(ref,{commandId,deviceId:id,sessionId,commandType:type,timestamp:now,expiresAt:now+5000,senderId:a.uid,status:'sent',deleteAfter:new Date(now+86400000)});tx.update(device,{lastCommandAt:now});return {commandId};
- });
- if(action==='ackCommand')return db().runTransaction(async tx=>{
-  const f=await player(tx,a),ref=f.device.collection('commands').doc(idSchema.parse(p.commandId)),c=await tx.get(ref),d=c!.data();
-  required(d&&d.sessionId===p.sessionId&&d.expiresAt>now&&d.status==='sent','invalid-command');required(((f.data.leases??[]) as Lease[]).some(x=>x.id===p.sessionId&&x.deviceId===a.deviceId),'session-expired');tx.update(ref,{status:'acknowledged',acknowledgedAt:now});return {ok:true};
+  const pinSession=f.deviceData.pinSession as {profileId?:string}|undefined;
+  if(action==='releaseSession'){
+   leases=leases.filter(x=>x.id!==sessionId);
+   // Leaving the profile (switch, exit) locks it again; multitasking keeps the PIN session.
+   tx.update(f.ref,{leases});tx.update(f.device,{sessionId:null,lastSeenAt:now,onlineUntil:0,...(p.suspend===true?{}:{pinSession:FieldValue.delete()})});return {ok:true};
+  }
+  if(!canStartPlayback(f.subscription,now))throw new DomainError('subscription-required',{plansRoute:'/account/subscription'});
+  leases=leases.map(x=>x.id===sessionId?{...x,expiresAt:now+LEASE_MS}:x);
+  tx.update(f.ref,{leases});tx.update(f.device,{sessionId,lastSeenAt:now,onlineUntil:now+LEASE_MS,...(pinSession?.profileId===current!.profileId?{pinSession:{profileId:current!.profileId,until:now+PIN_SESSION_MS}}:{})});
+  // Fallback for the TV listener: a pending remote play request, if any.
+  return {ok:true,playRequest:pendingPointer(f.deviceData,now)};
  });
  if(action==='readSourceCatalog')return readSourceCatalog(p,a);
  if(action==='readSourceSeries')return readSourceSeries(p,a);
@@ -297,7 +353,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   required(!a.deviceId);const locale=z.enum(['system','en','pt_BR','es']).parse(p.locale);await db().doc(`users/${a.uid}`).set({locale},{merge:true});return {ok:true};
  }
  if(action==='favorite'||action==='watchProgress'||action==='markWatched')return db().runTransaction(async tx=>{
-  const f=a.deviceId?await player(tx,a):await family(tx,a);const profileId=idSchema.parse(p.profileId),contentId=idSchema.parse(p.contentId);const profile=f.ref.collection('profiles').doc(profileId);const snap=await tx.get(profile);required(snap.exists,'not-found');
+  const f=a.deviceId?await activePlayer(tx,a,p.profileId):await family(tx,a);const profileId=idSchema.parse(p.profileId),contentId=idSchema.parse(p.contentId);const profile=f.ref.collection('profiles').doc(profileId);const snap=await tx.get(profile);required(snap.exists,'not-found');
   if(a.deviceId)required(((f.data.leases??[]) as Lease[]).some(x=>x.deviceId===a.deviceId&&x.profileId===profileId&&x.expiresAt>now),'session-expired');
   const view=profileView(profileId,snap.data()!);
   if(action==='favorite') {
