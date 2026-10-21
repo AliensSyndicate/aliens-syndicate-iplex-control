@@ -68,7 +68,7 @@ final entriesProvider = StreamProvider.autoDispose.family<List<Entry>, String>((
     accountProvider.select(
       (value) => collection == 'invitations'
           ? value.asData?.value?.uid
-          : collection == 'members'
+          : collection == 'members' || collection == 'sentInvitations'
           ? value.asData?.value?.familyId
           : collection == 'sources'
           ? value.asData?.value?.iptvScopeId

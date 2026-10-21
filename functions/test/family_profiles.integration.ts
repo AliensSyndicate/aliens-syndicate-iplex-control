@@ -1,3 +1,4 @@
+import {createFamily} from './support/membership';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {initializeApp,deleteApp} from 'firebase-admin/app';
@@ -15,7 +16,7 @@ before(()=>{
 after(()=>deleteApp(app));
 const db=()=>getFirestore();
 async function account(name='Pessoa'){const a:Identity={uid:`fp_${Date.now()}_${++seq}`,authTime:Math.floor(Date.now()/1000)};await getAuth().createUser({uid:a.uid,displayName:name});await execute('bootstrap',{},a);return a;}
-async function family(){const admin=await account('Admin');const fid=(await execute('createFamily',{name:'Casa'},admin) as {id:string}).id;return {admin,fid,ctx:{contextFamilyId:fid}};}
+async function family(){const admin=await account('Admin');const fid=(await createFamily(admin,'Casa') as {id:string}).id;return {admin,fid,ctx:{contextFamilyId:fid}};}
 const profiles=(fid:string)=>db().collection(`families/${fid}/profiles`);
 async function tv(admin:Identity,fid:string):Promise<Identity>{
  const s=await execute('beginDevicePair',{name:'TV'},undefined) as {token:string};

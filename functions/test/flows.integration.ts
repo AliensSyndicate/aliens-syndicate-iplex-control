@@ -1,4 +1,4 @@
-import {inviteAndAccept} from './support/membership';
+import {inviteAndAccept,createFamily} from './support/membership';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {initializeApp,deleteApp} from 'firebase-admin/app';
@@ -12,7 +12,7 @@ const key=Buffer.alloc(32,3).toString('base64');
 before(async()=>{
  if(!process.env.FIRESTORE_EMULATOR_HOST||!process.env.FIREBASE_AUTH_EMULATOR_HOST)throw new Error('Emulators required');
  app=initializeApp({projectId:'demo-iplex'});
- await getAuth().createUser({uid:'owner',displayName:'Owner'});await execute('bootstrap',{},admin);fid=(await execute('createFamily',{name:'Family'},admin) as any).id;
+ await getAuth().createUser({uid:'owner',displayName:'Owner'});await execute('bootstrap',{},admin);fid=(await createFamily(admin,'Family') as any).id;
 });
 after(async()=>{await deleteApp(app);});
 test('addressed invitation accepts once and retries idempotently',async()=>{

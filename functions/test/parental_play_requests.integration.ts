@@ -1,3 +1,4 @@
+import {createFamily} from './support/membership';
 import {randomBytes} from 'node:crypto';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ const deps={execute,quota:firestoreQuota,consume:consumePlayerRequest,now:Date.n
 /** Through the real `player` entry point (closed list, anti-replay), as the TV calls it. */
 const tvCall=(action:string,payload:Record<string,unknown>,auth:PlayerAuth)=>runPlayer({action,payload:{...payload,requestId:rid(),issuedAt:Date.now()},auth,ip:'203.0.113.9'},'',deps) as Promise<any>;
 async function account(name='Pessoa'){const a:Identity={uid:`pp_${Date.now()}_${++seq}`,authTime:Math.floor(Date.now()/1000)};await getAuth().createUser({uid:a.uid,displayName:name});await execute('bootstrap',{},a);return a;}
-async function family(){const admin=await account('Ana Admin');const fid=(await execute('createFamily',{name:'Casa'},admin) as {id:string}).id;return {admin,fid,ctx:{contextFamilyId:fid}};}
+async function family(){const admin=await account('Ana Admin');const fid=(await createFamily(admin,'Casa') as {id:string}).id;return {admin,fid,ctx:{contextFamilyId:fid}};}
 async function tv(admin:Identity,fid:string):Promise<PlayerAuth&{deviceId:string}>{
  const s=await execute('beginDevicePair',{name:'Sala',platform:'tizen'},undefined) as {token:string};
  const d=await execute('linkDevice',{token:s.token,contextFamilyId:fid},admin) as {id:string};
@@ -178,7 +179,7 @@ test('unlink with the TV open: protected calls fail at once and the refresh toke
  assert.equal(((await db().doc(`families/${fid}`).get()).data()?.leases??[]).length,0);
 });
 
-test('first accepted family becomes the active context (no manual selection needed)',async()=>{
+test('the accepted family becomes the only family of the account',async()=>{
  const {admin,fid}=await family();
  const member=await account('Bia');
  const code=(await db().doc(`users/${member.uid}`).get()).data()!.publicCode;
@@ -186,10 +187,9 @@ test('first accepted family becomes the active context (no manual selection need
  await execute('respondMembership',{id:request.id,accept:true},member);
  const user=(await db().doc(`users/${member.uid}`).get()).data()!;
  assert.equal(user.familyId,fid);
- assert.deepEqual(user.familyIds,[fid]);
- // A second family keeps the current choice.
+ assert.ok(user.familyIds.includes(fid));
+ // One account, one family: a second family cannot even invite the account.
  const other=await family();
- const second=await execute('requestMembership',{code,contextFamilyId:other.fid},other.admin) as {id:string};
- await execute('respondMembership',{id:second.id,accept:true},member);
+ await assert.rejects(execute('requestMembership',{code,contextFamilyId:other.fid},other.admin),/user-unavailable/);
  assert.equal((await db().doc(`users/${member.uid}`).get()).data()!.familyId,fid);
 });

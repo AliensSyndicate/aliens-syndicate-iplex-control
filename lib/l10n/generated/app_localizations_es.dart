@@ -327,7 +327,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get familyHasMembers =>
-      'Elimina las cuentas asociadas antes de eliminar tu cuenta.';
+      'Elimina a los miembros de la familia antes de eliminar tu cuenta.';
 
   @override
   String get loading => 'Cargando';
@@ -1003,7 +1003,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get membershipAcceptHelp =>
-      'Acepta para unirte a esta familia si hay espacio. Tus recursos personales siguen siendo privados.';
+      'Aceptar mueve tu cuenta a esta familia. Si tu familia individual tiene fuentes IPTV, dispositivos o perfiles, elimínalos antes.';
 
   @override
   String get acceptMembership => 'Aceptar';
@@ -1205,7 +1205,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profileLinked => 'Tu cuenta se vinculó al perfil.';
 
   @override
-  String get errorProfileLimit => 'Esta familia ya tiene cuatro asociados.';
+  String get errorProfileLimit => 'Esta familia ya tiene cuatro miembros.';
 
   @override
   String get errorProfileTypeImmutable =>
@@ -1561,4 +1561,43 @@ class AppLocalizationsEs extends AppLocalizations {
   String ageRatingLabel(String rating) {
     return 'Clasificación $rating';
   }
+
+  @override
+  String familyOfName(String name) {
+    return 'Familia $name';
+  }
+
+  @override
+  String get familyEmptyBody => 'Aún no hay miembros adicionales.';
+
+  @override
+  String get addMembers => 'Añadir miembros';
+
+  @override
+  String get invitePending => 'Invitación pendiente';
+
+  @override
+  String get cancelInvitation => 'Cancelar invitación';
+
+  @override
+  String get cancelInvitationBody =>
+      'La invitación dejará de ser válida y la persona ya no podrá aceptarla.';
+
+  @override
+  String get leaveFamily => 'Salir de la familia';
+
+  @override
+  String get leaveFamilyBody =>
+      'Vuelves a tu familia individual. Tus datos se conservan.';
+
+  @override
+  String get errorAlreadyInFamily => 'Esta cuenta ya pertenece a una familia.';
+
+  @override
+  String get errorIndividualFamilyHasResources =>
+      'Para unirte a otra familia, elimina antes las fuentes IPTV, los dispositivos y los perfiles de tu familia individual.';
+
+  @override
+  String get errorFamilyExclusive =>
+      'Cada cuenta pertenece a una sola familia.';
 }

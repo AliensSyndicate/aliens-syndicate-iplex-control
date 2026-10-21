@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
+import 'widgets/account_avatar.dart';
 import 'widgets/public_identity_sheet.dart';
 
 class AccountPage extends ConsumerStatefulWidget {
@@ -62,7 +63,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           AppSurface(
             child: Row(
               children: [
-                AppAvatar(name: a?.name ?? ''),
+                const AccountAvatar(),
                 const SizedBox(width: AppTokens.lg),
                 Expanded(
                   child: Column(

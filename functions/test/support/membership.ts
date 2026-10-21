@@ -8,3 +8,11 @@ export async function inviteAndAccept(admin:Identity,recipient:Identity) {
   await execute('selectContext',{familyId},recipient);
   return request;
 }
+/** Every account owns one family from its bootstrap; tests name it instead of creating another. */
+export async function createFamily(actor:Identity,name='Family') {
+  const db=getFirestore(),user=await db.doc(`users/${actor.uid}`).get();
+  let fid=user.data()?.familyId as string|undefined;
+  if(!fid){await execute('bootstrap',{},actor);fid=(await db.doc(`users/${actor.uid}`).get()).data()!.familyId as string;}
+  await db.doc(`families/${fid}`).update({name});
+  return {id:fid};
+}

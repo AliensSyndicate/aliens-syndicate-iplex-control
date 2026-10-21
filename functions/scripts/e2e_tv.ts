@@ -67,7 +67,8 @@ async function setup() {
   const state: State = {email: `ana-${Date.now()}@example.test`, password: randomUUID()};
   const p = await phone(state, true);
   await p.call('bootstrap');
-  state.fid = (await p.call('createFamily', {name: 'Família E2E'})).id; save(state);
+  // One account, one family: the individual family exists since the bootstrap.
+  state.fid = (await getDoc(doc(p.db, `users/${p.uid}`))).data()!.familyId as string; save(state);
   log(`account + family ${state.fid}`);
   await p.call('saveProfile', {name: 'Lia', type: 'kids', requestId: 'e2e-kids'});
   await p.call('saveProfile', {name: 'Rui', requestId: 'e2e-regular'});

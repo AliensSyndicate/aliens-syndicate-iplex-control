@@ -9,7 +9,7 @@ import 'package:aliens_syndicate_iplex_control/core/design_system/components.dar
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/authentication/login_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/family_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
 import 'package:flutter/material.dart';
@@ -82,6 +82,8 @@ class SessionRepository extends fixtures.TestRepository {
     yield Family(
       id: id,
       adminId: administrator ? currentUid! : 'other',
+      name: 'Account',
+      individual: true,
       members: {currentUid!: administrator ? 'admin' : 'member'},
     );
     yield* familyEvents.stream;
@@ -251,7 +253,7 @@ void main() {
     final c = await launch(tester, repo);
     await login(tester);
     expect(path(c), '/home');
-    expect(find.byType(FamilyPage), findsNothing);
+    expect(find.byType(UsersPage), findsNothing);
     expect(repo.initialized, ['u']);
   });
   testWidgets('4: persistent session restores directly to Home without Login', (
@@ -266,16 +268,20 @@ void main() {
     expect(repo.initialized, ['u']);
   });
   testWidgets(
-    '5 and 6: family management opens manually from Users and back preserves its tab',
+    '5 and 6: the Family tab shows the empty family and adding members opens the invite form; back preserves the tab',
     (tester) async {
-      final c = await launch(tester, SessionRepository(uid: 'u'));
+      final c = await launch(
+        tester,
+        SessionRepository(uid: 'u', linked: true),
+      );
       c.read(routerProvider).go('/users');
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(EntryTile, 'Family accounts').first);
+      expect(find.text('Account family'), findsOneWidget);
+      expect(find.text('No additional members yet.'), findsOneWidget);
+      expect(find.text('Create a family'), findsNothing);
+      await tester.tap(find.widgetWithText(AppButton, 'Add members'));
       await tester.pumpAndSettle();
-      expect(path(c), '/family');
-      expect(find.byType(FamilyPage), findsOneWidget);
-      expect(find.text('Create a family'), findsOneWidget);
+      expect(path(c), '/users/invite');
       c.read(routerProvider).pop();
       await tester.pumpAndSettle();
       expect(path(c), '/users');
@@ -354,7 +360,7 @@ void main() {
         c.read(routerProvider).go(route);
         await tester.pumpAndSettle();
         expect(path(c), route);
-        expect(find.byType(FamilyPage), findsNothing);
+        expect(find.text('Create a family'), findsNothing);
       }
       expect(repo.initialized, ['u']);
       expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
@@ -396,7 +402,7 @@ void main() {
         location: '/users/add',
       );
       expect(path(c), '/access');
-      expect(find.byType(FamilyPage), findsNothing);
+      expect(find.byType(UsersPage), findsNothing);
       expect(find.text('Manage family accounts'), findsOneWidget);
     },
   );
@@ -660,18 +666,15 @@ void main() {
     },
   );
   testWidgets(
-    'linked family management remains selectable and allows member details',
+    'a member sees the family without administrative actions and can open its own entry to leave',
     (tester) async {
       final c = await launch(
         tester,
-        SessionRepository(uid: 'u', linked: true),
+        SessionRepository(uid: 'u', linked: true, administrator: false),
         location: '/users',
       );
-      await tester.tap(find.widgetWithText(EntryTile, 'Family accounts').first);
-      await tester.pumpAndSettle();
-      expect(find.byType(FamilyPage), findsOneWidget);
-      expect(find.text('Create a family'), findsNothing);
-      expect(find.text('Invite a member'), findsOneWidget);
+      expect(find.text('Add members'), findsNothing);
+      expect(find.byKey(const Key('parental-control')), findsNothing);
       await tester.tap(find.widgetWithText(EntryTile, 'Account'));
       await tester.pumpAndSettle();
       expect(path(c), '/users/member/u');

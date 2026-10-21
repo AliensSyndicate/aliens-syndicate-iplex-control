@@ -10,8 +10,12 @@ export async function iptvWorkspace(tx:Transaction,actor:ScopeActor,create=false
   if(!snap.exists)throw new DomainError('account-unavailable');
   const user=snap.data()!,personal=user.iptvWorkspaceId as string|undefined;
   // Explicit context for new clients. Preserve legacy IPTV preference otherwise.
+  // Without a personal space (every account created since "one account, one family"),
+  // an absent context is the account's own family.
   const requested=actor.contextFamilyId;
-  const id=requested===undefined?(personal??user.familyId):(requested??personal);
+  const id=requested===undefined?(personal??user.familyId):(requested??personal??user.familyId);
+  // One account, one family: a context other than the account's own family is refused.
+  if(requested&&requested!==user.familyId&&requested!==personal)throw new DomainError('permission-denied');
   if(id){
     const ref=db.doc(`families/${id}`),data=(await tx.get(ref)).data();
     if(!data||data.deleting||!data.members?.[actor.uid]||
@@ -20,11 +24,7 @@ export async function iptvWorkspace(tx:Transaction,actor:ScopeActor,create=false
     if(requested&&data.kind==='personalIptv')throw new DomainError('permission-denied');
     return {fid:id as string,ref,data,initialize:()=>{}};
   }
-  if(!create)throw new DomainError('not-found');
-  const ref=db.collection('families').doc();
-  const data={kind:'personalIptv',ownerId:actor.uid,adminId:actor.uid,members:{[actor.uid]:'admin'},leases:[],createdAt:Date.now()};
-  return {fid:ref.id,ref,data,initialize:()=>{
-    tx.create(ref,data);
-    tx.update(account,{iptvWorkspaceId:ref.id});
-  }};
+  // The individual family is created at bootstrap; a personal space is never created again.
+  void create;
+  throw new DomainError('not-found');
 }

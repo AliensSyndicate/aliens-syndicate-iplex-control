@@ -1,3 +1,4 @@
+import {createFamily} from './support/membership';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {initializeApp,deleteApp} from 'firebase-admin/app';
@@ -12,7 +13,7 @@ before(()=>{if(!process.env.FIRESTORE_EMULATOR_HOST)throw new Error('Emulator re
 after(()=>deleteApp(app));
 const day=86400000;
 async function admin(){const a:Identity={uid:`pb_${Date.now()}_${++seq}`,authTime:Math.floor(Date.now()/1000)};await getAuth().createUser({uid:a.uid});await execute('bootstrap',{},a);
- const fid=(await execute('createFamily',{name:'Casa'},a) as {id:string}).id;return {a,fid};}
+ const fid=(await createFamily(a,'Casa') as {id:string}).id;return {a,fid};}
 function fakeApi(states:Record<string,PlaySubscription>){const acks:string[]=[];const api:PlayApi={async getSubscription(t){if(!states[t])throw new Error('404');return states[t]!;},async acknowledge(_p,t){acks.push(t);}};return {api,acks};}
 const sub=(uid:string,state:string,expiresIn:number,plan='monthly',extra:Partial<PlaySubscription>={}):PlaySubscription=>({subscriptionState:state,acknowledgementState:'ACKNOWLEDGEMENT_STATE_PENDING',latestOrderId:'GPA.1',
  externalAccountIdentifiers:{obfuscatedExternalAccountId:obfuscatedAccount(uid)},lineItems:[{productId:'iplex_playback',expiryTime:new Date(Date.now()+expiresIn).toISOString(),offerDetails:{basePlanId:plan}}],...extra});

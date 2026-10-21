@@ -40,10 +40,20 @@ class FirebaseManagerRepository implements ManagerRepository {
           familyId: d['familyId'] as String?,
           familyIds: List<String>.from(d['familyIds'] as List? ?? const []),
           publicCode: d['publicCode'] as String?,
+          // The stored photo is the sign-in provider's; Auth is only a fallback for the
+          // short time before the backend has copied it.
+          photoUrl: _httpsPhoto(
+            d['photoUrl'] ??
+                (_auth.currentUser?.uid == uid
+                    ? _auth.currentUser?.photoURL
+                    : null),
+          ),
           iptvWorkspaceId: d['iptvWorkspaceId'] as String?,
           locale: d['locale'] as String? ?? 'system',
         );
       });
+  static String? _httpsPhoto(Object? value) =>
+      value is String && value.startsWith('https://') ? value : null;
   @override
   Stream<Family?> watchFamily(String id) =>
       _db.doc('families/$id').snapshots().map((s) {
@@ -57,6 +67,7 @@ class FirebaseManagerRepository implements ManagerRepository {
           id: id,
           adminId: rawAdmin as String,
           name: d['name'] as String? ?? '',
+          individual: d['individual'] == true,
           members: rawMembers,
           parentalPinConfigured:
               (d['parental'] as Map?)?['pinConfigured'] == true,
@@ -68,6 +79,11 @@ class FirebaseManagerRepository implements ManagerRepository {
               ? _db
                     .collection('family_requests')
                     .where('recipientUid', isEqualTo: familyId)
+                    .where('status', isEqualTo: 'pending')
+              : collection == 'sentInvitations'
+              ? _db
+                    .collection('family_requests')
+                    .where('familyId', isEqualTo: familyId)
                     .where('status', isEqualTo: 'pending')
               : _db.collection('families/$familyId/$collection'))
           .limit(100)
@@ -206,10 +222,6 @@ class FirebaseManagerRepository implements ManagerRepository {
             'action': action,
             'payload': {'contextFamilyId': _contextFamilyId, ...payload},
           });
-      if (action == 'selectContext')
-        _contextFamilyId = payload['familyId'] as String?;
-      if (action == 'createFamily')
-        _contextFamilyId = (result.data as Map)['id'] as String;
       if (action == 'registerPushToken')
         _pushToken = payload['token'] as String?;
       return Map<String, dynamic>.from(result.data as Map);

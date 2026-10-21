@@ -133,16 +133,15 @@ void main() {
     );
   }
 
-  testWidgets('new user creates a family without consulting a subscription', (
+  testWidgets('a new account has its family already: no creation, no subscription', (
     tester,
   ) async {
-    final repo = AccessRepository(linked: false);
+    final repo = AccessRepository(linked: true);
     final container = await navigation.launch(tester, repo);
-    await go(tester, container, '/family/create');
-    await tester.enterText(find.byType(TextFormField), 'Free family');
-    await save(tester);
-    expect(repo.mutations, contains('createFamily'));
-    expect(navigation.path(container), '/home');
+    await go(tester, container, '/users');
+    expect(find.text('No additional members yet.'), findsOneWidget);
+    expect(find.text('Create a family'), findsNothing);
+    expect(repo.mutations, isNot(contains('createFamily')));
     expect(repo.subscriptionReads, 0);
   });
 

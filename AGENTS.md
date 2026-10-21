@@ -28,14 +28,14 @@
 
 ---
 
-## 1. REGRA FUNDAMENTAL — CONTA INDIVIDUAL
+## 1. REGRA FUNDAMENTAL — UMA CONTA, UMA FAMÍLIA
 
-Todo usuário pode utilizar o iPlex Gestor sem possuir família vinculada.
+Cada conta tem exatamente um vínculo familiar ativo (`users/{uid}.familyId`), como Administrador ou Membro. Não existe alternância nem associação simultânea a várias famílias. Nomenclatura da interface: **Administrador** e **Membro**.
 
 Ao cadastrar uma conta:
 - Criar a conta de usuário normalmente no Firebase Auth e Firestore.
 - Gerar seu identificador público único alfanumérico de 12 caracteres de forma segura e atômica.
-- **NÃO criar família automaticamente.**
+- **Criar automaticamente a família individual** no `bootstrap` (idempotente), com a própria conta como Administrador, sem tela de criação.
 - **NÃO exigir assinatura.**
 - **NÃO exigir associação familiar.**
 - Permitir acesso a todas as funcionalidades de gerenciamento.
@@ -49,26 +49,25 @@ O usuário individual tem pleno direito de:
 - Editar suas playlists IPTV próprias.
 - Excluir suas playlists IPTV próprias.
 - Acessar Perfil e Configurações.
-- Criar famílias quando desejar.
+- Convidar membros para a sua família.
 
-**A ausência de `familyId` nunca representa falta de permissão.**
+Exclusividade (backend: Cloud Functions e Rules):
+- `createFamily` é recusado (`already-in-family`); `selectContext`/`contextFamilyId` de outra família são recusados.
+- Aceitar convite move a conta de forma atômica. A família individual só é movida se estiver vazia (sem fontes, dispositivos, perfis ou histórico); então é **estacionada** (`parked`), nunca apagada, e volta quando a conta sai. Com recursos, a aceitação é bloqueada (`individual-family-has-resources`).
+- Remoção (`removeMember`) e saída (`leaveFamily`) devolvem a conta à família individual; o Administrador não sai.
+- Detalhes em `docs/CONTRACTS.md` §2.1.
+
+**A ausência de `familyId` (conta ainda sem bootstrap) nunca representa falta de permissão.** Espaços `personalIptv` legados são promovidos a família individual no bootstrap.
 
 ---
 
 ## 2. CONTEXTOS DE AUTORIZAÇÃO
 
-O sistema opera com separação estrita entre dois contextos:
+O contexto é sempre a única família da conta. As permissões dependem do papel nela:
+- **Administrador**: gerencia membros, perfis, dispositivos, IPTV e controle parental.
+- **Membro**: vê o que a família autoriza, sem ações administrativas; pode sair da família.
 
-1. **Contexto pessoal**:
-   - O usuário administra seus próprios recursos (dispositivos e playlists IPTV).
-   - Nenhuma família é obrigatória.
-2. **Contexto familiar**:
-   - As permissões dependem do vínculo do usuário com aquela família específica (administrador ou associado).
-
-O mesmo usuário pode:
-- Administrar várias famílias.
-- Participar como associado de outras famílias.
-- Continuar utilizando seus recursos individuais privados.
+Uma conta não administra nem participa de outra família.
 
 **Nunca utilizar um papel global para determinar todas as permissões.**
 A autorização (no Flutter, nas Cloud Functions e nas Firestore Security Rules) deve sempre considerar:
@@ -76,7 +75,7 @@ A autorização (no Flutter, nas Cloud Functions e nas Firestore Security Rules)
 - Recurso solicitado.
 - Proprietário do recurso (`ownerId` / `ownerUid`).
 - Família de destino, quando aplicável.
-- Papel do usuário naquela família (`admin` vs `member`).
+- Papel do usuário na sua família (`admin` vs `member`).
 - Operação solicitada.
 
 ---
@@ -86,7 +85,7 @@ A autorização (no Flutter, nas Cloud Functions e nas Firestore Security Rules)
 Mensagens como:
 `"Você não tem permissão para esta ação."`
 **NUNCA podem aparecer** simplesmente porque:
-- O usuário não criou família.
+- O usuário ainda não convidou ninguém.
 - O usuário não possui assinatura ativa.
 - O usuário ainda não adicionou membros.
 - O usuário está utilizando sua conta individual.
@@ -99,16 +98,10 @@ A autorização é aplicada por recurso na arquitetura, nunca mascarando erros o
 
 - A página deve se chamar **Família** (`FamilyPage`).
 - **NÃO renomeá-la para Usuários.**
-- Quando o usuário não possuir famílias:
-  - Exibir o estado vazio no padrão visual existente (`EmptyState`).
-  - Disponibilizar ação **Criar família** (`createFamily`).
-- Ao selecionar Criar família:
-  - Abrir formulário (`NameForm`).
-  - Solicitar nome da família.
-  - Validar os dados.
-  - Criar a família no backend via Cloud Function `createFamily`.
-  - Associar o criador como administrador.
-- Permitir que um usuário administre mais de uma família.
+- A tela é a aba Família (`UsersPage`); `/family` apenas redireciona para ela.
+- Sem membros adicionais: `EmptyState` equivalente ao da IPTV (nome da família, mensagem curta, botão **Adicionar membros**).
+- Com membros: um `EntryTile` por membro (avatar, nome, Administrador/Membro, convite pendente). Membro não tem ações administrativas.
+- Não há criação de família na interface.
 - Preservar o layout atual dos cards de família (`EntryTile`). Não adicionar botões extras não solicitados.
 
 ---
@@ -117,8 +110,8 @@ A autorização é aplicada por recurso na arquitetura, nunca mascarando erros o
 
 A unidade da família é o **perfil de mídia** (`families/{fid}/profiles/{pid}`), separado da conta Firebase:
 - 1 perfil **administrador** (id fixo `admin`, criado com a família e vinculado à conta do administrador).
-- Até **4 associados** (tipos `regular` ou `kids`; perfis legados sem tipo contam como `regular`).
-- 1 **visitante** opcional (id fixo `guest`), que não ocupa vaga de associado.
+- Até **4 membros adicionais** (tipos `regular` ou `kids`; perfis legados sem tipo contam como `regular`).
+- 1 **visitante** opcional (id fixo `guest`), que não ocupa vaga de membro.
 
 Regras permanentes:
 1. Perfil pode existir sem conta (criação direta pelo administrador, com `requestId` idempotente).
@@ -126,7 +119,7 @@ Regras permanentes:
 3. Vincular exige código temporário (10 min), de uso único, emitido pelo administrador e confirmado pela conta (`createProfileLinkCode` → `redeemProfileLink`), com limite de tentativas.
 4. Desvincular (`unlinkProfileAccount`) ou remover a conta da família (`removeMember`) **mantém o perfil e seus dados**; a vaga só é liberada ao excluir o perfil.
 5. O tipo do perfil é imutável após a criação (trocar `kids` por `regular` liberaria conteúdo restrito).
-6. Contas da família continuam limitadas a cinco (administrador + 4) em transação; aceitar uma solicitação de associação cria um perfil `regular` vinculado e consome vaga de associado.
+6. Contas da família continuam limitadas a cinco (administrador + 4) em transação; aceitar uma solicitação de associação cria um perfil `regular` vinculado e consome vaga de membro.
 
 ---
 
@@ -169,7 +162,7 @@ Fluxo de associação:
 3. Backend valida elegibilidade, família e limite de vagas.
 4. Administrador envia solicitação de associação (`requestMembership`).
 5. Usuário convidado visualiza a solicitação na aba Família e decide aceitar ou recusar (`respondMembership`).
-6. Ao aceitar, o usuário é associado automaticamente à família, sem exigir segunda aprovação do administrador.
+6. Ao aceitar, o usuário passa a Membro da família, sem segunda aprovação do administrador, respeitando a exclusividade e a política de transferência da §1.
 7. O limite de 5 integrantes é revalidado na transação de aceitação.
 8. Rate limiting estrito no backend protege as buscas contra enumeração e abuso.
 
@@ -211,7 +204,8 @@ Na tela Configurações (`SettingsPage`), existe a opção **Compartilhar aplica
 ## 12. INSTRUÇÕES OBSOLETAS REMOVIDAS
 
 Ficam terminantemente revogadas e proibidas as seguintes práticas anteriores:
-- ~~Criação automática de famílias no bootstrap.~~
+- ~~Criar famílias adicionais, administrar várias famílias ou alternar entre famílias.~~ (A família individual automática no bootstrap é a regra vigente, §1.)
+- ~~Espaço `personalIptv` novo para contas sem família.~~
 - ~~Obrigatoriedade de familyId para gerenciar recursos pessoais.~~
 - ~~Bloqueio de telas de gerenciamento por falta de assinatura.~~
 - ~~Convite familiar por link ou token transferível.~~

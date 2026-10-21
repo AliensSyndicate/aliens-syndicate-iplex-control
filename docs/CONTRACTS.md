@@ -35,8 +35,10 @@ clientes mapeiam o código para mensagens próprias (nunca genéricas).
 
 | Entidade | Onde | Campos do contrato |
 |---|---|---|
-| Usuário | `users/{uid}` | `publicCode` (12), `familyId` (contexto ativo), `familyIds[]`, `iptvWorkspaceId?`, `locale` |
-| Família | `families/{fid}` | `name`, `adminUid`, `members{uid: admin\|member}`, `leases[]`, `parental{pinConfigured, updatedAt}`, `kind?='personalIptv'` |
+| Usuário | `users/{uid}` | `publicCode` (12), `familyId` (**a única família da conta**), `homeFamilyId` (família individual; estacionada enquanto a conta é membro de outra), `photoUrl?` (foto https do provedor, escrita só pelo backend), `familyIds[]` (índice legado, não é lista de vínculos), `iptvWorkspaceId?` (legado), `locale` |
+| Família | `families/{fid}` | `name`, `individual?`, `adminUid`, `members{uid: admin\|member}`, `leases[]`, `parental{pinConfigured, updatedAt}`, `parked?` (família individual cujo titular entrou em outra; sem membros, nada é apagado), `kind?='personalIptv'` (legado: promovido a família individual no bootstrap) |
+| Membro (conta) | `families/{fid}/members/{uid}` | `uid`, `name`, `role: admin\|member`, `photoUrl?`, `joinedAt` |
+| Convite | `family_requests/{id}` | `familyId`, `issuerUid`, `recipientUid`, `recipientName`, `recipientPhotoUrl?`, `status: pending\|accepted\|declined\|cancelled`, `expiresAt`; leem o convidado e o administrador da família emissora |
 | Perfil | `families/{fid}/profiles/{pid}` | `name`, `type: admin\|regular\|kids\|guest` (imutável), `enabled`, `permissions{allSpaces, spaces[]}`, `generations{favorites, watched, progress}`, `permissionsVersion` |
 | Dispositivo (TV) | `families/{fid}/devices/{did}` | `name`, `platform`, `model`, `status`, `credentialVersion`, `sessionId`, `onlineUntil`, `pinUnlock?`, `pinSession?`, `pendingPlayRequest?` |
 | Assinatura | `families/{fid}/private/subscription` (só admin lê) | `status: notStarted\|trial\|active\|cancelled\|expired\|pending`, `trialEndsAt`, `paidUntil` — política em `canStartPlayback` |
@@ -53,11 +55,33 @@ Escritas de favoritos/assistidos/progresso exigem a `generation` atual do
 perfil (`stale-generation` caso contrário). Visitante nunca persiste
 (`guest-not-persisted`).
 
+## 2.1 Uma conta, uma família
+
+- `bootstrap` (idempotente, a cada abertura do Gestor) cria a **família individual** da conta
+  (`individual: true`, `adminUid` = a conta, perfil `admin`, assinatura `notStarted`) quando ela não
+  tem família ativa, e copia a foto do provedor (`photoUrl`) sem nunca substituí-la por vazio.
+  Contas antigas: a associação ativa é mantida; um espaço `personalIptv` é promovido no lugar a
+  família individual (fontes, dispositivos e histórico mantêm os identificadores).
+- `createFamily` → `already-in-family`; `selectContext` só aceita a própria família
+  (`family-exclusive`); `contextFamilyId`/`familyId` de outra família → `permission-denied`.
+- Convite: `lookupPublicUser`/`requestMembership` (só administrador; o convidado precisa estar sozinho
+  na própria família → `user-unavailable`), `respondMembership {id, accept}`,
+  `cancelMembershipRequest {id}` (administrador). Aceitar move a conta de forma atômica:
+  se a família individual tem fontes, dispositivos, TVs em uso, perfis ou histórico →
+  `individual-family-has-resources` (nada é movido); se está vazia, é **estacionada**
+  (`parked`, `members: {}`), sem exclusão, e volta quando a conta sai da família.
+  Os demais convites pendentes da conta são cancelados; aceitações simultâneas de duas famílias
+  resultam em uma só (`already-in-family`). O vínculo por código de perfil (`redeemProfileLink`) segue a mesma regra.
+- `removeMember {id}` (administrador) e `leaveFamily` (membro) devolvem a conta à família individual
+  (restaurada ou criada); o administrador não sai (`administrator-protected`).
+
 ## 3. PIN parental
 
 - `manager.setParentalPin {pin, confirmPin}` (4 dígitos) e
   `manager.clearParentalPin` — somente administrador.
-- `player.listPlayerProfiles` → `{parentalPin:{configured}, profiles:[{…, pinRequired}]}`.
+- `player.listPlayerProfiles` → `{parentalPin:{configured}, account:{name, photoUrl|null}, profiles:[{…, pinRequired}]}`.
+  `account` identifica a **conta** vinculada à TV (administrador da família): nome e foto https do
+  provedor, nunca credenciais nem perfis de visualização; `photoUrl: null` = avatar padrão.
   `pinRequired = (perfil admin|regular) && (família tem perfil kids)`.
 - `player.verifyProfilePin {profileId, pin}` →
   `{verified, required, attemptsLeft?, retryAt?}`. 5 erros → bloqueio de 15 min

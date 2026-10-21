@@ -69,6 +69,19 @@ class _DetailPageState extends ConsumerState<DetailPage> {
     }
   }
 
+  /// A member leaves on its own and returns to its individual family.
+  Future<void> leave() async {
+    final l = context.l;
+    final done = await confirmAndRun(
+      context,
+      title: l.leaveFamily,
+      body: l.leaveFamilyBody,
+      confirmLabel: l.leaveFamily,
+      operation: () => ref.read(repositoryProvider).mutate('leaveFamily'),
+    );
+    if (done && mounted) context.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.collection == 'sources') {
@@ -91,6 +104,10 @@ class _DetailPageState extends ConsumerState<DetailPage> {
               final removable =
                   admin &&
                   (widget.collection != 'members' || e.text('role') != 'admin');
+              final leavable =
+                  widget.collection == 'members' &&
+                  !admin &&
+                  e.id == ref.watch(accountProvider).asData?.value?.uid;
               return PageTemplate(
                 title: e.name,
                 showBack: true,
@@ -213,6 +230,10 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                     if (removable) ...[
                       const SizedBox(height: AppTokens.xl),
                       AppButton(label: l.remove, busy: busy, onPressed: remove),
+                    ],
+                    if (leavable) ...[
+                      const SizedBox(height: AppTokens.xl),
+                      AppButton(label: l.leaveFamily, onPressed: leave),
                     ],
                   ],
                 ),

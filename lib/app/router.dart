@@ -11,7 +11,6 @@ import '../features/manager/detail_page.dart';
 import '../features/manager/profile_link_redeem_page.dart';
 import '../features/manager/profile_manage_page.dart';
 import '../features/manager/devices_page.dart';
-import '../features/manager/family_page.dart';
 import '../features/manager/information_page.dart';
 import '../features/manager/invite_page.dart';
 import '../features/manager/name_form.dart';
@@ -345,31 +344,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
               GoRoute(
                 path: '/family',
-                pageBuilder: (c, s) =>
-                    _appPage(key: s.pageKey, child: const FamilyPage()),
+                // One account, one family: the Family tab is the only family screen.
+                redirect: (c, s) => s.uri.path == '/family' ? '/users' : null,
                 routes: [
-                  GoRoute(
-                    path: 'create',
-                    pageBuilder: (c, s) => _appPage(
-                      key: s.pageKey,
-                      child: NameForm(
-                        title: c.l.createFamily,
-                        action: 'createFamily',
-                      ),
-                    ),
-                  ),
                   GoRoute(
                     path: 'link-profile',
                     pageBuilder: (c, s) => _appPage(
                       key: s.pageKey,
                       child: const ProfileLinkRedeemPage(),
                     ),
-                  ),
-                  GoRoute(
-                    path: 'join',
-                    redirect: (c, s) => '/family',
-                    pageBuilder: (c, s) =>
-                        _appPage(key: s.pageKey, child: const FamilyPage()),
                   ),
                 ],
               ),

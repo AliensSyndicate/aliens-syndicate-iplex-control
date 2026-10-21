@@ -23,9 +23,9 @@ Os valores estão em `AppColors`, `AppSpacing`, `AppDimensions`, `AppRadii`, `Ap
 - `CircularButton`: círculo, foco, semântica acionável, estado selecionado/pressionado e alvo mínimo de 48 dp.
 - `AppButton`: ação larga com o mesmo acabamento físico e estados ocupado/desabilitado.
 - `AppTextField` e `AppDropdownField`: compartilham `AppInputFrame`, com label fixo acima, controle de 56 dp (`AppDimensions.input`) e label/borda brancos em foco. Erros aparecem abaixo, sem alterar a altura do controle. Busca e PIN usam o mesmo componente; o `FocusNode` externo permanece sob responsabilidade de quem o forneceu.
-- `AppAvatar`: dimensões quadradas fixas para que o avatar permaneça circular.
+- `AppAvatar` / `AppAvatarFace`: dimensões quadradas fixas para que o avatar permaneça circular. Mostram a foto https do provedor de login (Google; Apple só quando existir) ou o avatar padrão (inicial do nome). O botão Conta do menu e a tela Conta usam o mesmo `accountProvider` (`AccountAvatar`/`AccountAvatarFace`), nunca fontes paralelas.
 - `EntryTile`, `EmptyState`, `ErrorState`, `PageTemplate`: listas e estados reutilizáveis.
-- `BottomNavigation`: cinco botões circulares em superfície reta, sem cápsula ou contorno externo, **sobre fundo opaco idêntico ao das telas (o mesmo `GraphiteBackdrop`, recortado na barra; a barra de navegação do sistema, transparente, mostra essa mesma cor). O fundo é decisão do responsável: não torná-lo transparente nem removê-lo.**
+- `BottomNavigation`: cinco botões circulares em superfície reta, sem cápsula ou contorno externo, **sobre fundo opaco idêntico ao das telas (o mesmo `GraphiteBackdrop`, pintado em tamanho de tela e recortado na barra; a barra de navegação do sistema, transparente, mostra essa mesma cor). O fundo é decisão do responsável: não torná-lo transparente nem removê-lo.** O quinto botão (Conta) leva o avatar da conta no lugar do ícone.
 - `RemoteDirectionalPad`: disco circular único, direções integradas à face e botão OK em cavidade central. Voltar e reproduzir/pausar têm símbolos das ações reais.
 
 O catálogo da tela Início consulta fontes reais. Cartazes estáticos e botões sem ação não são utilizados para simular conteúdo disponível.
@@ -35,6 +35,21 @@ O catálogo da tela Início consulta fontes reais. Cartazes estáticos e botões
 As capturas em `docs/screenshots/` são de widgets Flutter renderizados, não montagens. Dados de exemplo das capturas de listas existem exclusivamente em `test/visual_test.dart`. Eles nunca são carregados pelo aplicativo em produção.
 
 Os testes carregam a fonte Roboto e a fonte de ícones do SDK, evitando blocos Ahem nas capturas. Incluem dimensões 390 × 844, telas estreitas com texto ampliado e controle em 740 × 360. O controle pode rolar em telas baixas.
+
+## Regra permanente: fundo do menu principal
+
+> **O menu principal e as telas do aplicativo devem compartilhar exatamente a mesma cor de fundo, sem variações de tonalidade.**
+
+- O token efetivo do fundo das telas não é um `Color` único: é o material do `GraphiteBackdrop`
+  (`AppColors.backgroundGradient` `#403E41 → #39373C → #2C2C2C` + grão). `AppColors.backgroundPrimary`
+  (`#39373A`) é só a face de painel; usá-lo no menu produz uma faixa de tom diferente (era o defeito).
+- O menu **não** define cor própria: `BottomNavigation` desenha o próprio `GraphiteBackdrop` em tamanho
+  de tela, alinhado ao fundo da tela e recortado na barra (acompanha o teclado). Assim cada ponto do menu
+  tem a mesma cor do ponto correspondente da tela, sem emenda, e é opaco (nada rolando por baixo aparece).
+- É proibido usar cor fixa, transparência, opacidade ou efeito que altere esse fundo no menu.
+- A regra vale para qualquer tela nova e é verificada em `test/account_avatar_test.dart`
+  (comparação pixel a pixel entre o fundo da tela e o do menu, com conteúdo colorido por baixo).
+- O valor `#0F0F0F` citado no pedido não é o fundo adotado pelo projeto; o documento acima é a referência.
 
 ## Regra Visual Obrigatória — Prioridade Máxima
 

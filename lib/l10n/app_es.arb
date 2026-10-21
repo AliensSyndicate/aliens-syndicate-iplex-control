@@ -100,7 +100,7 @@
   "familyLimit": "Esta familia ya tiene cinco cuentas.",
   "requiresLogin": "Vuelve a iniciar sesión para continuar.",
   "appVerificationFailed": "No se pudo verificar esta aplicación con el servidor. Tu sesión sigue activa; inténtalo de nuevo en unos minutos.",
-  "familyHasMembers": "Elimina las cuentas asociadas antes de eliminar tu cuenta.",
+  "familyHasMembers": "Elimina a los miembros de la familia antes de eliminar tu cuenta.",
   "loading": "Cargando",
   "edit": "Editar",
   "continueWatching": "Continúa viendo en tu TV",
@@ -344,7 +344,7 @@
   "personalContext": "Cuenta individual",
   "selectedContext": "Contexto seleccionado",
   "membershipRequests": "Solicitudes de asociación",
-  "membershipAcceptHelp": "Acepta para unirte a esta familia si hay espacio. Tus recursos personales siguen siendo privados.",
+  "membershipAcceptHelp": "Aceptar mueve tu cuenta a esta familia. Si tu familia individual tiene fuentes IPTV, dispositivos o perfiles, elimínalos antes.",
   "acceptMembership": "Aceptar",
   "declineMembership": "Rechazar",
   "sendMembershipRequest": "Solicitar asociación",
@@ -404,7 +404,7 @@
   "linkToProfileBody": "Escribe el código o escanea el código QR que muestra el administrador de la familia.",
   "linkCode": "Código",
   "profileLinked": "Tu cuenta se vinculó al perfil.",
-  "errorProfileLimit": "Esta familia ya tiene cuatro asociados.",
+  "errorProfileLimit": "Esta familia ya tiene cuatro miembros.",
   "errorProfileTypeImmutable": "El tipo de perfil no se puede cambiar.",
   "errorAccountAlreadyLinked": "Esta cuenta ya está vinculada a un perfil de esta familia.",
   "errorProfileAlreadyLinked": "Este perfil ya está vinculado a una cuenta.",
@@ -495,10 +495,28 @@
   "castLabel": "Reparto",
   "runtimeMinutes": "{minutes} min",
   "seasonsCount": "{count, plural, =1{1 temporada} other{{count} temporadas}}",
-    "episodesCount": "{count, plural, =1{1 episodio} other{{count} episodios}}",
+  "episodesCount": "{count, plural, =1{1 episodio} other{{count} episodios}}",
   "episodesTitle": "Episodios",
-    "showMore": "Mostrar más",
+  "showMore": "Mostrar más",
   "showLess": "Mostrar menos",
-    "seasonEpisodeShort": "T{season}E{episode}",
-  "ageRatingLabel": "Clasificación {rating}"
+  "seasonEpisodeShort": "T{season}E{episode}",
+  "ageRatingLabel": "Clasificación {rating}",
+  "familyOfName": "Familia {name}",
+  "@familyOfName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "familyEmptyBody": "Aún no hay miembros adicionales.",
+  "addMembers": "Añadir miembros",
+  "invitePending": "Invitación pendiente",
+  "cancelInvitation": "Cancelar invitación",
+  "cancelInvitationBody": "La invitación dejará de ser válida y la persona ya no podrá aceptarla.",
+  "leaveFamily": "Salir de la familia",
+  "leaveFamilyBody": "Vuelves a tu familia individual. Tus datos se conservan.",
+  "errorAlreadyInFamily": "Esta cuenta ya pertenece a una familia.",
+  "errorIndividualFamilyHasResources": "Para unirte a otra familia, elimina antes las fuentes IPTV, los dispositivos y los perfiles de tu familia individual.",
+  "errorFamilyExclusive": "Cada cuenta pertenece a una sola familia."
 }

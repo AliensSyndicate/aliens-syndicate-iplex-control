@@ -703,7 +703,7 @@ abstract class AppLocalizations {
   /// No description provided for @familyHasMembers.
   ///
   /// In en, this message translates to:
-  /// **'Remove the associated accounts before deleting your account.'**
+  /// **'Remove the family members before deleting your account.'**
   String get familyHasMembers;
 
   /// No description provided for @loading.
@@ -1873,7 +1873,7 @@ abstract class AppLocalizations {
   /// No description provided for @membershipAcceptHelp.
   ///
   /// In en, this message translates to:
-  /// **'Accept to join this family if a place is available. Your personal resources remain private.'**
+  /// **'Accepting moves your account into this family. If your individual family has IPTV sources, devices or profiles, remove them first.'**
   String get membershipAcceptHelp;
 
   /// No description provided for @acceptMembership.
@@ -2233,7 +2233,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorProfileLimit.
   ///
   /// In en, this message translates to:
-  /// **'This family already has four associates.'**
+  /// **'This family already has four members.'**
   String get errorProfileLimit;
 
   /// No description provided for @errorProfileTypeImmutable.
@@ -2811,6 +2811,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rated {rating}'**
   String ageRatingLabel(String rating);
+
+  /// No description provided for @familyOfName.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} family'**
+  String familyOfName(String name);
+
+  /// No description provided for @familyEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No additional members yet.'**
+  String get familyEmptyBody;
+
+  /// No description provided for @addMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Add members'**
+  String get addMembers;
+
+  /// No description provided for @invitePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation pending'**
+  String get invitePending;
+
+  /// No description provided for @cancelInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel invitation'**
+  String get cancelInvitation;
+
+  /// No description provided for @cancelInvitationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The invitation will no longer be valid and the person will not be able to accept it.'**
+  String get cancelInvitationBody;
+
+  /// No description provided for @leaveFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave family'**
+  String get leaveFamily;
+
+  /// No description provided for @leaveFamilyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You return to your individual family. Your data is kept.'**
+  String get leaveFamilyBody;
+
+  /// No description provided for @errorAlreadyInFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'This account already belongs to a family.'**
+  String get errorAlreadyInFamily;
+
+  /// No description provided for @errorIndividualFamilyHasResources.
+  ///
+  /// In en, this message translates to:
+  /// **'To join another family, first remove the IPTV sources, devices and profiles of your individual family.'**
+  String get errorIndividualFamilyHasResources;
+
+  /// No description provided for @errorFamilyExclusive.
+  ///
+  /// In en, this message translates to:
+  /// **'Each account belongs to a single family.'**
+  String get errorFamilyExclusive;
 }
 
 class _AppLocalizationsDelegate

@@ -88,7 +88,8 @@ test('public codes, membership pointers and requests are backend-owned and recip
   await assertFails(getDoc(doc(db,'public_user_codes/ABC123DEF456')));
   await assertFails(setDoc(doc(db,`users/${uid}`),{publicCode:'ABC123DEF456',familyIds:['f']},{merge:true}));
   await assertFails(updateDoc(doc(db,'family_requests/r'),{status:'accepted'}));
-  if(uid==='member')await assertSucceeds(getDoc(doc(db,'family_requests/r')));
+  // The invitee and the inviting family's administrator follow the request; nobody else.
+  if(uid==='member'||uid==='admin')await assertSucceeds(getDoc(doc(db,'family_requests/r')));
   else await assertFails(getDoc(doc(db,'family_requests/r')));
   if(uid==='admin')await assertSucceeds(getDoc(doc(db,'subscriptions/f')));
   else await assertFails(getDoc(doc(db,'subscriptions/f')));
@@ -152,4 +153,14 @@ test('play requests: the TV reads only its own (current credential); the request
  // The parental PIN hash is never readable by any client.
  await env.withSecurityRulesDisabled(c=>setDoc(doc(c.firestore(),'families/f/private/parental'),{pinHash:'x',salt:'y'}));
  for(const db of [admin,member,tv2])await assertFails(getDoc(doc(db,'families/f/private/parental')));
+});
+
+test('one account, one family: clients cannot create families, move themselves or read other families',async()=>{
+ const db=env.authenticatedContext('outsider').firestore();
+ await assertFails(setDoc(doc(db,'families/mine'),{adminId:'outsider',members:{outsider:'admin'}}));
+ await assertFails(setDoc(doc(db,'users/outsider'),{uid:'outsider',name:'O',email:'o@example.invalid',updatedAt:1,familyId:'mine',homeFamilyId:'mine',photoUrl:'https://example.invalid/a.png'}));
+ const member=env.authenticatedContext('member').firestore();
+ await assertFails(updateDoc(doc(member,'families/f'),{members:{member:'admin',admin:'member'}}));
+ await assertFails(setDoc(doc(member,'users/member'),{photoUrl:'https://example.invalid/a.png'},{merge:true}));
+ await assertFails(getDoc(doc(db,'families/f/members/admin')));
 });

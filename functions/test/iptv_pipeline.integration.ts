@@ -1,3 +1,4 @@
+import {ensureFamily} from '../src/family_individual';
 import {test, before, after} from 'node:test';
 import assert from 'node:assert/strict';
 import {initializeApp, deleteApp} from 'firebase-admin/app';
@@ -18,12 +19,13 @@ before(() => {
 after(async () => deleteApp(app));
 async function account() {
   const actor: Identity = {uid:`pipeline_${++seq}`};
-  await getFirestore().doc(`users/${actor.uid}`).set({uid:actor.uid});
+  await getFirestore().doc(`users/${actor.uid}`).set({uid:actor.uid,name:'Pipeline'});
+  await ensureFamily(actor.uid);
   return actor;
 }
 async function sourceRef(actor: Identity, id: string) {
   const account = (await getFirestore().doc(`users/${actor.uid}`).get()).data()!;
-  return getFirestore().doc(`families/${account.iptvWorkspaceId}/sources/${id}`);
+  return getFirestore().doc(`families/${account.familyId}/sources/${id}`);
 }
 
 test('real Storage upload → worker → versioned catalog → restart/read → edit → cleanup', async () => {

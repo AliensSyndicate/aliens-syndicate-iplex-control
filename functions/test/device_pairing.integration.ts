@@ -17,7 +17,7 @@ const begin=(nativeDeviceId:string)=>execute('beginDevicePair',{name:'Sala',plat
  nativeDeviceId,identitySource:'simulated'},undefined) as Promise<Session>;
 const qr=(token:string)=>new URL(`iplex://pair?token=${token}`).searchParams.get('token')!;
 
-test('real backend session: QR inspect, link without family, rename, unlink, replay denied and player revoked',async()=>{
+test('real backend session: QR inspect, link into the individual family, rename, unlink, replay denied and player revoked',async()=>{
  const a=await account(),session=await begin(`native-${seq}`);
  assert.match(session.token,/^[a-f0-9]{64}$/);assert.match(session.code,/^\d{6}$/);
  const inspected=await execute('inspectPairingSession',{token:qr(session.token),contextFamilyId:null},a) as Record<string,unknown>;
@@ -25,10 +25,10 @@ test('real backend session: QR inspect, link without family, rename, unlink, rep
  const linked=await execute('linkDevice',{token:session.token,contextFamilyId:null},a) as {id:string};
  assert.equal(linked.id,session.deviceId);
  const user=(await getFirestore().doc(`users/${a.uid}`).get()).data()!;
- assert.equal(user.familyId,undefined);
- const scope=user.iptvWorkspaceId as string;
+ assert.ok(user.familyId);assert.equal(user.iptvWorkspaceId,undefined);
+ const scope=user.familyId as string;
  assert.equal((await getFirestore().doc(`families/${scope}/devices/${linked.id}`).get()).exists,true);
- assert.equal((await getFirestore().doc(`devices/${linked.id}`).get()).data()!.ownership,'personal');
+ assert.equal((await getFirestore().doc(`devices/${linked.id}`).get()).data()!.ownership,'family');
  // The Player exchanges the consumed session once for its own credential.
  const minted=await execute('finishDevicePair',{token:session.token},undefined) as {customToken:string};
  assert.ok(minted.customToken.length>20);

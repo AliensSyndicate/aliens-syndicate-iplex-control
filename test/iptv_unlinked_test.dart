@@ -2,7 +2,6 @@ import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/family_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/widgets/family_required_state.dart';
@@ -92,7 +91,6 @@ void main() {
       expect(find.text('IPTV'), findsOneWidget);
       expect(find.text('Nenhuma fonte IPTV'), findsOneWidget);
       expect(find.text('Contas familiares'), findsNothing);
-      expect(find.byType(FamilyPage), findsNothing);
       expect(find.byType(FamilyRequiredState), findsNothing);
       expect(find.widgetWithText(AppButton, 'Adicionar fonte'), findsOneWidget);
       expect(

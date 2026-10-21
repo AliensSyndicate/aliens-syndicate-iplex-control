@@ -33,6 +33,9 @@ String failureText(BuildContext context, Object error) {
     'administrator-protected' => l.errorAdministratorProtected,
     'device-already-linked-elsewhere' => l.deviceLinkedElsewhere,
     'family-limit' => l.familyLimit,
+    'already-in-family' => l.errorAlreadyInFamily,
+    'family-exclusive' => l.errorFamilyExclusive,
+    'individual-family-has-resources' => l.errorIndividualFamilyHasResources,
     'session-limit' => l.sessionLimit(
       (error.details['devices'] as List?)?.join(', ') ?? '',
     ),

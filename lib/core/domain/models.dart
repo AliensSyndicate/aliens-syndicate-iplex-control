@@ -24,6 +24,7 @@ class Account {
     this.familyId,
     this.iptvWorkspaceId,
     this.publicCode,
+    this.photoUrl,
     this.familyIds = const [],
     this.locale = 'system',
   });
@@ -31,6 +32,9 @@ class Account {
   final String? familyId;
   final String? iptvWorkspaceId;
   final String? publicCode;
+
+  /// Provider photo (https) of the authenticated account; null = default avatar.
+  final String? photoUrl;
   final List<String> familyIds;
   List<String> get memberships => {...familyIds, ?familyId}.toList();
   String? get resourceScopeId => familyId ?? iptvWorkspaceId;
@@ -44,9 +48,13 @@ class Family {
     required this.adminId,
     required this.members,
     this.name = '',
+    this.individual = false,
     this.parentalPinConfigured = false,
   });
   final String id, adminId, name;
+
+  /// Created with the account: its name is the account holder's name.
+  final bool individual;
   final Map<String, String> members;
 
   /// The family has a parental PIN (the hash stays backend-only).

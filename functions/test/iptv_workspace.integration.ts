@@ -1,4 +1,4 @@
-import {inviteAndAccept} from './support/membership';
+import {inviteAndAccept,createFamily} from './support/membership';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {initializeApp,deleteApp} from 'firebase-admin/app';
@@ -22,16 +22,16 @@ async function account(){
 const source={name:'Personal M3U',format:'m3u',url:'https://example.com/playlist'};
 
 for (const format of ['m3u', 'url', 'other_m3u8']) {
-  test(`${format} URL can be saved, edited and deleted without family or subscription`, async () => {
+  test(`${format} URL can be saved, edited and deleted in the individual family without subscription`, async () => {
     const {actor,ref}=await account();
     const url='https://example.com/playlist.m3u8?username=fixture&password=private-token';
     const {id}=await execute('saveSource',{...source,format,url,isProtected:false},actor,key) as {id:string};
     const accountData=(await ref.get()).data()!;
-    assert.equal(accountData.familyId,undefined);
-    const metadata=getFirestore().doc(`families/${accountData.iptvWorkspaceId}/sources/${id}`);
+    assert.ok(accountData.familyId);assert.equal(accountData.iptvWorkspaceId,undefined);
+    const metadata=getFirestore().doc(`families/${accountData.familyId}/sources/${id}`);
     assert.equal((await metadata.get()).data()?.format,format);
     assert.equal(JSON.stringify((await metadata.get()).data()).includes('private-token'),false);
-    const encrypted=(await getFirestore().doc(`source_secrets/${accountData.iptvWorkspaceId}_${id}`).get()).data()!.encrypted;
+    const encrypted=(await getFirestore().doc(`source_secrets/${accountData.familyId}_${id}`).get()).data()!.encrypted;
     assert.equal(unseal<{url:string}>(encrypted,key).url,url);
     await execute('saveSource',{...source,id,format,url,name:'Updated M3U8'},actor,key);
     assert.equal((await metadata.get()).data()?.name,'Updated M3U8');
@@ -40,25 +40,25 @@ for (const format of ['m3u', 'url', 'other_m3u8']) {
   });
 }
 
-test('first IPTV save provisions only a private workspace, without family, trial or profiles',async()=>{
+test('first IPTV save uses the individual family created at bootstrap: no trial, only the administrator profile',async()=>{
   const {actor,ref}=await account();
-  assert.equal((await ref.get()).data()?.iptvWorkspaceId,undefined);
-  const result=await execute('saveSource',source,actor,key) as {id:string};
   const data=(await ref.get()).data()!;
-  assert.equal(data.familyId,undefined);assert.ok(data.iptvWorkspaceId);
-  const workspace=getFirestore().doc(`families/${data.iptvWorkspaceId}`);
-  assert.equal((await workspace.get()).data()?.kind,'personalIptv');
-  assert.equal((await workspace.get()).data()?.ownerId,actor.uid);
-  assert.equal((await workspace.collection('sources').doc(result.id).get()).data()?.status,'queued');
-  assert.equal((await workspace.collection('private').doc('subscription').get()).exists,false);
-  assert.equal((await workspace.collection('profiles').get()).size,0);
+  assert.ok(data.familyId);assert.equal(data.iptvWorkspaceId,undefined);
+  const result=await execute('saveSource',source,actor,key) as {id:string};
+  assert.equal((await ref.get()).data()?.familyId,data.familyId);
+  const family=getFirestore().doc(`families/${data.familyId}`);
+  assert.equal((await family.get()).data()?.kind,undefined);assert.equal((await family.get()).data()?.individual,true);
+  assert.equal((await family.get()).data()?.ownerId,actor.uid);
+  assert.equal((await family.collection('sources').doc(result.id).get()).data()?.status,'queued');
+  assert.deepEqual((await family.collection('private').doc('subscription').get()).data(),{status:'notStarted'});
+  assert.deepEqual((await family.collection('profiles').get()).docs.map(d=>d.id),['admin']);
   await execute('saveProfile',{name:'Personal profile'},actor);
 });
 
 test('protected URL sources persist failed PIN attempts and lock after five guesses',async()=>{
   const {actor,ref}=await account();
   const {id}=await execute('saveSource',{...source,format:'url',isProtected:true,pin:'1234',confirmPin:'1234'},actor,key) as {id:string};
-  const scope=(await ref.get()).data()?.iptvWorkspaceId;
+  const scope=(await ref.get()).data()?.familyId;
   const secret=getFirestore().doc(`source_secrets/${scope}_${id}`);
   for(let attempt=1;attempt<=5;attempt++){
     await assert.rejects(execute('verifySourcePin',{id,pin:'9999'},actor,key),/invalid-pin/);
@@ -70,27 +70,28 @@ test('protected URL sources persist failed PIN attempts and lock after five gues
   assert.equal((await secret.get()).data()?.failedAttempts,0);
 });
 
-test('invalid form, encryption key or edit does not leave an empty workspace',async()=>{
+test('invalid form, encryption key or edit leaves no source and no extra family',async()=>{
   const {actor,ref}=await account();
   await assert.rejects(execute('saveSource',{...source,url:'ftp://example.com'},actor,key));
   await assert.rejects(execute('saveSource',source,actor,'invalid-key'));
   await assert.rejects(execute('saveSource',{...source,id:'nonexistent'},actor,key),/not-found/);
-  assert.equal((await ref.get()).data()?.iptvWorkspaceId,undefined);
-  assert.equal((await getFirestore().collection('families').where('ownerId','==',actor.uid).get()).size,0);
+  const familyId=(await ref.get()).data()?.familyId;
+  assert.equal((await getFirestore().collection(`families/${familyId}/sources`).get()).size,0);
+  assert.equal((await getFirestore().collection('families').where('ownerId','==',actor.uid).get()).size,1);
 });
 
-test('concurrent first saves converge on one private workspace',async()=>{
+test('concurrent saves converge on the one individual family',async()=>{
   const {actor,ref}=await account();
   await Promise.all([execute('saveSource',source,actor,key),execute('saveSource',{...source,name:'Second'},actor,key)]);
-  const id=(await ref.get()).data()?.iptvWorkspaceId;
+  const id=(await ref.get()).data()?.familyId;
   assert.equal((await getFirestore().collection(`families/${id}/sources`).get()).size,2);
   assert.equal((await getFirestore().collection('families').where('ownerId','==',actor.uid).get()).size,1);
 });
 
-test('personal Xtream can edit, sync and delete without family while secrets remain encrypted',async()=>{
+test('Xtream can edit, sync and delete in the individual family while secrets remain encrypted',async()=>{
   const {actor,ref}=await account();
   const {id}=await execute('saveSource',{...source,format:'xtream',username:'private-user',password:'private-password'},actor,key) as {id:string};
-  const scope=(await ref.get()).data()?.iptvWorkspaceId;
+  const scope=(await ref.get()).data()?.familyId;
   await execute('saveSource',{...source,id,name:'Updated',format:'xtream',username:'private-user'},actor,key);
   await execute('syncSource',{id},actor);
   const metadata=(await getFirestore().doc(`families/${scope}/sources/${id}`).get()).data()!;
@@ -103,39 +104,48 @@ test('personal Xtream can edit, sync and delete without family while secrets rem
   assert.equal((await getFirestore().doc(`families/${scope}/sources/${id}`).get()).exists,false);
 });
 
-test('joining a family preserves personal IPTV and does not grant its member shared administrator rights',async()=>{
+test('joining a family never strands IPTV: blocked while the individual family has sources, parked and restored otherwise',async()=>{
   const person=await account(),owner=await account();
   const {id}=await execute('saveSource',source,person.actor,key) as {id:string};
-  const original=(await person.ref.get()).data()?.iptvWorkspaceId;
-  const family=await execute('createFamily',{name:'Real family'},owner.actor) as {id:string};
+  const original=(await person.ref.get()).data()?.familyId as string;
+  const family=await createFamily(owner.actor,'Real family') as {id:string};
+  await assert.rejects(inviteAndAccept(owner.actor,person.actor),/individual-family-has-resources/);
+  // Nothing was moved or removed.
+  assert.equal((await person.ref.get()).data()?.familyId,original);
+  assert.equal((await getFirestore().doc(`families/${original}/sources/${id}`).get()).exists,true);
+  await execute('deleteSource',{id},person.actor,key);
   await inviteAndAccept(owner.actor,person.actor);
-  await execute('syncSource',{id},person.actor);
-  const updated=(await person.ref.get()).data()!;
-  assert.equal(updated.familyId,family.id);assert.equal(updated.iptvWorkspaceId,original);
-  assert.equal((await getFirestore().doc(`families/${original}/sources/${id}`).get()).data()?.status,'queued');
+  const joined=(await person.ref.get()).data()!;
+  assert.equal(joined.familyId,family.id);assert.equal(joined.homeFamilyId,original);
+  const parked=(await getFirestore().doc(`families/${original}`).get()).data()!;
+  assert.equal(parked.parked,true);assert.deepEqual(parked.members,{});
   await assert.rejects(execute('saveProfile',{name:'Not admin'},person.actor),/permission-denied/);
+  await execute('leaveFamily',{},person.actor);
+  const back=(await person.ref.get()).data()!;
+  assert.equal(back.familyId,original);
+  assert.deepEqual((await getFirestore().doc(`families/${original}`).get()).data()!.members,{[person.actor.uid]:'admin'});
+  assert.equal((await getFirestore().doc(`families/${original}`).get()).data()!.parked,undefined);
 });
 
 test('client-selected account/workspace fields cannot redirect writes to another account',async()=>{
   const first=await account(),second=await account();
   const {id}=await execute('saveSource',source,first.actor,key) as {id:string};
-  const foreign=(await first.ref.get()).data()?.iptvWorkspaceId;
+  const foreign=(await first.ref.get()).data()?.familyId;
   await execute('saveSource',{...source,workspaceId:foreign,familyId:foreign,iptvWorkspaceId:foreign,uid:first.actor.uid},second.actor,key);
-  assert.notEqual((await second.ref.get()).data()?.iptvWorkspaceId,foreign);
+  assert.notEqual((await second.ref.get()).data()?.familyId,foreign);
   await assert.rejects(execute('syncSource',{id},second.actor),/not-found/);
   assert.equal((await getFirestore().collection(`families/${foreign}/sources`).get()).size,1);
   await assert.rejects(execute('saveSource',source,{uid:'tv_fake',deviceId:'fake',familyId:foreign},key),/permission-denied/);
   await assert.rejects(execute('saveSource',source,undefined,key),/unauthenticated/);
 });
 
-test('account deletion immediately revokes the personal workspace and queues cleanup',async()=>{
+test('account deletion immediately revokes the individual family and queues cleanup',async()=>{
   const {actor,ref}=await account();await execute('saveSource',source,actor,key);
-  const scope=(await ref.get()).data()?.iptvWorkspaceId;
+  const scope=(await ref.get()).data()?.familyId;
   await execute('prepareDeletion',{},actor);
   const workspace=(await getFirestore().doc(`families/${scope}`).get()).data()!;
   assert.equal(workspace.deleting,true);assert.deepEqual(workspace.members,{});
   const job=(await getFirestore().doc(`deletion_jobs/${actor.uid}`).get()).data()!;
-  assert.equal(job.iptvWorkspaceId,scope);assert.equal(job.familyId,null);
+  assert.deepEqual(job.familyIds,[scope]);assert.equal(job.iptvWorkspaceId,null);
   await assert.rejects(execute('prepareDeletion',{},actor),/not-found/);
-  assert.equal((await getFirestore().doc(`deletion_jobs/${actor.uid}`).get()).data()?.iptvWorkspaceId,scope);
 });

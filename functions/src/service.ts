@@ -7,6 +7,7 @@ import {getAuth} from 'firebase-admin/auth';
 import {randomUUID} from 'node:crypto';
 import {ensurePublicCode,limitIdentityAttempts} from './account_identity';
 import {familyMembership} from './family_membership';
+import {authPhotoUrl,ensureFamily,safePhotoUrl} from './family_individual';
 import {familyProfiles, profileView, requireWritableGeneration, writeAdminProfile, ADMIN_PROFILE_ID} from './family_profiles';
 import {listProfileSpaces} from './iptv_catalog_access';
 import {obfuscatedAccount, paymentsConfig, verifyPlayPurchase} from './play_billing';
@@ -114,10 +115,14 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  };
  if(action==='bootstrap') {
   required(!a.deviceId); const user=await getAuth().getUser(a.uid);
-  await ensurePublicCode(a.uid,{uid:a.uid,name:user.displayName??'',email:user.email??'',updatedAt:now});
+  // The provider photo is kept in the account; a missing one never replaces a stored photo.
+  const photoUrl=authPhotoUrl(user);
+  await ensurePublicCode(a.uid,{uid:a.uid,name:user.displayName??'',email:user.email??'',updatedAt:now,...(photoUrl?{photoUrl}:{})});
+  // One account, one family: the individual family is created here, once.
+  await ensureFamily(a.uid);
   return {ok:true};
  }
- if(['createFamily','selectContext','createMemberLink','joinFamily','removeMember','lookupPublicUser','requestMembership','respondMembership'].includes(action))return familyMembership(action,p,a);
+ if(['createFamily','selectContext','createMemberLink','joinFamily','removeMember','leaveFamily','lookupPublicUser','requestMembership','respondMembership','cancelMembershipRequest'].includes(action))return familyMembership(action,p,a);
  if(['saveProfile','setGuestEnabled','setProfilePermissions','createProfileLinkCode','redeemProfileLink','unlinkProfileAccount','clearProfileData'].includes(action)){
   required(!a.deviceId);
   return familyProfiles(action,p,a.uid,(tx,admin,create)=>family(tx,a,admin,create));
@@ -154,9 +159,11 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   const docs=(await tx.get(f.ref.collection('profiles'))).docs,rows=docs.map(d=>profileView(d.id,d.data())),profilesDeleting=docs.map(d=>d.data().deleting===true);
   const kids=rows.some((x,i)=>x.type==='kids'&&!profilesDeleting[i]);
   const pinConfigured=(await tx.get(f.ref.collection('private').doc('parental'))).exists;
+  // Identity of the account the TV is linked to (never a viewing profile): name and provider photo only.
+  const owner=(await tx.get(db().doc(`users/${f.data.adminUid??f.data.adminId}`))).data();
   // A disabled guest keeps its configuration but is not offered on the TV.
   // pinRequired is informative for the interface; acquireSession enforces it.
-  return {parentalPin:{configured:pinConfigured},profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion,pinRequired:kids&&isAdultProfile(x)}))};
+  return {parentalPin:{configured:pinConfigured},account:{name:String(owner?.name??owner?.displayName??'').slice(0,80),photoUrl:safePhotoUrl(owner?.photoUrl)},profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion,pinRequired:kids&&isAdultProfile(x)}))};
  });
  if(action==='verifyProfilePin'){
   const f=await db().runTransaction(tx=>playerContext(tx,a));
@@ -385,7 +392,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   required(!a.deviceId);required(a.authTime && now-a.authTime*1000<300000,'requires-recent-login');
   const ur=db().doc(`users/${a.uid}`),u=await tx.get(ur);const fid=u!.data()?.familyId;
   required(u.exists,'not-found');
-  const ids=Array.from(new Set<string>([...(u.data()?.familyIds??[]),fid].filter(Boolean)));
+  const ids=Array.from(new Set<string>([...(u.data()?.familyIds??[]),fid,u.data()?.homeFamilyId].filter(Boolean)));
   const families=await Promise.all(ids.map(async id=>{const ref=db().doc(`families/${id}`);return {ref,data:(await tx.get(ref)).data()};}));
   const owned:string[]=[];
   for(const {ref,data} of families)if(data&&(data.adminUid??data.adminId)===a.uid){

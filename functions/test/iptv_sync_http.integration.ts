@@ -1,3 +1,4 @@
+import {createFamily} from './support/membership';
 /**
  * IPTV sync end to end over real HTTP (controlled local provider) and the
  * emulators: Control saves the source → worker downloads/parses/publishes →
@@ -34,7 +35,7 @@ async function family() {
   const admin: Identity = {uid: `sync_${Date.now()}_${++seq}`, authTime: Math.floor(Date.now() / 1000)};
   await getAuth().createUser({uid: admin.uid, displayName: 'Ana'});
   await execute('bootstrap', {}, admin);
-  const fid = (await execute('createFamily', {name: 'Casa'}, admin) as {id: string}).id;
+  const fid = (await createFamily(admin,'Casa') as {id: string}).id;
   return {admin, fid, ctx: {contextFamilyId: fid}};
 }
 async function tv(admin: Identity, fid: string): Promise<PlayerAuth> {
@@ -256,13 +257,13 @@ test('empty and large catalogs; same source again keeps identifiers; credential 
   await assert.rejects(tvCall('readSourceCatalog', {id: big.id}, player), /not-found/);
 });
 
-test('personal IPTV space (account without family): the first TV gets the owner profile and reads the synced catalog', async () => {
+test('individual family (account without other members): the first TV uses the owner profile and reads the synced catalog', async () => {
   const owner: Identity = {uid: `personal_${Date.now()}_${++seq}`, authTime: Math.floor(Date.now() / 1000)};
   await getAuth().createUser({uid: owner.uid, displayName: 'Dono'});
   await execute('bootstrap', {}, owner);
   const {id} = await execute('saveSource', {name: 'Lista pessoal', format: 'm3u', url: `${provider.base}/big.m3u?n=5`}, owner, key) as {id: string};
-  const ws = (await db().doc(`users/${owner.uid}`).get()).data()!.iptvWorkspaceId as string;
-  assert.equal((await db().doc(`families/${ws}`).get()).data()?.kind, 'personalIptv');
+  const ws = (await db().doc(`users/${owner.uid}`).get()).data()!.familyId as string;
+  assert.equal((await db().doc(`families/${ws}`).get()).data()?.individual, true);
   const ref = db().doc(`families/${ws}/sources/${id}`);
   assert.equal((await sync(ref)).source.status, 'ready');
   const pair = async () => {

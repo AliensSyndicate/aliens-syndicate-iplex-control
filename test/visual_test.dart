@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
@@ -11,6 +13,7 @@ import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fake_network_image.dart';
 import 'widget_test.dart' as fixtures;
 
 /// Data exists only in this test, to inspect real widgets in populated states.
@@ -33,6 +36,16 @@ class VisualRepository extends fixtures.TestRepository {
     'lastSyncAt': DateTime.now().millisecondsSinceEpoch,
   });
   @override
+  Stream<Account?> watchAccount(String uid) => Stream.value(
+    Account(
+      uid: uid,
+      name: 'Alex',
+      email: 'alex@example.invalid',
+      familyId: 'f',
+      photoUrl: 'https://lh3.googleusercontent.com/a/visual',
+    ),
+  );
+  @override
   Stream<List<Entry>> watchEntries(String familyId, String collection) =>
       Stream.value(switch (collection) {
         'devices' => [
@@ -40,7 +53,11 @@ class VisualRepository extends fixtures.TestRepository {
           Entry('tv2', {'name': 'Bedroom', 'onlineUntil': 0}),
         ],
         'members' => [
-          Entry('u', {'name': 'Alex', 'role': 'admin'}),
+          Entry('u', {
+            'name': 'Alex',
+            'role': 'admin',
+            'photoUrl': 'https://lh3.googleusercontent.com/a/visual',
+          }),
           Entry('member', {'name': 'Sam', 'role': 'member'}),
         ],
         'profiles' => [
@@ -61,6 +78,8 @@ class VisualRepository extends fixtures.TestRepository {
 
 void main() {
   setUpAll(fixtures.loadTestFont);
+  setUp(() => HttpOverrides.global = FakeImageHttpOverrides());
+  tearDown(() => HttpOverrides.global = null);
   final pages = <({String name, Widget page, int? tab})>[
     (name: 'home', page: const HomePage(), tab: 0),
     (name: 'users', page: const UsersPage(), tab: 1),
@@ -95,6 +114,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await loadImages(tester);
       expect(tester.takeException(), null);
       await fixtures.screenshot(tester, page.name);
     });

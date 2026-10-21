@@ -1,8 +1,9 @@
 import {DocumentReference, FieldValue, getFirestore, Transaction} from 'firebase-admin/firestore';
 import {randomInt, randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {addMember, DomainError, hash, idSchema, nameSchema} from './domain';
+import {DomainError, hash, idSchema, nameSchema} from './domain';
 import {limitIdentityAttempts, PUBLIC_CODE_ALPHABET} from './account_identity';
+import {prepareJoin} from './family_individual';
 
 /**
  * Media profiles are independent of Firebase accounts:
@@ -157,11 +158,9 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
       require_(user!.exists, 'account-unavailable');
       require_((fd!.adminUid ?? fd!.adminId) !== uid && !link!.exists, 'account-already-linked');
       require_(!profile!.linkedUid && (profile!.type === 'regular' || profile!.type === 'kids'), 'profile-already-linked');
-      if (!fd!.members?.[uid]) {
-        tx.update(family, {members: addMember(fd!.members ?? {}, uid)});
-        tx.update(user!.ref, {familyIds: FieldValue.arrayUnion(...[user!.data()?.familyId, family.id].filter(Boolean))});
-        tx.set(family.collection('members').doc(uid), {uid, name: user!.data()?.name ?? '', role: 'member'});
-      }
+      // Joining by code follows the same one-family rule as an accepted invitation.
+      const join = fd!.members?.[uid] ? undefined : await prepareJoin(tx, uid, user!.data()!, {ref: family, data: fd!}, now);
+      join?.();
       // Same profile id: favorites, history, progress and permissions are untouched.
       tx.update(profileRef, {linkedUid: uid, linkedAt: now, updatedAt: now});
       tx.set(family.collection('profile_links').doc(uid), {profileId: profileRef.id, linkedAt: now});

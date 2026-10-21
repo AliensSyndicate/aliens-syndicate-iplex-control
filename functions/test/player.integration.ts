@@ -1,3 +1,4 @@
+import {createFamily} from './support/membership';
 import {randomBytes} from 'node:crypto';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +15,7 @@ before(()=>{
 after(()=>deleteApp(app));
 const deps={execute,quota:firestoreQuota,consume:consumePlayerRequest,now:Date.now};
 const call=(action:string,payload:Record<string,unknown>,auth?:PlayerAuth,ip='203.0.113.7')=>runPlayer({action,payload:{...payload,requestId:randomBytes(16).toString('hex'),issuedAt:Date.now()},auth,ip},'',deps);
-async function admin(){const a:Identity={uid:`player_admin_${Date.now()}_${++seq}`,authTime:Math.floor(Date.now()/1000)};await getAuth().createUser({uid:a.uid,displayName:'Admin'});await execute('bootstrap',{},a);await execute('createFamily',{name:'Família'},a);return a;}
+async function admin(){const a:Identity={uid:`player_admin_${Date.now()}_${++seq}`,authTime:Math.floor(Date.now()/1000)};await getAuth().createUser({uid:a.uid,displayName:'Admin'});await execute('bootstrap',{},a);await createFamily(a,'Família');return a;}
 /** Token verificado que o Firebase entregaria à callable depois do signInWithCustomToken. */
 async function deviceAuth(deviceId:string,familyId:string):Promise<PlayerAuth>{const credentialVersion=(await getFirestore().doc(`families/${familyId}/devices/${deviceId}`).get()).data()?.credentialVersion;return {uid:`tv_${deviceId}`,token:{deviceId,familyId,credentialVersion,firebase:{sign_in_provider:'custom'},auth_time:Math.floor(Date.now()/1000)}};}
 

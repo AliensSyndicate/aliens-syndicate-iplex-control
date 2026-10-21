@@ -17,6 +17,7 @@ class NeumorphicListTile extends StatelessWidget {
     this.onTap,
     this.online,
     this.trailing,
+    this.leading,
   });
   final String title;
   final String? subtitle;
@@ -24,6 +25,9 @@ class NeumorphicListTile extends StatelessWidget {
   final VoidCallback? onTap;
   final bool? online;
   final Widget? trailing;
+
+  /// Replaces the icon (for example an avatar); same footprint as the icon circle.
+  final Widget? leading;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -38,12 +42,15 @@ class NeumorphicListTile extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                GraphiteSurface(
-                  circle: true,
-                  recessed: true,
-                  padding: const EdgeInsets.all(AppSpacing.sm + AppSpacing.xs),
-                  child: AppIcon(icon, color: AppColors.textSecondary),
-                ),
+                leading ??
+                    GraphiteSurface(
+                      circle: true,
+                      recessed: true,
+                      padding: const EdgeInsets.all(
+                        AppSpacing.sm + AppSpacing.xs,
+                      ),
+                      child: AppIcon(icon, color: AppColors.textSecondary),
+                    ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(

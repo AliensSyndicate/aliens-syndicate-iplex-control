@@ -1,4 +1,4 @@
-import {inviteAndAccept} from './support/membership';
+import {inviteAndAccept,createFamily} from './support/membership';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {initializeApp,deleteApp} from 'firebase-admin/app';
@@ -20,7 +20,7 @@ async function fixture(){
   const actor:Identity={uid:`free_owner_${++sequence}`,authTime:Math.floor(Date.now()/1000)};
   await getAuth().createUser({uid:actor.uid});
   await execute('bootstrap',{},actor);
-  const {id:fid}=await execute('createFamily',{name:'Free family'},actor) as {id:string};
+  const {id:fid}=await createFamily(actor,'Free family') as {id:string};
   const family=getFirestore().doc(`families/${fid}`);
   return {actor,fid,family,subscription:family.collection('private').doc('subscription')};
 }

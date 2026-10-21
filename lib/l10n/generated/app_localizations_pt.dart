@@ -131,7 +131,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Use sua conta individual ou crie uma família quando desejar.';
 
   @override
-  String get invite => 'Convidar um associado';
+  String get invite => 'Convidar um membro';
 
   @override
   String get newProfile => 'Novo perfil de visualização';
@@ -140,7 +140,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get administrator => 'Administrador';
 
   @override
-  String get member => 'Associado';
+  String get member => 'Membro';
 
   @override
   String get inviteExpires => 'Convite de uso único. Válido por 5 minutos.';
@@ -291,7 +291,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get deleteAccountBody =>
-      'Será necessário entrar novamente. Remova os associados antes de excluir uma conta administradora. Seus dados serão encaminhados para exclusão permanente.';
+      'Será necessário entrar novamente. Remova os membros antes de excluir uma conta administradora. Seus dados serão encaminhados para exclusão permanente.';
 
   @override
   String get favorites => 'Favoritos';
@@ -326,7 +326,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get familyHasMembers =>
-      'Remova as contas associadas antes de excluir sua conta.';
+      'Remova os membros da família antes de excluir sua conta.';
 
   @override
   String get loading => 'Carregando';
@@ -998,7 +998,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get membershipAcceptHelp =>
-      'Aceitar adiciona sua conta à família, se houver vaga. Seus recursos pessoais permanecem privados.';
+      'Aceitar move sua conta para esta família. Se a sua família individual tiver fontes IPTV, dispositivos ou perfis, remova-os antes.';
 
   @override
   String get acceptMembership => 'Aceitar';
@@ -1200,7 +1200,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get profileLinked => 'Sua conta foi vinculada ao perfil.';
 
   @override
-  String get errorProfileLimit => 'Esta família já tem quatro associados.';
+  String get errorProfileLimit => 'Esta família já tem quatro membros.';
 
   @override
   String get errorProfileTypeImmutable =>
@@ -1555,4 +1555,42 @@ class AppLocalizationsPt extends AppLocalizations {
   String ageRatingLabel(String rating) {
     return 'Classificação $rating';
   }
+
+  @override
+  String familyOfName(String name) {
+    return 'Família $name';
+  }
+
+  @override
+  String get familyEmptyBody => 'Ainda não há membros adicionais.';
+
+  @override
+  String get addMembers => 'Adicionar membros';
+
+  @override
+  String get invitePending => 'Convite pendente';
+
+  @override
+  String get cancelInvitation => 'Cancelar convite';
+
+  @override
+  String get cancelInvitationBody =>
+      'O convite deixará de valer e a pessoa não poderá mais aceitá-lo.';
+
+  @override
+  String get leaveFamily => 'Sair da família';
+
+  @override
+  String get leaveFamilyBody =>
+      'Você volta para a sua família individual. Seus dados são mantidos.';
+
+  @override
+  String get errorAlreadyInFamily => 'Esta conta já pertence a uma família.';
+
+  @override
+  String get errorIndividualFamilyHasResources =>
+      'Para entrar em outra família, remova antes as fontes IPTV, os dispositivos e os perfis da sua família individual.';
+
+  @override
+  String get errorFamilyExclusive => 'Cada conta pertence a uma única família.';
 }
