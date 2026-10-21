@@ -23,6 +23,9 @@
    - **Sheets em vez de SnackBars**: Todo aviso, mensagem de erro ou feedback informativo do projeto DEVE ser apresentado via Bottom Sheet modal (`showAppModalSheet` ou `showAppFeedbackSheet`). O uso de `SnackBar` para notificações gerais é proibido.
    - **Exceção Obrigatória — Erro ao Conectar Dispositivo**: A única exceção ao uso de Bottom Sheets é o erro ao conectar/parear dispositivo (`showDeviceConnectionFailure`), que DEVE ser exibido via `SnackBar`.
    - **Sobreposição Obrigatória do Menu Principal**: Todo Bottom Sheet (`useRootNavigator: true`) e todo SnackBar DEVE se sobrepor ao menu principal (`BottomNavigation`), garantindo visibilidade limpa e sem cortes.
+5. **Fundo do Menu Principal**:
+   - O background do menu principal (`BottomNavigation`) usa a mesma cor do background da tela Home (`CatalogPageView`): o material `GraphiteBackdrop` (`AppColors.backgroundGradient` + grão).
+   - Aplicar via `GraphiteBackdropSlice`, que repinta o backdrop alinhado à base da tela. É proibido definir uma cor própria, deixar o menu transparente sobre o conteúdo ou duplicar os valores do gradiente.
 
 ---
 
