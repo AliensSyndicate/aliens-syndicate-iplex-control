@@ -41,13 +41,26 @@ export async function fetchSnapshot(
   const transport = fetch;
   let downloaded = 0;
   const deadline = Date.now() + 300000;
+  // One download per URL and sync: detection, access validation and extraction
+  // share the same response (lists used to be downloaded up to three times,
+  // tripling time, provider connections and the 64 MB budget).
+  const responses = new Map<string, Promise<string>>();
 
-  const budgetedFetch: ProviderFetch = async url => {
-    if (Date.now() > deadline) throw new DomainError('provider-time-budget');
-    const body = await transport(url);
-    downloaded += Buffer.byteLength(body, 'utf8');
-    if (downloaded > 64 * 1024 * 1024) throw new DomainError('catalog-too-large');
-    return body;
+  const budgetedFetch: ProviderFetch = url => {
+    let pending = responses.get(url);
+    if (!pending) {
+      pending = (async () => {
+        if (Date.now() > deadline) throw new DomainError('provider-time-budget', {reason: 'sync-budget'});
+        const body = await transport(url);
+        downloaded += Buffer.byteLength(body, 'utf8');
+        if (downloaded > 64 * 1024 * 1024) throw new DomainError('catalog-too-large', {bytes: downloaded});
+        return body;
+      })();
+      responses.set(url, pending);
+      // Failures are not cached: an explicit retry (Xtream lists) hits the network again.
+      pending.catch(() => responses.delete(url));
+    }
+    return pending;
   };
 
   // 1. Detect format and select adapter

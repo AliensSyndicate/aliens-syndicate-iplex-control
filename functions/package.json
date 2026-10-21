@@ -9,7 +9,7 @@
     "build": "tsc",
     "test": "node --import tsx --test test/*.test.ts",
     "test:rules": "node --import tsx --test test/*.rules.ts",
-    "test:integration": "node --import tsx --test test/*.integration.ts",
+    "test:integration": "node --import tsx --test --test-concurrency=1 test/*.integration.ts",
     "check": "npm run build && npm test",
     "dev:pairing-qr": "tsx scripts/dev_pairing_qr.ts",
     "e2e:callable": "tsx scripts/e2e_callable.ts"

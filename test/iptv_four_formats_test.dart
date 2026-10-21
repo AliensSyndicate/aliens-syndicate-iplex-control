@@ -797,6 +797,7 @@ void main() {
               'format': 'url',
               'status': 'error',
               'errorCode': 'catalog-sync-failed',
+              'version': 'v-anterior',
               'host': 'broken.provider.tv',
               'count': 88,
             }),
@@ -812,7 +813,7 @@ void main() {
 
         expect(
           find.text(
-            'Falha ao sincronizar com o provedor. O catálogo anterior foi preservado.',
+            'Não foi possível concluir a sincronização. O catálogo anterior foi preservado.',
           ),
           findsOneWidget,
         );

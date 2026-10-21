@@ -1,11 +1,13 @@
 import {getFirestore} from 'firebase-admin/firestore';
 import {getStorage} from 'firebase-admin/storage';
 import {z} from 'zod';
-import {catalogSchema, Catalog, fetchProvider, publicAddress} from './catalog';
+import {catalogSchema, Catalog, fetchProvider, privateProvidersAllowedForTests, publicAddress} from './catalog';
 import {canStartPlayback, DomainError, hash, idSchema, sourceSchema, unseal} from './domain';
 import {iptvWorkspace} from './iptv_workspace';
 import {requireSourceAccess} from './iptv_sources';
-import {findM3uStream, playlistBody, Source, validateXtream, xtreamUrl} from './iptv_ingestion';
+import {findM3uStream, normalizeSeriesDetail, playlistBody, Source, validateXtream, xtreamUrl} from './iptv_ingestion';
+import {streamIndexPath} from './iptv_sync';
+import {parseXtreamJson} from './iptv_adapters';
 import {xtreamBase} from './iptv_server';
 import {lookup} from 'node:dns/promises';
 import {activePlayer,type Identity} from './service';
@@ -130,28 +132,70 @@ export async function resolveSourceStream(input:Record<string,unknown>,actor:Ide
     if(!/^\d+$/.test(streamId)||!/^\w{1,10}$/.test(extension))throw new DomainError('invalid-catalog');
     const kind=item.kind==='channel'?'live':item.kind;
     url=new URL(`${kind}/${encodeURIComponent(source.username!)}/${encodeURIComponent(source.password!)}/${streamId}.${extension}`,xtreamBase(source.url!)).toString();
-  } else url=findM3uStream(await playlistBody(source,access.fid,id,fetchProvider),source.url??'',item.providerRef);
+  } else {
+    // M3U series episodes are addressed by their own stream reference.
+    const ref=item.kind==='series'?idSchema.parse(input.episodeId):item.providerRef;
+    if(item.kind==='series'&&!((catalog.seriesDetails?.[item.providerRef] as any)?.episodes&&Object.values((catalog.seriesDetails![item.providerRef] as any).episodes).flat().some((e:any)=>e?.id===ref)))throw new DomainError('not-found');
+    url=await sealedStream(access.fid,id,access.data,ref,key)??findM3uStream(await playlistBody(source,access.fid,id,fetchProvider),source.url??'',ref);
+  }
   if(!url)throw new DomainError('source-authorization-required');
   const parsed=new URL(url);
   if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)throw new DomainError('unsafe-provider');
   const addresses=await lookup(parsed.hostname.replace(/^\[|\]$/g,''),{all:true});
-  if(!addresses.length||addresses.some(a=>!publicAddress(a.address)))throw new DomainError('unsafe-provider');
+  if(!addresses.length||(!privateProvidersAllowedForTests()&&addresses.some(a=>!publicAddress(a.address))))throw new DomainError('unsafe-provider');
   // Permissions are revalidated right before the URL leaves the backend.
   const latest=await authorize(actor,id,true,input.profileId);
   if(latest.data.revision!==access.data.revision||latest.data.version!==access.data.version||!canSee(latest.viewer,id,item))throw new DomainError('source-conflict');
   return {url,sourceId:id,validatedAt:Date.now()};
 }
-export async function readSourceSeries(input:Record<string,unknown>,actor:Identity) {
+export async function readSourceSeries(input:Record<string,unknown>,actor:Identity,key='') {
   const id=idSchema.parse(input.id), seriesId=idSchema.parse(input.seriesId), access=await authorize(actor,id,false,input.profileId);
   const catalog=await load(access.data.version);
-  if(access.viewer) {
-    const item=catalog.items.find(i=>i.kind==='series'&&(i.providerRef===seriesId||i.id===seriesId||hash(`${id}:${i.id}`)===seriesId));
-    if(!item||!canSee(access.viewer,id,item))throw new DomainError('not-found');
-  }
-  const details=catalog.seriesDetails?.[seriesId]??null;
+  const item=catalog.items.find(i=>i.kind==='series'&&(i.providerRef===seriesId||i.id===seriesId||hash(`${id}:${i.id}`)===seriesId));
+  if(access.viewer&&(!item||!canSee(access.viewer,id,item)))throw new DomainError('not-found');
+  const details=catalog.seriesDetails?.[seriesId]??(item&&key?await xtreamSeriesDetails(access.fid,id,access.data,item.providerRef,key):null);
   const latest=await authorize(actor,id,false,input.profileId);
   if(latest.data.version!==access.data.version||latest.data.revision!==access.data.revision)throw new DomainError('source-conflict');
   return {schemaVersion:1,seriesId,details};
+}
+
+/** Sealed index written by the sync worker; null when absent or from another revision/version. */
+async function sealedStream(fid:string,sourceId:string,data:FirebaseFirestore.DocumentData,ref:string,key:string):Promise<string|undefined> {
+  try{
+    const [body]=await getStorage().bucket().file(streamIndexPath(fid,sourceId)).download();
+    const index=unseal<{version:string;revision:number;streams:Record<string,string>}>(body.toString(),key);
+    if(index.version!==data.version||index.revision!==data.revision)return undefined;
+    return index.streams[ref];
+  }catch{return undefined;}
+}
+
+/** Xtream episodes on demand (one get_series_info per opened series), cached per
+ * catalog version for 6 h. Episode metadata carries no credential. */
+const seriesCache=new Map<string,{at:number;details:unknown}>();
+async function xtreamSeriesDetails(fid:string,sourceId:string,data:FirebaseFirestore.DocumentData,seriesId:string,key:string):Promise<unknown> {
+  if(!/^\d{1,20}$/.test(seriesId))return null;
+  const cacheKey=`${data.version}:${sourceId}:${seriesId}`,path=`series_cache/${data.version}/${sourceId}_${seriesId}.json`,now=Date.now();
+  const hit=seriesCache.get(cacheKey);
+  if(hit&&now-hit.at<6*3600_000)return hit.details;
+  const file=getStorage().bucket().file(path);
+  try{
+    const [meta]=await file.getMetadata();
+    if(now-Date.parse(String(meta.updated))<6*3600_000){
+      const [body]=await file.download();const details=JSON.parse(body.toString());
+      seriesCache.set(cacheKey,{at:now,details});return details;
+    }
+  }catch{/* not cached yet */}
+  const secret=(await getFirestore().doc(`source_secrets/${fid}_${sourceId}`).get()).data();
+  if(!secret||secret.revision!==data.revision)throw new DomainError('source-conflict');
+  const source=sourceSchema.parse(unseal<Source>(secret.encrypted,key));
+  if(source.format!=='xtream')return null;
+  const raw=parseXtreamJson(await fetchProvider(xtreamUrl(source,'get_series_info',{series_id:seriesId})),'series-info');
+  if(!raw||typeof raw!=='object'||!raw.episodes||typeof raw.episodes!=='object')return null;
+  const details=normalizeSeriesDetail(raw);
+  await file.save(JSON.stringify(details),{resumable:false,contentType:'application/json'}).catch(()=>undefined);
+  if(seriesCache.size>500)seriesCache.delete(seriesCache.keys().next().value!);
+  seriesCache.set(cacheKey,{at:now,details});
+  return details;
 }
 
 /** Spaces (source + content type) available to the active profile. Kids profiles

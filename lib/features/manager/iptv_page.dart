@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
+import '../iptv/presentation/controllers/iptv_sync_controller.dart';
 
 class IptvPage extends ConsumerStatefulWidget {
   const IptvPage({super.key, required this.id});
@@ -122,11 +123,16 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                 );
               }
 
-              final isError =
-                  e.text('status') == 'error' || e.text('errorCode').isNotEmpty;
+              // A retryable failure keeps the source queued: the worker tries again
+              // by itself, so it is shown as pending, not as a final failure.
+              final isRetrying =
+                  e.text('status') == 'queued' && e.text('errorCode').isNotEmpty;
+              final isError = e.text('status') == 'error' ||
+                  (e.text('errorCode').isNotEmpty && !isRetrying);
               final isSyncing =
                   e.text('status') == 'syncing' ||
-                  e.text('status') == 'validating';
+                  e.text('status') == 'validating' ||
+                  isRetrying;
               final isReady =
                   e.text('status') == 'ready' || e.text('status') == 'online';
               final isOnline =
@@ -204,7 +210,7 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              l.sourceSyncing,
+                                              isRetrying ? l.sourceRetrying : l.sourceSyncing,
                                               style: const TextStyle(
                                                 color: AppColors.brandBlue,
                                                 fontSize: 13,
@@ -331,10 +337,22 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                                 ? l.singleStream
                                 : l.itemCount(itemCount),
                           ),
+                          if (!isSingleStream && e.data['channelCount'] is num) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            _SourceDetailRow(
+                              label: l.catalogKinds(
+                                e.number('channelCount'),
+                                e.number('movieCount'),
+                                e.number('seriesCount'),
+                              ),
+                              value: '',
+                              isFullLabel: true,
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    if (isError) ...[
+                    if (isError || isRetrying) ...[
                       const SizedBox(height: AppSpacing.lg),
                       AppSurface(
                         child: Row(
@@ -347,13 +365,32 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
-                              child: Text(
-                                l.syncErrorGeneric,
-                                style: const TextStyle(
-                                  color: AppColors.error,
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    [
+                                      mapIptvErrorCodeToMessage(context, e.text('errorCode')),
+                                      if (e.text('version').isNotEmpty) l.previousCatalogKept,
+                                    ].join(' '),
+                                    key: const Key('source-error-message'),
+                                    style: const TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 14,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  if (e.text('errorReason').isNotEmpty) ...[
+                                    const SizedBox(height: AppSpacing.xs),
+                                    Text(
+                                      l.technicalDetail(e.text('errorReason')),
+                                      style: const TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                           ],

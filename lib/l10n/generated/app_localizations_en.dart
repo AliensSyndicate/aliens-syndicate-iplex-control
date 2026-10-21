@@ -1413,4 +1413,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get parentalPinRemoved => 'Parental PIN removed.';
+
+  @override
+  String get sourceRetrying => 'Retrying automatically';
+
+  @override
+  String get previousCatalogKept => 'The previous catalog was kept.';
+
+  @override
+  String technicalDetail(String detail) {
+    return 'Technical detail: $detail';
+  }
+
+  @override
+  String catalogKinds(int channels, int movies, int series) {
+    return '$channels channels · $movies movies · $series series';
+  }
 }

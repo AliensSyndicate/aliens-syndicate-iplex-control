@@ -14,11 +14,15 @@ class IptvSourceCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l;
-    final isError =
-        entry.text('status') == 'error' || entry.text('errorCode').isNotEmpty;
+    // Retryable failures stay queued and are retried by the worker: pending, not failed.
+    final isRetrying =
+        entry.text('status') == 'queued' && entry.text('errorCode').isNotEmpty;
+    final isError = entry.text('status') == 'error' ||
+        (entry.text('errorCode').isNotEmpty && !isRetrying);
     final isSyncing =
         entry.text('status') == 'syncing' ||
-        entry.text('status') == 'validating';
+        entry.text('status') == 'validating' ||
+        isRetrying;
     final isReady =
         entry.text('status') == 'ready' || entry.text('status') == 'online';
     final isOnline =

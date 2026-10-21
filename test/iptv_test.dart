@@ -741,7 +741,8 @@ void main() {
 
       expect(
         find.text(
-          'Falha ao sincronizar com o provedor. O catálogo anterior foi preservado.',
+          // Specific message for the backend code (no catalog published yet: nothing to keep).
+          'Não foi possível concluir a sincronização.',
         ),
         findsOneWidget,
       );

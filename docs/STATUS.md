@@ -1,5 +1,14 @@
 # Estado de implementação e validação — 19/10/2026
 
+## Atualização 20/10/2026 — sincronização IPTV (sem deploy, commit ou push)
+
+Diagnóstico completo em [IPTV/iptv_sync_diagnosis_2026-10-20.md](IPTV/iptv_sync_diagnosis_2026-10-20.md).
+
+- **Causa em produção**: o backend implantado falha na resolução DNS (Node ≥ 20) e na transação de publicação (leitura após escrita), sem log útil. Corrigido localmente; **exige deploy**.
+- Download robusto (redirecionamento, gzip, charset, User‑Agent alternativo, limites, erros classificados), parsers M3U/Xtream tolerantes, séries M3U com episódios, episódios Xtream sob demanda, índice de streams criptografado para reprodução.
+- Control mostra nova tentativa agendada, erro específico com detalhe técnico, catálogo anterior preservado e contagem por tipo.
+- Validação: 88 unitários, 14 de regras, 67 de integração (servidor IPTV controlado com HTTP real); 238 testes Flutter; 164 testes Web. Listas reais: 476 e 11 365 itens sincronizados pelo trigger; reprodução no Web confirmada.
+
 ## Atualização 20/10/2026 — integração Control ↔ Web ↔ App (sem deploy, commit ou push)
 
 Contratos v1 em [CONTRACTS.md](CONTRACTS.md). Relatório completo, matriz e plano de implantação/rollback em `aliens-syndicate-iplex-web/docs/INTEGRACAO-2026-10-20.md`.

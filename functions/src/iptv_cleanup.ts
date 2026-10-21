@@ -16,6 +16,8 @@ export async function cleanupIptvResources(): Promise<void> {
       }
       if (data.deleteSource) {
         await getStorage().bucket().deleteFiles({prefix: `epg/${source.ref.parent.parent!.id}/${source.id}/`});
+        // Sealed stream index (provider URLs): also removed right away by deleteIptvSource.
+        await getStorage().bucket().file(`stream_index/${source.ref.parent.parent!.id}_${source.id}.bin`).delete({ignoreNotFound: true});
         const fid = source.ref.parent.parent!.id, id = source.id;
         for (const collection of ['catalog', 'source_access']) {
           // Access grants carry source IDs in their document name for rules compatibility.

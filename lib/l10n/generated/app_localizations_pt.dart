@@ -1426,4 +1426,20 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get parentalPinRemoved => 'PIN parental removido.';
+
+  @override
+  String get sourceRetrying => 'Nova tentativa automática em breve';
+
+  @override
+  String get previousCatalogKept => 'O catálogo anterior foi preservado.';
+
+  @override
+  String technicalDetail(String detail) {
+    return 'Detalhe técnico: $detail';
+  }
+
+  @override
+  String catalogKinds(int channels, int movies, int series) {
+    return '$channels canais · $movies filmes · $series séries';
+  }
 }

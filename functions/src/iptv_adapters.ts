@@ -1,12 +1,20 @@
 import {getStorage} from 'firebase-admin/storage';
 import {z} from 'zod';
-import {Catalog, catalogSchema, fetchProvider, parseM3u, parseXtream} from './catalog';
+import {Catalog, catalogSchema, fetchProvider, parseM3uDetailed, parseXtream} from './catalog';
 import {DomainError, hash, sourceSchema} from './domain';
 import {normalizeServerEndpoint, xtreamBase} from './iptv_server';
 
 export type Source = z.infer<typeof sourceSchema>;
 export type ProviderFetch = typeof fetchProvider;
-export type ProviderSnapshot = {proof: string; build: () => Promise<Catalog>; singleStream: boolean};
+export type ProviderSnapshot = {
+  proof: string;
+  build: () => Promise<Catalog>;
+  singleStream: boolean;
+  /** Filled by build(): diagnostic counters (entries, skipped, duplicates, episodes...). */
+  stats?: Record<string, number>;
+  /** M3U only: providerRef/episode id → stream URL, sealed by the worker so playback never re-downloads the list. */
+  streamIndex?: () => Record<string, string>;
+};
 
 export interface SourceLimitations {
   readonly supportsEpg: boolean;
@@ -36,8 +44,17 @@ export function xtreamUrl(source: Source, action?: string, params: Record<string
   return url.toString();
 }
 
+/** Xtream answers wrong credentials in several ways: 401/403, an empty body, `[]`,
+ * `{"user_info":{"auth":0}}`. An HTML page or other text means the panel/URL is wrong. */
+export function parseXtreamJson(body: string, reason: string): any {
+  const clean = body.replace(/^\uFEFF/, '').trim();
+  if (!clean || clean === '[]' || clean === 'null') throw new DomainError('invalid-credentials', {reason: `${reason}-empty`});
+  try { return JSON.parse(clean); }
+  catch { throw new DomainError('provider-unavailable', {reason: `${reason}-unexpected-response`}); }
+}
+
 export async function validateXtream(source: Source, fetch: ProviderFetch): Promise<void> {
-  const auth = JSON.parse(await fetch(xtreamUrl(source)));
+  const auth = parseXtreamJson(await fetch(xtreamUrl(source)), 'xtream-auth');
   const userInfo = auth?.user_info;
   const isAuthValid = [1, '1', true].includes(userInfo?.auth);
   const status = String(userInfo?.status ?? '').toLowerCase().trim();
@@ -83,6 +100,24 @@ export function normalizeSeriesDetail(detail: any): unknown {
       }))
     : [];
   return {seasons, episodes};
+}
+
+/** Every playable URL of a playlist keyed by its stream reference (hash of the URL). */
+export function m3uStreamIndex(body: string, base: string): Record<string, string> {
+  const index: Record<string, string> = {};
+  if (/#EXT-X-(?:STREAM-INF|TARGETDURATION|MEDIA-SEQUENCE|VERSION):/i.test(body)) {
+    if (base) index[hash(base)] = base;
+    return index;
+  }
+  for (const line of body.split(/\r?\n/)) {
+    const value = line.trim();
+    if (!value || value.startsWith('#')) continue;
+    try {
+      const url = new URL(value, base.startsWith('http') ? base : undefined);
+      if (['http:', 'https:'].includes(url.protocol)) index[hash(url.toString())] ??= url.toString();
+    } catch { /* not a URL */ }
+  }
+  return index;
 }
 
 export function findM3uStream(body: string, base: string, providerRef: string): string | undefined {
@@ -132,78 +167,55 @@ export class XtreamAdapter implements IptvSourceAdapter {
   }
 
   async extractCatalog(source: Source, fid: string, sourceId: string, fetch: ProviderFetch): Promise<ProviderSnapshot> {
-    const started = Date.now();
     const groups = [
       ['get_live_streams', 'get_live_categories', 'channel'],
       ['get_vod_streams', 'get_vod_categories', 'movie'],
       ['get_series', 'get_series_categories', 'series'],
     ] as const;
-
-    const data: {kind: 'channel' | 'movie' | 'series'; rows: any[]; categories: any[]}[] = [];
-    const details: Record<string, unknown> = {};
-
-    for (const [streams, categories, kind] of groups) {
-      let rawStreams: any = [];
-      let rawCats: any = [];
-      try {
-        rawStreams = JSON.parse(await fetch(xtreamUrl(source, streams)));
-      } catch {
-        rawStreams = [];
-      }
-      try {
-        rawCats = JSON.parse(await fetch(xtreamUrl(source, categories)));
-      } catch {
-        rawCats = [];
-      }
-      const rows = Array.isArray(rawStreams) ? z.array(z.record(z.unknown())).max(100000).parse(rawStreams) : [];
-      const cats = Array.isArray(rawCats)
-        ? rawCats
-            .filter((c: any) => c && typeof c === 'object' && c.category_id !== undefined)
-            .map((c: any) => ({
-              category_id: String(c.category_id),
-              category_name: String(c.category_name ?? c.name ?? 'General').slice(0, 300),
-            }))
-        : [];
-      data.push({kind, rows, categories: cats});
-
-      if (kind === 'series') {
-        for (const row of rows) {
-          if (Date.now() - started > 240000) break;
-          const id = String(row.series_id ?? '');
-          if (!/^\d+$/.test(id)) continue;
-          try {
-            const detail = JSON.parse(await fetch(xtreamUrl(source, 'get_series_info', {series_id: id})));
-            if (detail && typeof detail === 'object' && detail.episodes && typeof detail.episodes === 'object') {
-              details[id] = normalizeSeriesDetail(detail);
-            }
-          } catch {
-            // Tolerate single series detail failure
-          }
+    // Main lists: one retry on transient failures, then fail closed (a partial
+    // catalog would silently remove a whole content type). A 200 that is not a
+    // list (panel without VOD/series) is an empty type. Categories are optional.
+    const list = async (action: string, required: boolean): Promise<unknown[]> => {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const body = (await fetch(xtreamUrl(source, action))).replace(/^\uFEFF/, '').trim();
+          if (!body) return [];
+          const parsed = JSON.parse(body);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          if (!required) return [];
+          // Panels without VOD/series answer "not implemented": that type is empty, not a failure.
+          if (error instanceof DomainError && [400, 404, 405, 501].includes(Number(error.details?.statusCode))) return [];
+          const transient = error instanceof DomainError && ['provider-unavailable', 'download-failed', 'provider-time-budget'].includes(error.code);
+          if (error instanceof SyntaxError) throw new DomainError('parsing-failed', {reason: `${action}-invalid-json`});
+          if (!transient || attempt >= 1) throw error;
         }
       }
+    };
+    const data: {kind: 'channel' | 'movie' | 'series'; rows: unknown[]; categories: {category_id: string; category_name: string}[]}[] = [];
+    for (const [streams, categories, kind] of groups) {
+      const rows = await list(streams, true);
+      const cats = (await list(categories, false))
+        .filter((c: any) => c && typeof c === 'object' && c.category_id !== undefined)
+        .map((c: any) => ({category_id: String(c.category_id), category_name: String(c.category_name ?? c.name ?? 'General').slice(0, 300)}));
+      data.push({kind, rows, categories: cats});
     }
-
-    const proof = hash(`parser-2:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}:${JSON.stringify(details)}`);
-    return {
-      proof,
+    // Episodes are fetched on demand (readSourceSeries), like IPTV players do:
+    // one get_series_info per series during sync does not scale to large panels.
+    const snapshot: ProviderSnapshot = {
+      proof: hash(`parser-3:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}`),
       singleStream: false,
       build: async () => {
         const categories: NonNullable<Catalog['categories']> = data.flatMap(d =>
           d.categories.map(c => ({id: String(c.category_id), name: c.category_name, kind: d.kind}))
         );
-        const items = data.flatMap(d => parseXtream(d.rows, d.kind, categories));
-        const itemIndex = new Map(items.map(i => [`${i.kind}:${i.providerRef}`, i]));
-        for (const group of data) {
-          for (let i = 0; i < group.rows.length; i++) {
-            const row = group.rows[i]!;
-            const item = itemIndex.get(`${group.kind}:${String(row.stream_id ?? row.series_id)}`);
-            const image = row.stream_icon ?? row.cover;
-            if (item && typeof image === 'string' && image) item.imageRef = hash(image);
-          }
-        }
-        return catalogSchema.parse({schemaVersion: 1, items, categories, seriesDetails: details});
+        const counters = {skipped: 0};
+        const items = data.flatMap(d => parseXtream(d.rows, d.kind, categories, counters));
+        snapshot.stats = {entries: data.reduce((n, d) => n + d.rows.length, 0), skipped: counters.skipped};
+        return catalogSchema.parse({schemaVersion: 1, items, categories});
       },
     };
+    return snapshot;
   }
 
   getLimitations(source: Source): SourceLimitations {
@@ -262,11 +274,17 @@ export class M3uPlaylistAdapter implements IptvSourceAdapter {
     const body = await playlistBody(source, fid, sourceId, fetch);
     const singleStream = /#EXT-X-(?:STREAM-INF|TARGETDURATION|MEDIA-SEQUENCE|VERSION):/i.test(body);
     const origin = source.format === 'file' ? 'file' : source.url!;
-    return {
-      proof: hash(`parser-2:${origin}:${singleStream ? source.name : ''}:${body}`),
+    const snapshot: ProviderSnapshot = {
+      proof: hash(`parser-3:${origin}:${singleStream ? source.name : ''}:${body}`),
       singleStream,
-      build: async () => parseM3u(body, source.url ?? '', source.name),
+      build: async () => {
+        const {catalog, stats} = parseM3uDetailed(body, source.url ?? '', source.name);
+        snapshot.stats = stats;
+        return catalog;
+      },
+      streamIndex: () => m3uStreamIndex(body, source.url ?? ''),
     };
+    return snapshot;
   }
 
   getLimitations(source: Source): SourceLimitations {

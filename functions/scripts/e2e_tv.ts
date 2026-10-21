@@ -12,6 +12,8 @@
  *   tsx scripts/e2e_tv.ts invite                  admin invites the newest anonymous emulator account (Control on a simulator)
  *   tsx scripts/e2e_tv.ts single                  delete the non-admin profiles (TV opens the admin profile directly)
  *   tsx scripts/e2e_tv.ts tvcode [platform]     code shown by the newest unpaired TV (no camera/screen needed)
+ *   tsx scripts/e2e_tv.ts source <name> <format> <url> [username] [password]
+ *                                                 save a source like the Control does and follow the real job to the end
  *
  * Refuses to run unless every Firebase endpoint is an emulator on demo-iplex.
  */
@@ -21,7 +23,7 @@ import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {initializeApp} from 'firebase/app';
 import {connectAuthEmulator, createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword, updateProfile} from 'firebase/auth';
 import {connectFunctionsEmulator, getFunctions, httpsCallable} from 'firebase/functions';
-import {collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, onSnapshot} from 'firebase/firestore';
+import {collection, connectFirestoreEmulator, doc, getDoc, getDocs, getFirestore, onSnapshot, query, where} from 'firebase/firestore';
 
 const host = process.env.EMULATOR_HOST ?? '127.0.0.1';
 const STATE = process.env.E2E_TV_STATE ?? 'build/e2e-tv/state.json';
@@ -163,6 +165,28 @@ async function single() {
   }
 }
 
+async function source(name: string, format: string, url: string, username?: string, password?: string) {
+  const state = load()!; const p = await phone(state);
+  const t0 = Date.now();
+  const {id} = await p.call('saveSource', {name, format, url, ...(username ? {username, password} : {}), requestId: randomUUID().replace(/-/g, '')});
+  log(`source ${id} saved (${format})`);
+  let last = '';
+  for (;;) {
+    const s = (await getDoc(doc(p.db, `families/${state.fid}/sources/${id}`))).data()!;
+    // Rules: an account reads only the jobs it requested (same as the Control).
+    const jobs = await getDocs(query(collection(p.db, 'iptv_sync_jobs'), where('requestedByUid', '==', p.uid), where('familyId', '==', state.fid), where('sourceId', '==', id)));
+    const job = jobs.docs.map(d => d.data())[0];
+    const line = `${s.status}${job ? ` · job ${job.status}/${job.stage}` : ''}${s.errorCode ? ` · ${s.errorCode}${s.errorReason ? ` (${s.errorReason})` : ''}` : ''}`;
+    if (line !== last) { console.log(`    · ${((Date.now() - t0) / 1000).toFixed(1)} s ${line}`); last = line; }
+    if (s.status === 'ready' || s.status === 'error') {
+      if (s.status === 'ready') log(`${s.count} items: ${s.channelCount} channels · ${s.movieCount} movies · ${s.seriesCount} series`);
+      return;
+    }
+    if (Date.now() - t0 > 300_000) throw new Error('no final status in 5 min');
+    await new Promise(r => setTimeout(r, 1000));
+  }
+}
+
 async function status() {
   const state = load()!; const p = await phone(state);
   const family = (await getDoc(doc(p.db, `families/${state.fid}`))).data()!;
@@ -172,6 +196,6 @@ async function status() {
 
 const [command, ...args] = process.argv.slice(2);
 if (!/^(127\.0\.0\.1|localhost|192\.168\.\d+\.\d+)$/.test(host)) throw new Error('emulator host required');
-const run = {setup, link: () => link(args[0]!), play: () => play(args[0]!, args[1]), unlink: () => unlink(args[0]), subscription: () => subscription(args[0]!), status, single, invite, tvcode: () => tvcode(args[0])}[command ?? ''];
+const run = {setup, link: () => link(args[0]!), play: () => play(args[0]!, args[1]), unlink: () => unlink(args[0]), subscription: () => subscription(args[0]!), status, single, invite, source: () => source(args[0]!, args[1]!, args[2]!, args[3], args[4]), tvcode: () => tvcode(args[0])}[command ?? ''];
 if (!run) { console.error('usage: setup | link <code> | play <title> [tvId] | unlink [tvId] | subscription <expired|trial> | status | tvcode [platform]'); process.exit(2); }
 run().then(() => process.exit(0), e => { console.error(`✖ ${e.code ?? ''} ${e.message}`); process.exit(1); });

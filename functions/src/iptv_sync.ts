@@ -2,7 +2,7 @@ import {getFirestore, DocumentReference, FieldValue} from 'firebase-admin/firest
 import {getStorage} from 'firebase-admin/storage';
 import {randomUUID} from 'node:crypto';
 import {catalogSchema, fetchProvider, fingerprint, validateUpdate, Catalog} from './catalog';
-import {sourceSchema, unseal, hash, DomainError} from './domain';
+import {sourceSchema, unseal, seal, hash, DomainError} from './domain';
 import {parseIptvEpg} from './iptv_epg';
 import {identifyOrCreateServer} from './iptv_server';
 import {fetchSnapshot, Source, ProviderFetch, ProviderSnapshot} from './iptv_ingestion';
@@ -13,6 +13,9 @@ import {classifyIptvError, isRetryableIptvError, logSyncFailure} from './iptv_er
 
 const LEASE_MS=600000;
 export type SyncStage='queued'|'identifying_server'|'validating_source'|'downloading'|'parsing'|'uploading_catalog'|'publishing_catalog'|'completed'|'failed';
+
+/** Sealed providerRef → stream URL index of an M3U source (playback without re-downloading the list). */
+export const streamIndexPath = (fid: string, sourceId: string) => `stream_index/${fid}_${sourceId}.bin`;
 
 export async function syncDueSources(key: string): Promise<void> {
   await advanceDailyScan();
@@ -108,6 +111,16 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
       version = ''; storagePath = '';
     }
     validateUpdate(locked.data.count ?? 0, catalog);
+    // Playback must not depend on downloading the whole list again: the worker
+    // seals providerRef → URL once (same key as source secrets; no client access).
+    if (snapshot.streamIndex) {
+      const sealed = seal({schemaVersion: 1, version: hash(`${serverId ?? 'file'}:${fingerprint(catalog)}`), revision: locked.data.revision, streams: snapshot.streamIndex()}, key);
+      try {
+        await getStorage().bucket().file(streamIndexPath(fid, ref.id)).save(sealed, {resumable: false, contentType: 'application/octet-stream'});
+      } catch (err: any) {
+        throw new DomainError('storage-upload-failed', {reason: 'stream-index', message: err?.message});
+      }
+    }
     if (!reused) {
       version = hash(`${serverId ?? 'file'}:${fingerprint(catalog)}`);
       storagePath = `catalogs/${version}.json`;
@@ -130,6 +143,8 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
         // EPG parsing error is logged but optional unless required
       }
     }
+    const kinds = {channel: 0, movie: 0, series: 0};
+    for (const item of catalog.items) kinds[item.kind]++;
     await stage('publishing_catalog');
     const catalogRef = db.doc(`catalogs/${version}`);
     const iptvCatalogRef = db.doc(`iptv_catalogs/${version}`);
@@ -142,6 +157,7 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
       if (!owns(current.data()) || !family.exists || family.data()?.deleting) throw new DomainError('job-superseded');
       const patch = {
         serverId, catalogId: version, version, catalogSchemaVersion: 1, catalogStorage: 'object', count: catalog.items.length, contentCount: catalog.items.length,
+        channelCount: kinds.channel, movieCount: kinds.movie, seriesCount: kinds.series, errorReason: null,
         epgVersion, epgCount, isSingleStream: snapshot.singleStream, status: 'ready', authorizationStatus: 'valid', authorizationRevision: locked.data.revision,
         lastSuccessfulSyncAt: finishedAt, lastSyncAt: finishedAt, lastAttemptAt: now, nextSyncAt: Number.MAX_SAFE_INTEGER,
         lockedUntil: 0, runId: null, errorCode: null, failureCount: 0, currentJobId: null, updatedAt: finishedAt
@@ -195,10 +211,17 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
         }
       }
     });
+    console.info(JSON.stringify({component: 'iptv-sync', event: 'completed', jobId: locked.jobId, sourceId: ref.id, adapter: source?.format ?? 'unknown',
+      items: catalog.items.length, ...kinds, stats: snapshot.stats ?? null, reusedCatalog: reused, elapsedMs: Date.now() - now, attempts: locked.attempts}));
   } catch (error: any) {
-    const {code} = classifyIptvError(error, currentStage);
+    const {code, details} = classifyIptvError(error, currentStage);
+    // Only non-sensitive diagnostic fields leave the worker (no URL, user or password).
+    const errorReason = typeof details?.statusCode === 'number' ? `http-${details.statusCode}` : typeof details?.reason === 'string' ? details.reason.slice(0, 80) : null;
     const traceId = randomUUID();
-    const retryable = isRetryableIptvError(code);
+    // 400/404/410 on the provider's own endpoint mean a wrong URL or a cancelled
+    // line: retrying only delays the message the user needs to fix the source.
+    const definitive = [400, 404, 410].includes(Number(details?.statusCode));
+    const retryable = isRetryableIptvError(code) && !definitive;
     const retry = retryable && locked.attempts < 3;
 
     logSyncFailure({
@@ -213,7 +236,7 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
       elapsedMs: Date.now() - now,
       adapter: source?.format ?? locked.data.format ?? 'unknown',
       attempts: locked.attempts,
-      message: error instanceof Error ? error.message : String(error),
+      message: `${error?.constructor?.name ?? 'Error'}:${error?.code ?? ''} ${errorReason ?? ''} ${error instanceof Error && !(error instanceof DomainError) ? error.message : ''}`.trim(),
     });
 
     await db.runTransaction(async tx => {
@@ -227,6 +250,7 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
       const patch = {
         status: retry ? 'queued' : 'error',
         errorCode: code,
+        errorReason,
         failureCount: (current!.failureCount ?? 0) + 1,
         nextSyncAt: retry ? Date.now() + 60000 * 2 ** locked.attempts : Number.MAX_SAFE_INTEGER,
         lockedUntil: 0,
@@ -241,6 +265,7 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
         status: retry ? 'queued' : 'failed',
         stage: retry ? 'queued' : currentStage,
         errorCode: code,
+        errorReason,
         errorRetryable: retry,
         traceId,
         progress: null,

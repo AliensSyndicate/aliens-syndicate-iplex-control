@@ -341,7 +341,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   return {ok:true,playRequest:pendingPointer(f.deviceData,now)};
  });
  if(action==='readSourceCatalog')return readSourceCatalog(p,a);
- if(action==='readSourceSeries')return readSourceSeries(p,a);
+ if(action==='readSourceSeries')return readSourceSeries(p,a,key);
  if(action==='resolveSourceStream')return resolveSourceStream(p,a,key);
  if(action==='registerPushToken'||action==='unregisterPushToken')return registerPushToken(p,a,action==='unregisterPushToken');
  if(action==='readSourceEpg')return readIptvEpg(p,a);

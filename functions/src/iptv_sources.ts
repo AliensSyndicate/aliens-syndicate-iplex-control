@@ -6,6 +6,7 @@ import {z} from 'zod';
 import {DomainError, hash, idSchema, pinSchema, seal, sourceInputSchema, sourceSchema, unseal} from './domain';
 import {identifyOrCreateServer} from './iptv_server';
 import {terminal, writeJob} from './iptv_jobs';
+import {streamIndexPath} from './iptv_sync';
 import {iptvWorkspace} from './iptv_workspace';
 import type {Identity} from './service';
 
@@ -212,7 +213,7 @@ export async function verifyIptvPin(payload: Record<string, unknown>, actor: Ide
 }
 
 export async function deleteIptvSource(payload: Record<string, unknown>, actor: Identity) {
-  return db().runTransaction(async tx => {
+  const removed = await db().runTransaction(async tx => {
     const f = await iptvWorkspace(tx, actor), id = idSchema.parse(payload.id), ref = f.ref.collection('sources').doc(id);
     const source = await tx.get(ref);
     if (source.exists) await requireSourceAccess(tx, ref, source.data()!, actor.uid);
@@ -229,8 +230,12 @@ export async function deleteIptvSource(payload: Record<string, unknown>, actor: 
     }
     for (const j of jobs.docs) tx.update(j.ref, {status:'cancelled',stage:'cancelled',finishedAt:Date.now()});
     tx.set(db().doc(`iptv_cleanup/source_${f.fid}_${id}`), {sourcePath: ref.path, deleteSource: true, filePath: source.data()?.filePath ?? (source.data()?.format === 'file' ? `source_files/${f.fid}_${id}.m3u` : null), notBefore: Date.now() + 15 * 60000});
-    return {ok: true};
+    return {fid: f.fid, id};
   });
+  // The sealed stream index holds provider URLs (credentials): removed at once, not deferred.
+  // The deferred cleanup (iptv_cleanup) deletes it again if this attempt fails.
+  try { await getStorage().bucket().file(streamIndexPath(removed.fid, removed.id)).delete({ignoreNotFound: true}); } catch { /* retried by cleanup */ }
+  return {ok: true};
 }
 
 /** Bounded EPG read; no bearer Storage URL or provider credentials reach clients. */

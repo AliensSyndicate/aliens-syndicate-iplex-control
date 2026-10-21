@@ -2607,6 +2607,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Parental PIN removed.'**
   String get parentalPinRemoved;
+
+  /// No description provided for @sourceRetrying.
+  ///
+  /// In en, this message translates to:
+  /// **'Retrying automatically'**
+  String get sourceRetrying;
+
+  /// No description provided for @previousCatalogKept.
+  ///
+  /// In en, this message translates to:
+  /// **'The previous catalog was kept.'**
+  String get previousCatalogKept;
+
+  /// No description provided for @technicalDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical detail: {detail}'**
+  String technicalDetail(String detail);
+
+  /// No description provided for @catalogKinds.
+  ///
+  /// In en, this message translates to:
+  /// **'{channels} channels · {movies} movies · {series} series'**
+  String catalogKinds(int channels, int movies, int series);
 }
 
 class _AppLocalizationsDelegate

@@ -219,10 +219,11 @@ test('11. Provedores com canais, filmes e séries: parses all three kinds in ful
   assert.ok(kinds.has('channel'));
   assert.ok(kinds.has('movie'));
   assert.ok(kinds.has('series'));
-  assert.ok(catalog.seriesDetails && Object.keys(catalog.seriesDetails).length > 0);
+  // Episodes are fetched on demand (readSourceSeries), never one request per series during sync.
+  assert.equal(catalog.seriesDetails, undefined);
 });
 
-test('12. Endpoints parcialmente implementados: gracefully tolerates non-JSON or missing optional endpoints', async () => {
+test('12. Endpoints parcialmente implementados: a type the panel does not implement (404/405/501) is an empty type', async () => {
   const source = {
     name: 'Partial Xtream',
     format: 'xtream' as const,
@@ -234,7 +235,8 @@ test('12. Endpoints parcialmente implementados: gracefully tolerates non-JSON or
     if (url.includes('action=get_live_streams')) return JSON.stringify([{stream_id: 10, name: 'Channel Only', category_id: '1'}]);
     if (url.includes('action=get_live_categories')) return JSON.stringify([{category_id: '1', category_name: 'Live'}]);
     if (url.includes('action=get_vod_streams') || url.includes('action=get_series')) {
-      throw new Error('501 Not Implemented');
+      // What fetchProvider produces for a panel without VOD/series support.
+      throw new DomainError('provider-unavailable', {reason: 'http-status', statusCode: 501});
     }
     return JSON.stringify({user_info: {auth: 1, status: 'Active'}});
   };

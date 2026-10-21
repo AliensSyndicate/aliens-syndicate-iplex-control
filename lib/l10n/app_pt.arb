@@ -466,5 +466,9 @@
   "removeParentalPinBody": "Enquanto houver perfil infantil, os perfis adultos ficarão bloqueados na TV.",
   "parentalPinLength": "Use 4 dígitos.",
   "parentalPinSaved": "PIN parental salvo.",
-  "parentalPinRemoved": "PIN parental removido."
+  "parentalPinRemoved": "PIN parental removido.",
+  "sourceRetrying": "Nova tentativa automática em breve",
+  "previousCatalogKept": "O catálogo anterior foi preservado.",
+  "technicalDetail": "Detalhe técnico: {detail}",
+  "catalogKinds": "{channels} canais · {movies} filmes · {series} séries"
 }

@@ -567,5 +567,29 @@
   "removeParentalPinBody": "While there is a kids profile, adult profiles will stay locked on the TV.",
   "parentalPinLength": "Use 4 digits.",
   "parentalPinSaved": "Parental PIN saved.",
-  "parentalPinRemoved": "Parental PIN removed."
+  "parentalPinRemoved": "Parental PIN removed.",
+  "sourceRetrying": "Retrying automatically",
+  "previousCatalogKept": "The previous catalog was kept.",
+  "technicalDetail": "Technical detail: {detail}",
+  "@technicalDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "catalogKinds": "{channels} channels · {movies} movies · {series} series",
+  "@catalogKinds": {
+    "placeholders": {
+      "channels": {
+        "type": "int"
+      },
+      "movies": {
+        "type": "int"
+      },
+      "series": {
+        "type": "int"
+      }
+    }
+  }
 }
