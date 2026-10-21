@@ -21,11 +21,8 @@ class BottomNavigation extends StatelessWidget {
           AppIcons.iptv,
           AppIcons.account,
         ];
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.zero,
-      ),
+    // Same material as the Home background (rule in AGENTS.md).
+    return GraphiteBackdropSlice(
       child: SafeArea(
         top: false,
         child: Padding(

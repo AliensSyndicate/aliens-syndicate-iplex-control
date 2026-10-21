@@ -21,6 +21,38 @@ class GraphiteBackdrop extends StatelessWidget {
   );
 }
 
+/// Opaque slice of the [GraphiteBackdrop] for a widget anchored to the bottom
+/// of the screen. It paints the backdrop at full screen size, aligned to the
+/// bottom and clipped to the widget, so the slice matches the page pixel for
+/// pixel instead of showing the content scrolling underneath.
+class GraphiteBackdropSlice extends StatelessWidget {
+  const GraphiteBackdropSlice({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: ClipRect(
+            child: OverflowBox(
+              alignment: Alignment.bottomCenter,
+              minWidth: screen.width,
+              maxWidth: screen.width,
+              minHeight: screen.height,
+              maxHeight: screen.height,
+              child: const RepaintBoundary(
+                child: CustomPaint(painter: _GraphiteGrain()),
+              ),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
 class _GraphiteGrain extends CustomPainter {
   const _GraphiteGrain();
 
