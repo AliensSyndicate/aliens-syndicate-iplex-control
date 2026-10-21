@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'model_utils.dart';
 
 /// Representation of a registered playback device in `devices/{deviceId}`.
-/// Platforms: `android_tv`, `tizen`, `webos`.
+/// Platforms: `android_tv`, `tizen`, `webos`, `web` (iPlex Web in a browser).
 @immutable
 class DeviceModel {
   const DeviceModel({
@@ -66,6 +66,8 @@ class DeviceModel {
         return 'Samsung Tizen';
       case 'webos':
         return 'LG webOS';
+      case 'web':
+        return 'Navegador';
       case 'android_tv':
       default:
         return 'Android TV';

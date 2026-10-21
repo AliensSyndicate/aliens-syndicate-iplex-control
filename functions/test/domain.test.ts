@@ -66,6 +66,9 @@ test('pinned DNS lookup serves real Node requests in both lookup forms', async (
   const lookup = pinnedLookup({address: '127.0.0.1', family: 4});
   lookup('x', {all: true}, (err: unknown, list: unknown) => assert.deepEqual([err, list], [null, [{address: '127.0.0.1', family: 4}]]));
   lookup('x', {}, (err: unknown, address: unknown, family: unknown) => assert.deepEqual([err, address, family], [null, '127.0.0.1', 4]));
+  // Every checked address is offered, IPv4 first (no IPv6 egress on Cloud Run).
+  pinnedLookup([{address: '::1', family: 6}, {address: '127.0.0.1', family: 4}])('x', {all: true}, (_e: unknown, list: unknown) =>
+    assert.deepEqual(list, [{address: '127.0.0.1', family: 4}, {address: '::1', family: 6}]));
   const server = http.createServer((_q, r) => r.end('#EXTM3U')).listen(0);
   try {
     const port = (server.address() as {port: number}).port;

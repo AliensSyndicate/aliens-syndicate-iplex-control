@@ -13,11 +13,15 @@ export function publicAddress(value:string):boolean {
  try{return ipaddr.process(value).range()==='unicast';}catch{return false;}
 }
 /** DNS answer pinned to an address already checked by publicAddress. */
-export function pinnedLookup(address: {address: string; family: number}) {
+/** Serves only already-checked addresses. All of them, IPv4 first: Cloud Run has
+ * no IPv6 egress by default and many providers publish AAAA records, so pinning
+ * the first (often IPv6) address alone left those hosts unreachable. */
+export function pinnedLookup(addresses: {address: string; family: number} | {address: string; family: number}[]) {
+  const list = [...(Array.isArray(addresses) ? addresses : [addresses])].sort((a, b) => a.family - b.family);
   return (_host: string, opts: unknown, cb?: (...args: unknown[]) => void) => {
     const callback = (typeof opts === 'function' ? opts : cb) as (...args: unknown[]) => void;
-    if (typeof opts === 'object' && opts !== null && (opts as {all?: boolean}).all) callback(null, [address]);
-    else callback(null, address.address, address.family);
+    if (typeof opts === 'object' && opts !== null && (opts as {all?: boolean}).all) callback(null, list);
+    else callback(null, list[0]!.address, list[0]!.family);
   };
 }
 export const PROVIDER_LIMITS = {maxBytes: 64 * 1024 * 1024, idleMs: 30_000, totalMs: 180_000, maxRedirects: 5, maxItems: 100_000};
@@ -65,19 +69,17 @@ export function createProviderFetch(options: ProviderFetchOptions = {}): (raw: s
     try { url = new URL(raw); } catch { throw new DomainError('invalid-source-url', {reason: 'invalid-url'}); }
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new DomainError('unsafe-provider');
     const hostname = url.hostname.replace(/^\[|\]$/g, '');
-    let address: {address: string; family: number};
-    if (ipaddr.isValid(hostname)) address = {address: hostname, family: hostname.includes(':') ? 6 : 4};
+    let addresses: {address: string; family: number}[];
+    if (ipaddr.isValid(hostname)) addresses = [{address: hostname, family: hostname.includes(':') ? 6 : 4}];
     else {
-      let addresses;
       try { addresses = await lookup(hostname, {all: true}); }
       catch (err: any) {
         throw new DomainError('provider-unavailable', {reason: ['ENOTFOUND', 'EAI_AGAIN', 'ENODATA'].includes(err?.code) ? 'host-not-found' : 'dns-lookup-failed'});
       }
       if (!addresses.length) throw new DomainError('provider-unavailable', {reason: 'host-not-found'});
-      if (addresses.some(x => !allowed(x.address))) throw new DomainError('unsafe-provider');
-      address = addresses[0]!;
     }
-    if (!allowed(address.address)) throw new DomainError('unsafe-provider');
+    // Every address must be public: one private record makes the host unsafe.
+    if (addresses.some(x => !allowed(x.address))) throw new DomainError('unsafe-provider');
     const transport = url.protocol === 'https:' ? https : http;
     const remaining = limits.totalMs - (Date.now() - started);
     if (remaining <= 0) throw new DomainError('provider-time-budget', {reason: 'total-timeout'});
@@ -88,7 +90,7 @@ export function createProviderFetch(options: ProviderFetchOptions = {}): (raw: s
       const total = setTimeout(() => fail(new DomainError('provider-time-budget', {reason: 'total-timeout'})), remaining);
       const req = transport.get(url, {
         // Node >= 20 asks for `{all: true}` (happy eyeballs) and expects an array.
-        lookup: pinnedLookup(address) as any,
+        lookup: pinnedLookup(addresses) as any,
         headers: {'user-agent': agents[agent]!, accept: 'application/json,application/x-mpegURL,audio/x-mpegurl,text/plain,*/*', 'accept-encoding': 'gzip, deflate, identity', connection: 'close'},
       }, res => {
         const status = res.statusCode ?? 0;

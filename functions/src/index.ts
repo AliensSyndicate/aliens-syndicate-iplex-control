@@ -54,6 +54,11 @@ function httpsErrorFrom(error:unknown):HttpsError {
  if(error instanceof ZodError)return new HttpsError('invalid-argument','invalid-input');
  if(error instanceof DomainError)return new HttpsError(error.code==='unauthenticated'?'unauthenticated':error.code==='permission-denied'?'permission-denied':'failed-precondition',error.code,error.details);
  // Never forward provider URLs, credentials, SDK errors or token-bearing payloads.
+ // Logged for diagnosis with URLs and long tokens removed (an unlogged 500 hid a
+ // missing signBlob permission in finishDevicePair).
+ const e=error as {name?:unknown;code?:unknown;message?:unknown};
+ console.error(JSON.stringify({component:'callable',event:'unexpected-error',name:String(e?.name??typeof error).slice(0,60),code:String(e?.code??'').slice(0,80),
+  message:String(e?.message??'').replace(/https?:\/\/\S+/g,'<url>').replace(/[A-Za-z0-9_\-.]{40,}/g,'<redacted>').slice(0,300)}));
  return new HttpsError('internal','operation-failed');
 }
 export const synchronizeCatalogs=onSchedule({schedule:DAILY_SCHEDULE,timeZone:DAILY_TIME_ZONE,region:'us-central1',timeoutSeconds:60},()=>scheduleDailySync());

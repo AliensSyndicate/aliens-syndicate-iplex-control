@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -209,6 +210,14 @@ class FirebaseManagerRepository implements ManagerRepository {
                 ? 'network-request-failed'
                 : 'requires-recent-login',
           );
+        }
+        // The retry must not reuse an expired or placeholder App Check token
+        // (the SDK sends a placeholder when an attestation refresh failed).
+        // The backend still verifies whatever comes back.
+        try {
+          await FirebaseAppCheck.instance.getToken(true);
+        } catch (_) {
+          // Attestation still unavailable: the retry reports app-verification-failed.
         }
         try {
           final retryResult = await FirebaseFunctions.instanceFor(

@@ -120,6 +120,9 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
       } catch (err: any) {
         throw new DomainError('storage-upload-failed', {reason: 'stream-index', message: err?.message});
       }
+    } else {
+      // An Xtream source back on its API must not keep a stale index of provider URLs.
+      try { await getStorage().bucket().file(streamIndexPath(fid, ref.id)).delete({ignoreNotFound: true}); } catch { /* cleanup worker retries on removal */ }
     }
     if (!reused) {
       version = hash(`${serverId ?? 'file'}:${fingerprint(catalog)}`);

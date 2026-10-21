@@ -15,6 +15,7 @@ import {execute, Identity} from '../src/service';
 import {syncIptvCatalog, streamIndexPath} from '../src/iptv_sync';
 import {firestoreQuota, runPlayer, consumePlayerRequest, type PlayerAuth} from '../src/player';
 import {startFakeProvider, type FakeProvider} from './support/fake_iptv_server';
+import {hash} from '../src/domain';
 
 let app: ReturnType<typeof initializeApp>, provider: FakeProvider, seq = 0;
 const key = Buffer.alloc(32, 9).toString('base64');
@@ -85,6 +86,7 @@ test('Xtream Codes: channels, movies and series synced; TV reads catalog, episod
 
 test('Xtream wrong credentials: invalid-credentials (not retried, authorization invalid), in each provider shape', async () => {
   const {admin, fid} = await family();
+  const getPhpBefore = provider.hits['/get.php'] ?? 0;
   for (const mode of ['zero', 'empty'] as const) {
     provider.mode.auth = mode;
     const ref = await save(admin, fid, {name: `Errada ${mode}`, format: 'xtream', url: provider.base, username: 'assinante', password: 'senha-1'});
@@ -92,11 +94,72 @@ test('Xtream wrong credentials: invalid-credentials (not retried, authorization 
     assert.equal(source.status, 'error'); assert.equal(source.errorCode, 'invalid-credentials'); assert.equal(source.authorizationStatus, 'invalid');
     assert.equal(job.status, 'failed'); assert.equal(job.errorRetryable, false);
   }
-  provider.mode.auth = 'html';
+  // Wrong credentials never try the M3U Plus export.
+  assert.equal(provider.hits['/get.php'] ?? 0, getPhpBefore);
+  // API answering HTML and no M3U Plus export either: the API error is reported.
+  provider.mode.auth = 'html'; provider.mode.m3uPlus = false;
   const ref = await save(admin, fid, {name: 'Painel errado', format: 'xtream', url: provider.base, username: 'assinante', password: 'senha-1'});
   const {source} = await sync(ref);
   assert.equal(source.errorCode, 'provider-unavailable'); assert.equal(source.errorReason, 'xtream-auth-unexpected-response');
-  provider.mode.auth = 'ok';
+  Object.assign(provider.mode, {auth: 'ok', m3uPlus: true});
+});
+
+test('Xtream API down: catalog from the M3U Plus export, playback from the sealed index; API back keeps channel/movie ids', async () => {
+  const {admin, fid} = await family();
+  provider.mode.apiStatus = 503;
+  try {
+    const ref = await save(admin, fid, {name: 'Xtream sem API', format: 'xtream', url: provider.base, username: 'assinante', password: 'senha-1'});
+    const {source, job} = await sync(ref);
+    assert.equal(source.status, 'ready', JSON.stringify({code: source.errorCode, reason: source.errorReason}));
+    assert.equal(job.status, 'completed');
+    assert.deepEqual([source.channelCount, source.movieCount, source.seriesCount], [2, 2, 1]);
+    assert.equal(JSON.stringify(source).includes('senha-1'), false);
+    const [sealed] = await getStorage().bucket().file(streamIndexPath(fid, ref.id)).download();
+    assert.equal(sealed.toString().includes('senha-1'), false, 'stream index is encrypted');
+    const player = await tv(admin, fid);
+    const page = await tvCall('readSourceCatalog', {id: ref.id}, player);
+    const apiHits = provider.hits['/player_api.php'] ?? 0;
+    const channel = page.items.find((i: any) => i.title === 'Canal Notícias');
+    assert.equal(channel.catalogItemId, hash('channel:101'), 'same id as get_live_streams');
+    assert.equal((await tvCall('resolveSourceStream', {id: ref.id, itemId: channel.id}, player)).url, `${provider.base}/live/assinante/senha-1/101.ts`);
+    const movie = page.items.find((i: any) => i.kind === 'movie' && i.title.startsWith('Missão'));
+    assert.equal((await tvCall('resolveSourceStream', {id: ref.id, itemId: movie.id}, player)).url, `${provider.base}/movie/assinante/senha-1/201.mkv`);
+    const series = page.items.find((i: any) => i.kind === 'series');
+    const details = await tvCall('readSourceSeries', {id: ref.id, seriesId: series.providerRef}, player);
+    assert.deepEqual(details.details.episodes['1'].map((e: any) => e.title), ['Começo', 'Meio']);
+    const episode = details.details.episodes['2'][0];
+    assert.equal((await tvCall('resolveSourceStream', {id: ref.id, itemId: series.id, episodeId: episode.id}, player)).url, `${provider.base}/series/assinante/senha-1/303.mkv`);
+    await assert.rejects(tvCall('resolveSourceStream', {id: ref.id, itemId: series.id, episodeId: 'f'.repeat(64)}, player), /not-found/);
+    assert.equal(provider.hits['/player_api.php'] ?? 0, apiHits, 'playback did not depend on the unavailable API');
+
+    // API back: next sync uses it again; channels and movies keep their ids, the stale index is removed.
+    provider.mode.apiStatus = 0;
+    await ref.update({lastAttemptAt: 0});
+    await execute('syncSource', {id: ref.id, contextFamilyId: fid}, admin, key);
+    const back = await sync(ref);
+    assert.equal(back.source.status, 'ready');
+    assert.deepEqual([back.source.channelCount, back.source.movieCount, back.source.seriesCount], [3, 2, 1]);
+    const ids = new Set((await tvCall('readSourceCatalog', {id: ref.id}, player)).items.map((i: any) => i.catalogItemId));
+    for (const id of [hash('channel:101'), hash('channel:102'), hash('movie:201'), hash('movie:202')]) assert.ok(ids.has(id), id);
+    assert.equal((await getStorage().bucket().file(streamIndexPath(fid, ref.id)).exists())[0], false);
+    const again = (await tvCall('readSourceCatalog', {id: ref.id, search: 'Missão'}, player)).items[0];
+    assert.equal((await tvCall('resolveSourceStream', {id: ref.id, itemId: again.id}, player)).url, `${provider.base}/movie/assinante/senha-1/201.mkv`);
+  } finally {
+    provider.mode.apiStatus = 0;
+  }
+});
+
+test('M3U file uploaded from the Control: synced, published and playable', async () => {
+  const {admin, fid} = await family();
+  const fileContent = '#EXTM3U\n#EXTINF:-1 group-title="Notícias",Canal Arquivo A\nhttps://example.com/a.m3u8\n#EXTINF:-1 group-title="Filmes",Filme Arquivo (2020)\nhttps://example.com/f.mp4\n';
+  const ref = await save(admin, fid, {name: 'Lista em arquivo', format: 'file', fileName: 'lista.m3u', fileContent});
+  const {source, job} = await sync(ref);
+  assert.equal(source.status, 'ready', JSON.stringify({code: source.errorCode, reason: source.errorReason}));
+  assert.equal(job.status, 'completed');
+  assert.deepEqual([source.channelCount, source.movieCount], [1, 1]);
+  const player = await tv(admin, fid);
+  const channel = (await tvCall('readSourceCatalog', {id: ref.id, search: 'Canal Arquivo'}, player)).items[0];
+  assert.equal((await tvCall('resolveSourceStream', {id: ref.id, itemId: channel.id}, player)).url, 'https://example.com/a.m3u8');
 });
 
 test('M3U Plus (get.php): single download, tolerant parsing, series with episodes, playback from the sealed index', async () => {
@@ -191,4 +254,30 @@ test('empty and large catalogs; same source again keeps identifiers; credential 
   assert.equal((await db().doc(`source_secrets/${fid}_${big.id}`).get()).exists, false);
   assert.equal((await getStorage().bucket().file(streamIndexPath(fid, big.id)).exists())[0], false);
   await assert.rejects(tvCall('readSourceCatalog', {id: big.id}, player), /not-found/);
+});
+
+test('personal IPTV space (account without family): the first TV gets the owner profile and reads the synced catalog', async () => {
+  const owner: Identity = {uid: `personal_${Date.now()}_${++seq}`, authTime: Math.floor(Date.now() / 1000)};
+  await getAuth().createUser({uid: owner.uid, displayName: 'Dono'});
+  await execute('bootstrap', {}, owner);
+  const {id} = await execute('saveSource', {name: 'Lista pessoal', format: 'm3u', url: `${provider.base}/big.m3u?n=5`}, owner, key) as {id: string};
+  const ws = (await db().doc(`users/${owner.uid}`).get()).data()!.iptvWorkspaceId as string;
+  assert.equal((await db().doc(`families/${ws}`).get()).data()?.kind, 'personalIptv');
+  const ref = db().doc(`families/${ws}/sources/${id}`);
+  assert.equal((await sync(ref)).source.status, 'ready');
+  const pair = async () => {
+    const s = await execute('beginDevicePair', {name: 'Sala', platform: 'tizen'}, undefined) as {token: string};
+    const d = await execute('linkDevice', {token: s.token}, owner) as {id: string};
+    const credentialVersion = (await db().doc(`families/${ws}/devices/${d.id}`).get()).data()?.credentialVersion;
+    return {uid: `tv_${d.id}`, token: {deviceId: d.id, familyId: ws, credentialVersion, firebase: {sign_in_provider: 'custom'}}};
+  };
+  const auth = await pair();
+  const profiles = await tvCall('listPlayerProfiles', {}, auth);
+  assert.deepEqual(profiles.profiles.map((p: any) => [p.id, p.type]), [['admin', 'admin']]);
+  await tvCall('acquireSession', {profileId: 'admin'}, auth);
+  assert.deepEqual((await tvCall('listProfileSpaces', {}, auth)).spaces.map((s: any) => s.sourceId), [id]);
+  assert.equal((await tvCall('readSourceCatalog', {id}, auth)).items.length, 5);
+  // A second TV does not duplicate or reset the owner profile.
+  await pair();
+  assert.equal((await db().collection(`families/${ws}/profiles`).get()).size, 1);
 });

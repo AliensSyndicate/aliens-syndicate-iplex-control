@@ -63,6 +63,8 @@ class DeviceEntity {
         return 'Samsung Tizen';
       case 'webos':
         return 'LG webOS';
+      case 'web':
+        return 'Navegador';
       case 'android_tv':
       default:
         return 'Android TV';

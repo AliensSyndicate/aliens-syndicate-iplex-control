@@ -7,7 +7,7 @@ import {getAuth} from 'firebase-admin/auth';
 import {randomUUID} from 'node:crypto';
 import {ensurePublicCode,limitIdentityAttempts} from './account_identity';
 import {familyMembership} from './family_membership';
-import {familyProfiles, profileView, requireWritableGeneration, ADMIN_PROFILE_ID} from './family_profiles';
+import {familyProfiles, profileView, requireWritableGeneration, writeAdminProfile, ADMIN_PROFILE_ID} from './family_profiles';
 import {listProfileSpaces} from './iptv_catalog_access';
 import {obfuscatedAccount, paymentsConfig, verifyPlayPurchase} from './play_billing';
 import {iptvWorkspace} from './iptv_workspace';
@@ -249,6 +249,10 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   if(topSnap.exists && topSnap.data()?.familyId && topSnap.data()?.familyId !== f.fid) {
    throw new DomainError('device-already-linked-elsewhere');
   }
+  // A personal IPTV space has no profile management: its owner's profile is created
+  // with the first TV, otherwise the TV would have no profile to open (dead end).
+  const personalOwner=f.data.kind==='personalIptv'?String(f.data.ownerId??a.uid):null;
+  const [ownerProfile,ownerAccount]=personalOwner?await tx.getAll(f.ref.collection('profiles').doc(ADMIN_PROFILE_ID),db().doc(`users/${personalOwner}`)):[null,null];
 
   const legacyRef = f.ref.collection('devices').doc(canonicalId);
   const credentialVersion=randomUUID();
@@ -285,6 +289,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   tx.update(tr, {used: true, credentialVersion, familyId: f.fid, deviceId: canonicalId, claimedByUid: a.uid, completedAt: now});
   tx.set(db().doc(`device_pairing_sessions/${tokenHash}`), {used: true, credentialVersion, familyId: f.fid, deviceId: canonicalId, claimedByUid: a.uid, completedAt: now}, {merge: true});
   tx.set(sr, startTrial(s!.data() as Subscription, now));
+  if(personalOwner&&!ownerProfile!.exists)writeAdminProfile(tx,f.ref,personalOwner,String(ownerAccount!.data()?.name??''),now);
   return {id: canonicalId, displayName: deviceData.displayName, platform: deviceData.platform, status: 'linked'};
  });
  if(action==='renameDevice'||action==='deleteDevice'){

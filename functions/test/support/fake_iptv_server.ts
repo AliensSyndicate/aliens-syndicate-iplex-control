@@ -11,7 +11,7 @@ export type FakeProvider = {
   base: string;
   hits: Record<string, number>;
   credentials: {username: string; password: string};
-  mode: {auth: 'ok' | 'zero' | 'empty' | 'html'; seriesInfo: boolean; flaky: number; latin1: boolean};
+  mode: {auth: 'ok' | 'zero' | 'empty' | 'html'; seriesInfo: boolean; flaky: number; latin1: boolean; apiStatus: number; m3uPlus: boolean};
   close: () => Promise<void>;
 };
 
@@ -46,7 +46,7 @@ export async function startFakeProvider(): Promise<FakeProvider> {
   const state = {
     hits: {} as Record<string, number>,
     credentials: {username: 'assinante', password: 'senha-1'},
-    mode: {auth: 'ok', seriesInfo: true, flaky: 0, latin1: false} as FakeProvider['mode'],
+    mode: {auth: 'ok', seriesInfo: true, flaky: 0, latin1: false, apiStatus: 0, m3uPlus: true} as FakeProvider['mode'],
   };
   let base = '';
   const json = (res: http.ServerResponse, body: unknown) => { res.writeHead(200, {'content-type': 'application/json'}); res.end(JSON.stringify(body)); };
@@ -56,6 +56,8 @@ export async function startFakeProvider(): Promise<FakeProvider> {
     state.hits[key] = (state.hits[key] ?? 0) + 1;
     const authorized = url.searchParams.get('username') === state.credentials.username && url.searchParams.get('password') === state.credentials.password;
     if (url.pathname === '/player_api.php') {
+      // API down or blocked while the M3U Plus export still answers.
+      if (state.mode.apiStatus) { res.writeHead(state.mode.apiStatus); res.end(); return; }
       if (!authorized || state.mode.auth !== 'ok') {
         if (state.mode.auth === 'empty') { res.writeHead(200); res.end(''); return; }
         if (state.mode.auth === 'html') { res.writeHead(200, {'content-type': 'text/html'}); res.end('<html><body>Painel</body></html>'); return; }
@@ -86,6 +88,7 @@ export async function startFakeProvider(): Promise<FakeProvider> {
       }
     }
     if (url.pathname === '/get.php') {
+      if (!state.mode.m3uPlus) { res.writeHead(404); res.end(); return; }
       if (!authorized) { res.writeHead(403); res.end('forbidden'); return; }
       const body = m3uPlus(base, state.credentials.username, state.credentials.password);
       res.writeHead(200, {'content-type': 'audio/x-mpegurl', 'content-encoding': 'gzip'});

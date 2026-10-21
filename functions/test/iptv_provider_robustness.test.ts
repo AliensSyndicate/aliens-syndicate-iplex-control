@@ -6,7 +6,8 @@ import {test, before, after} from 'node:test';
 import assert from 'node:assert/strict';
 import {createProviderFetch, decodeProviderBody, parseM3uDetailed, parseXtream, privateProvidersAllowedForTests, PROVIDER_LIMITS} from '../src/catalog';
 import {fetchSnapshot} from '../src/iptv_ingestion';
-import {parseXtreamJson} from '../src/iptv_adapters';
+import {parseXtreamJson, xtreamCatalogFromM3uPlus, xtreamFallbackAllowed} from '../src/iptv_adapters';
+import {hash} from '../src/domain';
 import {DomainError} from '../src/domain';
 import {startFakeProvider, type FakeProvider} from './support/fake_iptv_server';
 
@@ -107,4 +108,69 @@ test('Xtream wrong credentials in their usual shapes', () => {
   assert.throws(() => parseXtreamJson('[]', 'auth'), code('invalid-credentials'));
   assert.throws(() => parseXtreamJson('<html>painel</html>', 'auth'), code('provider-unavailable'));
   assert.deepEqual(parseXtreamJson('﻿{"user_info":{"auth":1}}', 'auth'), {user_info: {auth: 1}});
+});
+
+test('Xtream fallback to M3U Plus only when the API itself fails, never on credentials', () => {
+  for (const error of [new DomainError('provider-unavailable', {reason: 'http-status', statusCode: 500}), new DomainError('provider-unavailable', {reason: 'xtream-auth-unexpected-response'}),
+    new DomainError('parsing-failed'), new DomainError('download-failed'), new DomainError('provider-time-budget', {reason: 'idle-timeout'}), new SyntaxError('x')]) {
+    assert.equal(xtreamFallbackAllowed(error), true, String((error as any).code ?? error.name));
+  }
+  for (const error of [new DomainError('invalid-credentials'), new DomainError('invalid-credentials', {statusCode: 403}), new DomainError('provider-rate-limited'),
+    new DomainError('unsafe-provider'), new DomainError('catalog-too-large'), new DomainError('provider-unavailable', {reason: 'host-not-found'}),
+    new DomainError('provider-unavailable', {reason: 'connection-failed'}), new DomainError('provider-unavailable', {reason: 'tls-certificate'}),
+    new DomainError('provider-time-budget', {reason: 'sync-budget'}), new Error('x')]) {
+    assert.equal(xtreamFallbackAllowed(error), false, `${(error as any).code} ${JSON.stringify((error as any).details)}`);
+  }
+});
+
+test('M3U Plus fallback catalog keeps the API identifiers for channels and movies; URLs only in the sealed map', async () => {
+  const body = await fetch(`${provider.base}/get.php?username=assinante&password=senha-1&type=m3u_plus&output=ts`);
+  const {catalog, stats, streams} = xtreamCatalogFromM3uPlus(body, `${provider.base}/`);
+  const channel = catalog.items.find(i => i.title === 'Canal Notícias')!, movie = catalog.items.find(i => i.title === 'Missão Fictícia (2021)')!;
+  assert.deepEqual([channel.id, channel.providerRef], [hash('channel:101'), '101']);
+  assert.deepEqual([movie.id, movie.providerRef, movie.containerExtension], [hash('movie:201'), '201', 'mkv']);
+  assert.equal(streams['101'], `${provider.base}/live/assinante/senha-1/101.ts`);
+  const series = catalog.items.find(i => i.kind === 'series')!;
+  const episode = (catalog.seriesDetails![series.providerRef] as any).episodes['1'][0];
+  assert.equal(streams[episode.id], `${provider.base}/series/assinante/senha-1/301.mkv`);
+  assert.equal(stats.xtreamM3uPlus, 1);
+  assert.equal(JSON.stringify(catalog).includes('senha-1'), false, 'no credential in the catalog');
+});
+
+test('Xtream snapshot: HTML or 5xx API falls back to get.php; wrong credentials and a dead export do not', async () => {
+  const source = {name: 'Xtream', format: 'xtream' as const, url: provider.base, username: 'assinante', password: 'senha-1'};
+  const build = async () => { const s = await fetchSnapshot({...source}, 'fam', 'src', fetch); return {catalog: await s.build(), snapshot: s}; };
+  try {
+    provider.mode.auth = 'html';
+    let r = await build();
+    assert.equal(r.snapshot.stats?.xtreamM3uPlus, 1);
+    assert.deepEqual(['channel', 'movie', 'series'].map(k => r.catalog.items.filter(i => i.kind === k).length), [2, 2, 1]);
+    assert.ok(r.snapshot.streamIndex, 'playback index for the fallback catalog');
+    provider.mode.auth = 'ok'; provider.mode.apiStatus = 503;
+    r = await build();
+    assert.equal(r.snapshot.stats?.xtreamM3uPlus, 1);
+    // Both fail: the API error is reported, not the export's 404.
+    provider.mode.m3uPlus = false;
+    await assert.rejects(build(), (e: any) => e.code === 'provider-unavailable' && e.details.statusCode === 503);
+    provider.mode.apiStatus = 0; provider.mode.m3uPlus = true;
+    // Wrong credentials never reach get.php.
+    provider.mode.auth = 'zero';
+    const hits = provider.hits['/get.php'] ?? 0;
+    await assert.rejects(build(), code('invalid-credentials'));
+    assert.equal(provider.hits['/get.php'] ?? 0, hits);
+    // API healthy: no fallback, no index.
+    provider.mode.auth = 'ok';
+    r = await build();
+    assert.equal(r.snapshot.stats?.xtreamM3uPlus, undefined);
+    assert.equal(r.snapshot.streamIndex, undefined);
+  } finally {
+    Object.assign(provider.mode, {auth: 'ok', apiStatus: 0, m3uPlus: true});
+  }
+});
+
+test('regression: host names resolve through the pinned lookup (Node happy eyeballs asks for all addresses)', async () => {
+  // The deployed 18/10 build answered {all: true} with a single address and every
+  // URL source failed with ERR_INVALID_IP_ADDRESS before any byte was read.
+  const byName = provider.base.replace('127.0.0.1', 'localhost');
+  assert.match(await fetch(`${byName}/get.php?username=assinante&password=senha-1`), /^#EXTM3U/);
 });

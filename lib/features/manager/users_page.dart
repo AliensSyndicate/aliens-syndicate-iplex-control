@@ -104,7 +104,12 @@ class UsersPage extends ConsumerWidget {
           SectionHeader(l.profiles),
           EntriesView(
             collection: 'profiles',
-            empty: EmptyState(title: l.emptyUsers, body: l.newProfile),
+            empty: EmptyState(
+              title: l.emptyUsers,
+              body: l.noProfilesBody,
+              icon: AppIcons.users,
+              action: AppButton(label: l.newProfile, onPressed: () => context.push('/users/add')),
+            ),
             builder: (items) => Column(
               children: items
                   .map(

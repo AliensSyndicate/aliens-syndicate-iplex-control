@@ -44,6 +44,57 @@ export function xtreamUrl(source: Source, action?: string, params: Record<string
   return url.toString();
 }
 
+/** The same account exported as one M3U Plus playlist (what IPTV players load
+ * from Xtream panels). Carries credentials: never logged or stored in clear. */
+export function xtreamM3uPlusUrl(source: Source): string {
+  const url = new URL('get.php', xtreamBase(source.url!));
+  url.searchParams.set('username', source.username!);
+  url.searchParams.set('password', source.password!);
+  url.searchParams.set('type', 'm3u_plus');
+  url.searchParams.set('output', 'ts');
+  return url.toString();
+}
+
+/** Only failures of the API itself fall back to the M3U Plus export. Wrong
+ * credentials, rate limiting, unsafe or unreachable hosts and size limits never do:
+ * the export lives on the same server and would fail the same way. */
+export function xtreamFallbackAllowed(error: unknown): boolean {
+  if (error instanceof SyntaxError) return true;
+  if (!(error instanceof DomainError)) return false;
+  const reason = String(error.details?.reason ?? '');
+  if (error.code === 'provider-unavailable') return reason === 'http-status' || reason.endsWith('-unexpected-response');
+  if (error.code === 'provider-time-budget') return reason !== 'sync-budget';
+  return ['parsing-failed', 'download-failed'].includes(error.code);
+}
+
+const XTREAM_STREAM_PATH = /\/(live|movie)\/[^/]+\/[^/]+\/(\d{1,20})\.(\w{1,10})$/;
+
+/** Catalog from the M3U Plus export. Live channels and movies keep the API
+ * identifiers (id and providerRef of get_live_streams/get_vod_streams), so
+ * favourites survive switching paths; series are grouped from episode titles.
+ * `streams` maps each playback reference to its URL for the sealed index. */
+export function xtreamCatalogFromM3uPlus(body: string, base: string): {catalog: Catalog; stats: Record<string, number>; streams: Record<string, string>} {
+  const {catalog, stats} = parseM3uDetailed(body, base);
+  const urls = m3uStreamIndex(body, base), streams: Record<string, string> = {}, seen = new Set<string>();
+  const items: Catalog['items'] = [];
+  let duplicates = stats.duplicates;
+  for (const item of catalog.items) {
+    const url = urls[item.providerRef];
+    const match = url && item.kind !== 'series' ? XTREAM_STREAM_PATH.exec(new URL(url).pathname) : null;
+    const next = match && (match[1] === 'live') === (item.kind === 'channel')
+      ? {...item, id: hash(`${item.kind}:${match[2]}`), providerRef: match[2]!, ...(item.kind === 'movie' ? {containerExtension: match[3]!} : {})}
+      : item;
+    if (seen.has(next.id)) { duplicates++; continue; }
+    seen.add(next.id);
+    items.push(next);
+    if (url) streams[next.providerRef] = url;
+  }
+  for (const detail of Object.values(catalog.seriesDetails ?? {}) as {episodes: Record<string, {id: string}[]>}[]) {
+    for (const episode of Object.values(detail.episodes).flat()) if (urls[episode.id]) streams[episode.id] = urls[episode.id]!;
+  }
+  return {catalog: catalogSchema.parse({...catalog, items}), stats: {...stats, duplicates, xtreamM3uPlus: 1}, streams};
+}
+
 /** Xtream answers wrong credentials in several ways: 401/403, an empty body, `[]`,
  * `{"user_info":{"auth":0}}`. An HTML page or other text means the panel/URL is wrong. */
 export function parseXtreamJson(body: string, reason: string): any {
@@ -157,8 +208,17 @@ export class XtreamAdapter implements IptvSourceAdapter {
     return false;
   }
 
+  /** Sources whose API failed (not on credentials) and whose M3U Plus export answered. */
+  private readonly m3uPlusSources = new WeakSet<Source>();
+
   async validateAccess(source: Source, fetch: ProviderFetch): Promise<void> {
-    await validateXtream(source, fetch);
+    try {
+      await validateXtream(source, fetch);
+    } catch (error) {
+      if (!xtreamFallbackAllowed(error)) throw error;
+      await this.m3uPlusFallback(source, fetch, error);
+      this.m3uPlusSources.add(source);
+    }
   }
 
   identifyServer(source: Source): {canonicalEndpoint: string; identityHash: string} | null {
@@ -166,7 +226,72 @@ export class XtreamAdapter implements IptvSourceAdapter {
     return normalizeServerEndpoint(source.url, 'xtream');
   }
 
+  /** M3U Plus export of the account, or the original API error when the export
+   * fails too (its own wrong-credentials answer wins: it is conclusive). */
+  private async m3uPlusFallback(source: Source, fetch: ProviderFetch, apiError: unknown, announce = true): Promise<ProviderSnapshot> {
+    const base = xtreamBase(source.url!).toString();
+    let body: string;
+    try {
+      body = await fetch(xtreamM3uPlusUrl(source));
+    } catch (error) {
+      if (error instanceof DomainError && error.code === 'invalid-credentials') throw error;
+      throw apiError;
+    }
+    const clean = body.replace(/^﻿/, '').trimStart();
+    if (!clean.startsWith('#EXTM3U') && !clean.startsWith('#EXTINF:')) throw apiError;
+    // Codes and reasons only: never the URL, host credentials or response body.
+    if (announce) console.warn(JSON.stringify({component: 'iptv-xtream', event: 'm3u-plus-fallback',
+      apiCode: apiError instanceof DomainError ? apiError.code : (apiError as Error)?.name,
+      apiReason: apiError instanceof DomainError ? apiError.details?.reason ?? apiError.details?.statusCode ?? null : null}));
+    let parsed: ReturnType<typeof xtreamCatalogFromM3uPlus> | undefined;
+    const result = () => (parsed ??= xtreamCatalogFromM3uPlus(body, base));
+    const snapshot: ProviderSnapshot = {
+      proof: hash(`parser-3:xtream-m3u-plus:${base}:${body}`),
+      singleStream: false,
+      build: async () => {
+        const {catalog, stats} = result();
+        snapshot.stats = stats;
+        return catalog;
+      },
+      streamIndex: () => result().streams,
+    };
+    return snapshot;
+  }
+
   async extractCatalog(source: Source, fid: string, sourceId: string, fetch: ProviderFetch): Promise<ProviderSnapshot> {
+    // Already announced by validateAccess; the export body is shared by the sync's fetch.
+    if (this.m3uPlusSources.has(source)) return this.m3uPlusFallback(source, fetch, new DomainError('provider-unavailable'), false);
+    let data: {kind: 'channel' | 'movie' | 'series'; rows: unknown[]; categories: {category_id: string; category_name: string}[]}[];
+    try {
+      data = await this.apiLists(source, fetch);
+    } catch (error) {
+      if (!xtreamFallbackAllowed(error)) throw error;
+      return this.m3uPlusFallback(source, fetch, error);
+    }
+    // Every type answered "not implemented"/empty: the export may still list the account.
+    if (data.every(d => !d.rows.length)) {
+      try { return await this.m3uPlusFallback(source, fetch, new DomainError('provider-unavailable', {reason: 'empty-api-lists'})); }
+      catch { /* an empty account stays empty (rejected later as suspicious-catalog) */ }
+    }
+    // Episodes are fetched on demand (readSourceSeries), like IPTV players do:
+    // one get_series_info per series during sync does not scale to large panels.
+    const snapshot: ProviderSnapshot = {
+      proof: hash(`parser-3:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}`),
+      singleStream: false,
+      build: async () => {
+        const categories: NonNullable<Catalog['categories']> = data.flatMap(d =>
+          d.categories.map(c => ({id: String(c.category_id), name: c.category_name, kind: d.kind}))
+        );
+        const counters = {skipped: 0};
+        const items = data.flatMap(d => parseXtream(d.rows, d.kind, categories, counters));
+        snapshot.stats = {entries: data.reduce((n, d) => n + d.rows.length, 0), skipped: counters.skipped};
+        return catalogSchema.parse({schemaVersion: 1, items, categories});
+      },
+    };
+    return snapshot;
+  }
+
+  private async apiLists(source: Source, fetch: ProviderFetch) {
     const groups = [
       ['get_live_streams', 'get_live_categories', 'channel'],
       ['get_vod_streams', 'get_vod_categories', 'movie'],
@@ -200,22 +325,7 @@ export class XtreamAdapter implements IptvSourceAdapter {
         .map((c: any) => ({category_id: String(c.category_id), category_name: String(c.category_name ?? c.name ?? 'General').slice(0, 300)}));
       data.push({kind, rows, categories: cats});
     }
-    // Episodes are fetched on demand (readSourceSeries), like IPTV players do:
-    // one get_series_info per series during sync does not scale to large panels.
-    const snapshot: ProviderSnapshot = {
-      proof: hash(`parser-3:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}`),
-      singleStream: false,
-      build: async () => {
-        const categories: NonNullable<Catalog['categories']> = data.flatMap(d =>
-          d.categories.map(c => ({id: String(c.category_id), name: c.category_name, kind: d.kind}))
-        );
-        const counters = {skipped: 0};
-        const items = data.flatMap(d => parseXtream(d.rows, d.kind, categories, counters));
-        snapshot.stats = {entries: data.reduce((n, d) => n + d.rows.length, 0), skipped: counters.skipped};
-        return catalogSchema.parse({schemaVersion: 1, items, categories});
-      },
-    };
-    return snapshot;
+    return data;
   }
 
   getLimitations(source: Source): SourceLimitations {

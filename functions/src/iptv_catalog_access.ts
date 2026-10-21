@@ -114,7 +114,17 @@ export async function resolveSourceStream(input:Record<string,unknown>,actor:Ide
   const item=catalog.items.find(i=>i.id===itemId||hash(`${id}:${i.id}`)===itemId);
   if(!item||!canSee(access.viewer,id,item))throw new DomainError('not-found');
   let url:string|undefined;
-  if(source.format==='xtream') {
+  // Series episodes are addressed by their own reference and must belong to the item the profile may see.
+  const episodeOf=()=>{
+    const ref=idSchema.parse(input.episodeId);
+    if(!((catalog.seriesDetails?.[item.providerRef] as any)?.episodes&&Object.values((catalog.seriesDetails![item.providerRef] as any).episodes).flat().some((e:any)=>e?.id===ref)))throw new DomainError('not-found');
+    return ref;
+  };
+  // Catalogs built from the Xtream M3U Plus export (API unavailable) carry a sealed index of this version.
+  const sealed=source.format==='xtream'&&(item.kind!=='series'||catalog.seriesDetails?.[item.providerRef])
+    ?await sealedStream(access.fid,id,access.data,item.kind==='series'?episodeOf():item.providerRef,key):undefined;
+  if(sealed)url=sealed;
+  else if(source.format==='xtream') {
     await validateXtream(source,fetchProvider);
     const action=item.kind==='channel'?'get_live_streams':item.kind==='movie'?'get_vod_streams':'get_series';
     const rows=z.array(z.record(z.unknown())).parse(JSON.parse(await fetchProvider(xtreamUrl(source,action))));
@@ -133,9 +143,7 @@ export async function resolveSourceStream(input:Record<string,unknown>,actor:Ide
     const kind=item.kind==='channel'?'live':item.kind;
     url=new URL(`${kind}/${encodeURIComponent(source.username!)}/${encodeURIComponent(source.password!)}/${streamId}.${extension}`,xtreamBase(source.url!)).toString();
   } else {
-    // M3U series episodes are addressed by their own stream reference.
-    const ref=item.kind==='series'?idSchema.parse(input.episodeId):item.providerRef;
-    if(item.kind==='series'&&!((catalog.seriesDetails?.[item.providerRef] as any)?.episodes&&Object.values((catalog.seriesDetails![item.providerRef] as any).episodes).flat().some((e:any)=>e?.id===ref)))throw new DomainError('not-found');
+    const ref=item.kind==='series'?episodeOf():item.providerRef;
     url=await sealedStream(access.fid,id,access.data,ref,key)??findM3uStream(await playlistBody(source,access.fid,id,fetchProvider),source.url??'',ref);
   }
   if(!url)throw new DomainError('source-authorization-required');
