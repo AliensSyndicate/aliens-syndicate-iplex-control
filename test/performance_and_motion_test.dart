@@ -4,7 +4,7 @@ import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/catalog_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/name_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
@@ -191,7 +191,7 @@ void main() {
         final router = container.read(routerProvider);
 
         // Start at Home (Tab 0)
-        expect(find.byType(CatalogPageView), findsOneWidget);
+        expect(find.byType(HomePage), findsOneWidget);
 
         // Switch to Users (Tab 1)
         router.go('/users');
@@ -216,7 +216,7 @@ void main() {
         // Switch back to Home (Tab 0) - immediate without recreation
         router.go('/home');
         await tester.pumpAndSettle();
-        expect(find.byType(CatalogPageView), findsOneWidget);
+        expect(find.byType(HomePage), findsOneWidget);
       },
     );
 

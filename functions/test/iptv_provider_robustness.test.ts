@@ -174,3 +174,19 @@ test('regression: host names resolve through the pinned lookup (Node happy eyeba
   const byName = provider.base.replace('127.0.0.1', 'localhost');
   assert.match(await fetch(`${byName}/get.php?username=assinante&password=senha-1`), /^#EXTM3U/);
 });
+
+test('source artwork and "added" date: https only, no credentials, nothing guessed', async () => {
+  const {safeImageUrl, providerAddedAt} = await import('../src/catalog');
+  assert.equal(safeImageUrl('https://img.example.com/a.png'), 'https://img.example.com/a.png');
+  for (const bad of ['http://img.example.com/a.png', 'https://u:p@img.example.com/a.png', 'https://img.example.com/a.png?token=x', 'https://img.example.com/a.png?password=x', 'javascript:alert(1)', 42, '']) {
+    assert.equal(safeImageUrl(bad), undefined, String(bad));
+  }
+  assert.equal(providerAddedAt('1700000000'), 1700000000000);
+  for (const bad of ['abc', '0', '123', String(Math.floor(Date.now() / 1000) + 10 * 86400), undefined]) assert.equal(providerAddedAt(bad), undefined, String(bad));
+  const rows = [{stream_id: 1, name: 'A', added: '1700000000', stream_icon: 'https://x.example/a.jpg'}, {stream_id: 2, name: 'B', stream_icon: 'https://x.example/b.jpg?token=t'}];
+  const [a, b] = parseXtream(rows, 'movie');
+  assert.deepEqual([a!.addedAt, a!.imageRef], [1700000000000, 'https://x.example/a.jpg']);
+  assert.deepEqual([b!.addedAt, b!.imageRef], [undefined, undefined]);
+  const m3u = parseM3uDetailed('#EXTM3U\n#EXTINF:-1 tvg-logo="https://x.example/l.png",Canal\nhttps://s.example/c.m3u8\n#EXTINF:-1 tvg-logo="http://x.example/l.png",Outro\nhttps://s.example/o.m3u8\n').catalog;
+  assert.deepEqual(m3u.items.map(i => i.imageRef), ['https://x.example/l.png', undefined]);
+});

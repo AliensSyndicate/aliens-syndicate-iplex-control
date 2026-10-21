@@ -3,7 +3,7 @@ import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/catalog_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
@@ -117,9 +117,9 @@ void main() {
         final router = container.read(routerProvider);
 
         // 1. Home - No + button
-        expect(find.byType(CatalogPageView), findsOneWidget);
+        expect(find.byType(HomePage), findsOneWidget);
         final homeAdd = find.descendant(
-          of: find.byType(CatalogPageView),
+          of: find.byType(HomePage),
           matching: find.byWidgetPredicate(
             (w) => w is CircularButton && w.icon == AppIcons.add,
           ),
@@ -203,20 +203,30 @@ void main() {
         );
         final router = container.read(routerProvider);
         final l10n = AppLocalizations.of(
-          tester.element(find.byType(PageTemplate).first),
+          tester.element(find.byKey(const Key('home-search'))),
         );
 
-        // Helper to find the Y coordinate of the title text in PageTemplate
-        double titleY(String text) {
-          final finder = find.descendant(
-            of: find.byType(PageTemplate),
-            matching: find.text(text),
-          );
-          expect(finder, findsAtLeastNWidgets(1));
-          return tester.getTopLeft(finder.first).dy;
+        // Top of each main screen's header row: the title row of PageTemplate;
+        // on Home, the search row that replaces the title.
+        double headerTop(Finder inHeader) {
+          expect(inHeader, findsAtLeastNWidgets(1));
+          return tester
+              .getTopLeft(
+                find
+                    .ancestor(of: inHeader.first, matching: find.byType(Row))
+                    .first,
+              )
+              .dy;
         }
 
-        final homeY = titleY(l10n.home);
+        double titleY(String text) => headerTop(
+          find.descendant(
+            of: find.byType(PageTemplate),
+            matching: find.text(text),
+          ),
+        );
+
+        final homeY = headerTop(find.byKey(const Key('home-search')));
 
         router.go('/users');
         await tester.pumpAndSettle();

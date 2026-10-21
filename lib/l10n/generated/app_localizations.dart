@@ -2631,6 +2631,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{channels} channels · {movies} movies · {series} series'**
   String catalogKinds(int channels, int movies, int series);
+
+  /// No description provided for @homeSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search channels, movies and series'**
+  String get homeSearchHint;
+
+  /// No description provided for @selectIptvSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Select IPTV source'**
+  String get selectIptvSource;
+
+  /// No description provided for @iptvSources.
+  ///
+  /// In en, this message translates to:
+  /// **'IPTV sources'**
+  String get iptvSources;
+
+  /// No description provided for @selectedSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get selectedSource;
+
+  /// No description provided for @homeFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get homeFavorites;
+
+  /// No description provided for @homeContinueWatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue watching'**
+  String get homeContinueWatching;
+
+  /// No description provided for @homeMyList.
+  ///
+  /// In en, this message translates to:
+  /// **'My list'**
+  String get homeMyList;
+
+  /// No description provided for @homeRecentMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added movies'**
+  String get homeRecentMovies;
+
+  /// No description provided for @homeRecentSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added series'**
+  String get homeRecentSeries;
+
+  /// No description provided for @homeEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Home is still empty'**
+  String get homeEmptyTitle;
+
+  /// No description provided for @homeEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Search channels, movies and series. What you favorite, save to your list or start watching shows up here.'**
+  String get homeEmptyBody;
+
+  /// No description provided for @exploreCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore the catalog'**
+  String get exploreCatalog;
+
+  /// No description provided for @addToFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to favorites'**
+  String get addToFavorites;
+
+  /// No description provided for @removeFromFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from favorites'**
+  String get removeFromFavorites;
+
+  /// No description provided for @addToMyList.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to My list'**
+  String get addToMyList;
+
+  /// No description provided for @removeFromMyList.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from My list'**
+  String get removeFromMyList;
+
+  /// No description provided for @continueWatchingOnTv.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue watching on TV'**
+  String get continueWatchingOnTv;
+
+  /// No description provided for @liveChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Live channel'**
+  String get liveChannel;
+
+  /// No description provided for @onAirNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get onAirNow;
+
+  /// No description provided for @upNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Up next'**
+  String get upNext;
+
+  /// No description provided for @castLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast'**
+  String get castLabel;
+
+  /// No description provided for @runtimeMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String runtimeMinutes(int minutes);
+
+  /// No description provided for @seasonsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 season} other{{count} seasons}}'**
+  String seasonsCount(int count);
+
+  /// No description provided for @ageRatingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rated {rating}'**
+  String ageRatingLabel(String rating);
 }
 
 class _AppLocalizationsDelegate

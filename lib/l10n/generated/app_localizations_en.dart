@@ -1429,4 +1429,89 @@ class AppLocalizationsEn extends AppLocalizations {
   String catalogKinds(int channels, int movies, int series) {
     return '$channels channels · $movies movies · $series series';
   }
+
+  @override
+  String get homeSearchHint => 'Search channels, movies and series';
+
+  @override
+  String get selectIptvSource => 'Select IPTV source';
+
+  @override
+  String get iptvSources => 'IPTV sources';
+
+  @override
+  String get selectedSource => 'Selected';
+
+  @override
+  String get homeFavorites => 'Favorites';
+
+  @override
+  String get homeContinueWatching => 'Continue watching';
+
+  @override
+  String get homeMyList => 'My list';
+
+  @override
+  String get homeRecentMovies => 'Recently added movies';
+
+  @override
+  String get homeRecentSeries => 'Recently added series';
+
+  @override
+  String get homeEmptyTitle => 'Your Home is still empty';
+
+  @override
+  String get homeEmptyBody =>
+      'Search channels, movies and series. What you favorite, save to your list or start watching shows up here.';
+
+  @override
+  String get exploreCatalog => 'Explore the catalog';
+
+  @override
+  String get addToFavorites => 'Add to favorites';
+
+  @override
+  String get removeFromFavorites => 'Remove from favorites';
+
+  @override
+  String get addToMyList => 'Add to My list';
+
+  @override
+  String get removeFromMyList => 'Remove from My list';
+
+  @override
+  String get continueWatchingOnTv => 'Continue watching on TV';
+
+  @override
+  String get liveChannel => 'Live channel';
+
+  @override
+  String get onAirNow => 'Now';
+
+  @override
+  String get upNext => 'Up next';
+
+  @override
+  String get castLabel => 'Cast';
+
+  @override
+  String runtimeMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String seasonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seasons',
+      one: '1 season',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ageRatingLabel(String rating) {
+    return 'Rated $rating';
+  }
 }

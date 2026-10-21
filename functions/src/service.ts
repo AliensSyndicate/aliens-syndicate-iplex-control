@@ -1,5 +1,5 @@
 import {calculateCanonicalDeviceId, calculateIdentityFingerprint, maskIdentityFingerprint, generatePairingCode, hashPairingCode, PlatformType} from './device_identity';
-import {readSourceCatalog, readSourceSeries, resolveSourceStream} from './iptv_catalog_access';
+import {authorizeMetadata, readHome, readSourceCatalog, readSourceSeries, resolveSourceStream} from './iptv_catalog_access';
 import {registerPushToken} from './iptv_notifications';
 import {getFirestore, FieldValue, Transaction, DocumentReference} from 'firebase-admin/firestore';
 import {getStorage} from 'firebase-admin/storage';
@@ -346,6 +346,9 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   return {ok:true,playRequest:pendingPointer(f.deviceData,now)};
  });
  if(action==='readSourceCatalog')return readSourceCatalog(p,a);
+ if(action==='readHome')return readHome(p,a);
+ // TMDB grant for the Control (iplexWebTmdb → manager, with App Check): same item rules as the TV.
+ if(action==='authorizeMetadata'){required(!a.deviceId,'permission-denied');return authorizeMetadata(p,a);}
  if(action==='readSourceSeries')return readSourceSeries(p,a,key);
  if(action==='resolveSourceStream')return resolveSourceStream(p,a,key);
  if(action==='registerPushToken'||action==='unregisterPushToken')return registerPushToken(p,a,action==='unregisterPushToken');

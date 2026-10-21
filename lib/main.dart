@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
@@ -8,7 +9,8 @@ import 'core/data/firebase_repository.dart';
 import 'core/data/providers.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -21,7 +23,10 @@ Future<void> main() async {
       systemNavigationBarContrastEnforced: false,
     ),
   );
+  // Keep the native splash visible for a minimum time so it is actually seen.
+  final minimumSplash = Future<void>.delayed(const Duration(milliseconds: 1500));
   final configured = await initializeServices();
+  await minimumSplash;
   runApp(
     ProviderScope(
       overrides: [
@@ -32,4 +37,5 @@ Future<void> main() async {
       child: const IplexApp(),
     ),
   );
+  FlutterNativeSplash.remove();
 }

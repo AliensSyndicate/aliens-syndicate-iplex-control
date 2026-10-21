@@ -6,7 +6,7 @@ import '../core/data/providers.dart';
 import '../core/design_system/components.dart';
 import '../features/authentication/login_page.dart';
 import '../features/manager/account_page.dart';
-import '../features/manager/catalog_page.dart';
+import '../features/home/home_page.dart';
 import '../features/manager/detail_page.dart';
 import '../features/manager/profile_link_redeem_page.dart';
 import '../features/manager/profile_manage_page.dart';
@@ -250,7 +250,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/home',
                 pageBuilder: (c, s) =>
-                    _rootPage(key: s.pageKey, child: const CatalogPageView()),
+                    _rootPage(key: s.pageKey, child: const HomePage()),
               ),
             ],
           ),

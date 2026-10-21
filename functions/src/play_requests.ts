@@ -61,6 +61,8 @@ export async function requestPlayback(p: Record<string, unknown>, actor: Identit
   const episodeId = p.episodeId === undefined || p.episodeId === null ? null : idSchema.parse(p.episodeId);
   const episodeLabel = p.episodeLabel === undefined || p.episodeLabel === null ? null : nameSchema.parse(p.episodeLabel);
   const requestId = z.string().regex(/^[a-f0-9]{32}$/).parse(p.requestId);
+  // "Continuar assistindo": the TV resumes from its active profile's saved progress.
+  const resume = p.resume === true;
 
   // 1) The requester may see this item with its own profile/permissions (kids accounts stay restricted).
   const own = await playableItem(actor, sourceId, itemId);
@@ -102,7 +104,7 @@ export async function requestPlayback(p: Record<string, unknown>, actor: Identit
     pending.docs.forEach(d => tx.update(d.ref, {status: 'superseded', updatedAt: now, finishedAt: now}));
     tx.create(ref, {
       schemaVersion: 1, deviceId, familyId: target.fid, requesterUid: actor.uid, requesterName,
-      sourceId, itemId, episodeId, episodeLabel, kind: own.kind, title: own.title.slice(0, 300),
+      sourceId, itemId, episodeId, episodeLabel, kind: own.kind, title: own.title.slice(0, 300), resume: resume && own.kind !== 'channel',
       status: 'pending', errorCode: null, createdAt: now, updatedAt: now, expiresAt: now + PLAY_REQUEST_TTL_MS,
       deliveredAt: null, finishedAt: null, expireAt: new Date(now + 86_400_000),
     });
@@ -143,7 +145,7 @@ export async function claimPlayRequest(p: Record<string, unknown>, actor: Identi
     }
     tx.update(ref, {status: 'delivered', updatedAt: now, deliveredAt: now});
     if (Object.keys(clearPointer).length) tx.update(deviceRef, clearPointer);
-    return {id, status: 'delivered' as PlayRequestStatus, request: {sourceId: d.sourceId, itemId: d.itemId, episodeId: d.episodeId ?? null, episodeLabel: d.episodeLabel ?? null, kind: d.kind, title: d.title, requesterName: d.requesterName ?? ''}};
+    return {id, status: 'delivered' as PlayRequestStatus, request: {sourceId: d.sourceId, itemId: d.itemId, episodeId: d.episodeId ?? null, episodeLabel: d.episodeLabel ?? null, kind: d.kind, title: d.title, requesterName: d.requesterName ?? '', ...(d.resume === true ? {resume: true} : {})}};
   });
 }
 

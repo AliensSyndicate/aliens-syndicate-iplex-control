@@ -18,6 +18,9 @@ class FirebaseManagerRepository implements ManagerRepository {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
   String? _provider;
   String? _contextFamilyId;
+
+  /// Family context sent with every manager call (null = personal scope).
+  String? get contextFamilyId => _contextFamilyId;
   String? _pushToken;
   Future<void>? _googleInitialization;
   @override

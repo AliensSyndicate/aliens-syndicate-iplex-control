@@ -259,6 +259,84 @@ export async function playableItem(actor:Identity,sourceId:string,itemId:string)
  return {fid:access.fid,kind:item.kind,title:item.title};
 }
 
+/** Public id (the one readSourceCatalog returns) → catalog item, per published version. */
+const indexes=new Map<string,Map<string,Catalog['items'][number]>>();
+function itemIndex(version:string,sourceId:string,catalog:Catalog) {
+  const key=`${version}:${sourceId}`;
+  let index=indexes.get(key);
+  if(!index){
+    index=new Map(catalog.items.map(i=>[hash(`${sourceId}:${i.id}`),i]));
+    if(indexes.size>=4)indexes.delete(indexes.keys().next().value!);
+    indexes.set(key,index);
+  }
+  return index;
+}
+const HOME_ROW=10;
+
+/** Control Home ("Meu iPlex" of the account's own profile): favorites, progress and
+ * the recently added titles of the selected source, resolved to items the profile can
+ * still open. Same scope and visibility rules as readSourceCatalog; generations
+ * cleared in the Gestor are ignored, as on the TV. */
+export async function readHome(input:Record<string,unknown>,actor:Identity) {
+  if(actor.deviceId)throw new DomainError('permission-denied');
+  const db=getFirestore();
+  const selected=input.sourceId===undefined||input.sourceId===null?null:idSchema.parse(input.sourceId);
+  const context=await db.runTransaction(async tx=>{
+    const scope=await iptvWorkspace(tx,actor,false,false);
+    const profileId=(await tx.get(scope.ref.collection('profile_links').doc(actor.uid))).data()?.profileId;
+    const snap=typeof profileId==='string'?await tx.get(scope.ref.collection('profiles').doc(profileId)):null;
+    const sources=(await tx.get(scope.ref.collection('sources'))).docs.filter(d=>d.data().enabled&&d.data().version);
+    return {ref:scope.ref,profile:snap?.exists&&snap.data()?.deleting!==true?profileView(snap.id,snap.data()!):null,sources};
+  });
+  type Item=Catalog['items'][number];
+  const visible=new Map<string,{sourceId:string;sourceName:string;version:string;item:Item}>();
+  const recentMovies:Record<string,unknown>[]=[],recentSeries:Record<string,unknown>[]=[];
+  const publicItem=(sourceId:string,sourceName:string,version:string,i:Item)=>({...i,id:hash(`${sourceId}:${i.id}`),catalogItemId:i.id,sourceId,sourceName,version});
+  for(const source of context.sources){
+    let access;
+    try{access=await authorize(actor,source.id);}
+    catch(e){if(e instanceof DomainError&&['not-found','pin-required'].includes(e.code))continue;throw e;}
+    const version=access.data.version as string,catalog=await load(version),name=String(source.data().name??'');
+    for(const [id,item] of itemIndex(version,source.id,catalog))if(canSee(access.viewer,source.id,item))visible.set(id,{sourceId:source.id,sourceName:name,version,item});
+    if(source.id!==selected)continue;
+    // Only providers that publish an "added" date: nothing is guessed for the others.
+    const recent=(kind:Kind)=>catalog.items.filter(i=>i.kind===kind&&i.addedAt&&canSee(access.viewer,source.id,i))
+      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,HOME_ROW).map(i=>publicItem(source.id,name,version,i));
+    recentMovies.push(...recent('movie'));recentSeries.push(...recent('series'));
+  }
+  const profile=context.profile;
+  let favoriteIds:string[]=[],favorites:Record<string,unknown>[]=[],myList:Record<string,unknown>[]=[],continueWatching:Record<string,unknown>[]=[];
+  if(profile&&profile.type!=='guest'){
+    const ref=context.ref.collection('profiles').doc(profile.id);
+    const [fav,progress]=await Promise.all([
+      ref.collection('favorites').orderBy('updatedAt','desc').limit(100).get(),
+      ref.collection('watch_progress').orderBy('updatedAt','desc').limit(50).get(),
+    ]);
+    const resolved=(contentId:string)=>{const v=visible.get(contentId);return v?publicItem(v.sourceId,v.sourceName,v.version,v.item):null;};
+    for(const doc of fav.docs){
+      const d=doc.data();
+      if(d.generation!==profile.generations.favorites||typeof d.contentId!=='string')continue;
+      const item=resolved(d.contentId);if(!item)continue;
+      favoriteIds.push(d.contentId);
+      const row=item.kind==='channel'?favorites:myList;
+      if(row.length<HOME_ROW)row.push(item);
+    }
+    for(const doc of progress.docs){
+      const d=doc.data();
+      if(continueWatching.length>=HOME_ROW||d.generation!==profile.generations.progress||typeof d.contentId!=='string')continue;
+      if(!(Number(d.duration)>0)||Number(d.position)/Number(d.duration)>=0.95)continue;
+      // Episodes are saved as `<seriesItemId>_e<episodeId>` (same contract as the TV).
+      const episode=/^([A-Za-z0-9-]+)_e([A-Za-z0-9_-]+)$/.exec(d.contentId);
+      const item=resolved(episode?episode[1]!:d.contentId);
+      if(!item||(episode&&item.kind!=='series'))continue;
+      continueWatching.push({...item,progress:{position:Number(d.position),duration:Number(d.duration),updatedAt:Number(d.updatedAt)||0},...(episode?{episodeId:episode[2]}:{})});
+    }
+  }
+  return {schemaVersion:1,selectedSourceId:selected,
+    profile:profile?{id:profile.id,name:profile.name,type:profile.type,generations:profile.generations}:null,
+    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries};
+}
+
 /** Library reads are now server-authorized; direct Firestore access is closed. */
 export async function readPlayerLibrary(input:Record<string,unknown>,actor:Identity) {
  const db=getFirestore(),context=await db.runTransaction(tx=>activePlayer(tx,actor,input.profileId));

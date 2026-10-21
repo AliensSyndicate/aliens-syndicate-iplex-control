@@ -591,5 +591,32 @@
         "type": "int"
       }
     }
-  }
+  },
+  "homeSearchHint": "Search channels, movies and series",
+  "selectIptvSource": "Select IPTV source",
+  "iptvSources": "IPTV sources",
+  "selectedSource": "Selected",
+  "homeFavorites": "Favorites",
+  "homeContinueWatching": "Continue watching",
+  "homeMyList": "My list",
+  "homeRecentMovies": "Recently added movies",
+  "homeRecentSeries": "Recently added series",
+  "homeEmptyTitle": "Your Home is still empty",
+  "homeEmptyBody": "Search channels, movies and series. What you favorite, save to your list or start watching shows up here.",
+  "exploreCatalog": "Explore the catalog",
+  "addToFavorites": "Add to favorites",
+  "removeFromFavorites": "Remove from favorites",
+  "addToMyList": "Add to My list",
+  "removeFromMyList": "Remove from My list",
+  "continueWatchingOnTv": "Continue watching on TV",
+  "liveChannel": "Live channel",
+  "onAirNow": "Now",
+  "upNext": "Up next",
+  "castLabel": "Cast",
+  "runtimeMinutes": "{minutes} min",
+  "@runtimeMinutes": {"placeholders": {"minutes": {"type": "int"}}},
+  "seasonsCount": "{count, plural, =1{1 season} other{{count} seasons}}",
+  "@seasonsCount": {"placeholders": {"count": {"type": "int"}}},
+  "ageRatingLabel": "Rated {rating}",
+  "@ageRatingLabel": {"placeholders": {"rating": {"type": "String"}}}
 }

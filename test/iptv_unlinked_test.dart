@@ -225,6 +225,10 @@ void main() {
           }),
         ];
       await navigation.launch(tester, repo);
+      expect(find.text('Sua Home ainda está vazia'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField), 'avail');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
       expect(find.text('Available title'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField), 'sem resultado');
       await tester.pump(const Duration(milliseconds: 400));

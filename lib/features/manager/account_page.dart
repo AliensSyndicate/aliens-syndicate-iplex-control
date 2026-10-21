@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
+import 'widgets/public_identity_sheet.dart';
 
 class AccountPage extends ConsumerStatefulWidget {
   const AccountPage({super.key});
@@ -48,6 +49,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     return PageTemplate(
       title: l.account,
       hasBottomNav: true,
+      action: CircularButton(
+        key: const Key('account-public-code'),
+        label: l.publicUserCode,
+        icon: AppIcons.qr,
+        size: AppDimensions.touch,
+        onPressed: () => showPublicIdentity(context, a?.publicCode),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

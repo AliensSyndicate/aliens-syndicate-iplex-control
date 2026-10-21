@@ -1,7 +1,7 @@
 import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/catalog_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_details_page.dart';
@@ -62,7 +62,7 @@ class VisualRepository extends fixtures.TestRepository {
 void main() {
   setUpAll(fixtures.loadTestFont);
   final pages = <({String name, Widget page, int? tab})>[
-    (name: 'home', page: const CatalogPageView(), tab: 0),
+    (name: 'home', page: const HomePage(), tab: 0),
     (name: 'users', page: const UsersPage(), tab: 1),
     (name: 'devices', page: const DevicesPage(), tab: 2),
     (name: 'iptv', page: const ListIptvPage(), tab: 3),

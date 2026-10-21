@@ -1442,4 +1442,89 @@ class AppLocalizationsPt extends AppLocalizations {
   String catalogKinds(int channels, int movies, int series) {
     return '$channels canais · $movies filmes · $series séries';
   }
+
+  @override
+  String get homeSearchHint => 'Buscar canais, filmes e séries';
+
+  @override
+  String get selectIptvSource => 'Selecionar fonte IPTV';
+
+  @override
+  String get iptvSources => 'Fontes IPTV';
+
+  @override
+  String get selectedSource => 'Selecionada';
+
+  @override
+  String get homeFavorites => 'Favoritos';
+
+  @override
+  String get homeContinueWatching => 'Continuar assistindo';
+
+  @override
+  String get homeMyList => 'Minha lista';
+
+  @override
+  String get homeRecentMovies => 'Filmes recém-adicionados';
+
+  @override
+  String get homeRecentSeries => 'Séries recém-adicionadas';
+
+  @override
+  String get homeEmptyTitle => 'Sua Home ainda está vazia';
+
+  @override
+  String get homeEmptyBody =>
+      'Pesquise canais, filmes e séries. O que você favoritar, salvar na sua lista ou começar a assistir aparece aqui.';
+
+  @override
+  String get exploreCatalog => 'Explorar o catálogo';
+
+  @override
+  String get addToFavorites => 'Adicionar aos favoritos';
+
+  @override
+  String get removeFromFavorites => 'Remover dos favoritos';
+
+  @override
+  String get addToMyList => 'Adicionar à Minha lista';
+
+  @override
+  String get removeFromMyList => 'Remover da Minha lista';
+
+  @override
+  String get continueWatchingOnTv => 'Continuar assistindo na TV';
+
+  @override
+  String get liveChannel => 'Canal ao vivo';
+
+  @override
+  String get onAirNow => 'Agora';
+
+  @override
+  String get upNext => 'A seguir';
+
+  @override
+  String get castLabel => 'Elenco';
+
+  @override
+  String runtimeMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String seasonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count temporadas',
+      one: '1 temporada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ageRatingLabel(String rating) {
+    return 'Classificação $rating';
+  }
 }

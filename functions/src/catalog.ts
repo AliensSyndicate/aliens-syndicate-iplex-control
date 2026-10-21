@@ -6,7 +6,7 @@ import ipaddr from 'ipaddr.js';
 import {z} from 'zod';
 import {DomainError,hash} from './domain';
 import {normalizeAgeRating} from './content_audience';
-export const itemSchema=z.object({id:z.string(),title:z.string().min(1).max(300),titleKey:z.string(),kind:z.enum(['channel','movie','series']),category:z.string().max(300),providerRef:z.string(),epgId:z.string().max(300).optional(),categoryId:z.string().optional(),imageRef:z.string().optional(),containerExtension:z.string().max(20).optional(),plot:z.string().max(10000).optional(),year:z.union([z.string(),z.number()]).optional(),rating:z.union([z.string(),z.number()]).optional(),ageRating:z.string().max(20).optional()});
+export const itemSchema=z.object({id:z.string(),title:z.string().min(1).max(300),titleKey:z.string(),kind:z.enum(['channel','movie','series']),category:z.string().max(300),providerRef:z.string(),epgId:z.string().max(300).optional(),categoryId:z.string().optional(),imageRef:z.string().max(1000).optional(),addedAt:z.number().int().positive().optional(),containerExtension:z.string().max(20).optional(),plot:z.string().max(10000).optional(),year:z.union([z.string(),z.number()]).optional(),rating:z.union([z.string(),z.number()]).optional(),ageRating:z.string().max(20).optional()});
 export const catalogSchema=z.object({schemaVersion:z.literal(1),items:z.array(itemSchema).max(100000),categories:z.array(z.object({id:z.string(),name:z.string(),kind:z.enum(['channel','movie','series'])})).optional(),seriesDetails:z.record(z.unknown()).optional()});
 export type Catalog=z.infer<typeof catalogSchema>;
 export function publicAddress(value:string):boolean {
@@ -200,6 +200,7 @@ export function parseM3uDetailed(body: string, sourceUrl = '', sourceName = ''):
     const title = named || titleOf(attribute(extinf, 'tvg-name')) || titleOf(basename) || 'Sem título';
     const category = titleOf(attribute(extinf, 'group-title'));
     const epgId = attribute(extinf, 'tvg-id').slice(0, 300);
+    const imageRef = safeImageUrl(attribute(extinf, 'tvg-logo'));
     const ageRating = normalizeAgeRating(/(?:tvg-rating|rating|age-rating|parental-rating)="([^"]*)"/i.exec(extinf)?.[1]);
     const declared = attribute(extinf, '(?:content-type|type)').toLowerCase();
     const path = url.pathname.toLowerCase();
@@ -212,7 +213,7 @@ export function parseM3uDetailed(body: string, sourceUrl = '', sourceName = ''):
       let entry = series.get(key);
       if (!entry) {
         const ref = hash(`m3u-series:${key}`);
-        entry = {item: {id: ref, title: seriesName, titleKey: seriesName.toLocaleLowerCase('en').normalize('NFKD'), kind: 'series', category, providerRef: ref, ...(ageRating ? {ageRating} : {})}, episodes: new Map()};
+        entry = {item: {id: ref, title: seriesName, titleKey: seriesName.toLocaleLowerCase('en').normalize('NFKD'), kind: 'series', category, providerRef: ref, ...(ageRating ? {ageRating} : {}), ...(imageRef ? {imageRef} : {})}, episodes: new Map()};
         series.set(key, entry);
         items.push(entry.item);
       }
@@ -224,7 +225,7 @@ export function parseM3uDetailed(body: string, sourceUrl = '', sourceName = ''):
       continue;
     }
     items.push({id: providerRef, title, titleKey: title.toLocaleLowerCase('en').normalize('NFKD'), kind: isMovie ? 'movie' : 'channel', category, providerRef,
-      ...(epgId && !isMovie ? {epgId} : {}), ...(ageRating ? {ageRating} : {})});
+      ...(epgId && !isMovie ? {epgId} : {}), ...(ageRating ? {ageRating} : {}), ...(imageRef ? {imageRef} : {})});
   }
   if (items.length > PROVIDER_LIMITS.maxItems) throw new DomainError('catalog-too-large', {items: items.length});
   const seriesDetails: Record<string, unknown> = {};
@@ -241,6 +242,22 @@ export function parseM3u(body: string, sourceUrl = '', sourceName = ''): Catalog
   return parseM3uDetailed(body, sourceUrl, sourceName).catalog;
 }
 const scalar = (v: unknown) => typeof v === 'string' || typeof v === 'number' ? v : undefined;
+/** Artwork published by the source: https only, no credentials or account tokens in the URL. */
+export function safeImageUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 1000) return undefined;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== 'https:' || url.username || url.password) return undefined;
+    if ([...url.searchParams.keys()].some(k => /^(user(name)?|pass(word)?|token|auth|key)$/i.test(k))) return undefined;
+    return url.toString();
+  } catch { return undefined; }
+}
+/** Provider "added" (Unix seconds) → ms; anything implausible is ignored, never guessed. */
+export function providerAddedAt(value: unknown, now = Date.now()): number | undefined {
+  const seconds = Number(scalar(value));
+  if (!Number.isInteger(seconds) || seconds < 946684800 || seconds * 1000 > now + 86_400_000) return undefined;
+  return seconds * 1000;
+}
 /** Tolerant Xtream rows: a malformed row is skipped, never the whole catalog. */
 export function parseXtream(rows:unknown,kind:'channel'|'movie'|'series',categories:Catalog['categories']=[],stats?:{skipped:number}):Catalog['items'] {
  if(!Array.isArray(rows))return [];
@@ -256,10 +273,11 @@ export function parseXtream(rows:unknown,kind:'channel'|'movie'|'series',categor
    const categoryId=String(scalar(x.category_id)??''),ageRating=normalizeAgeRating(scalar(x.age)??scalar(x.mpaa_rating)??scalar(x.certification));
    const extension=String(scalar(x.container_extension)??'');
    const year=scalar(x.year)??scalar(x.releaseDate);
+   const imageRef=safeImageUrl(kind==='series'?x.cover??x.stream_icon:x.stream_icon??x.cover),addedAt=providerAddedAt(x.added??x.last_modified);
    items.push(itemSchema.parse({id:hash(`${kind}:${providerRef}`),title,titleKey:title.toLocaleLowerCase('en').normalize('NFKD'),kind,
      category:titleOf(names.get(categoryId)??categoryId),categoryId,providerRef,
      ...(typeof x.epg_channel_id==='string'&&x.epg_channel_id?{epgId:x.epg_channel_id.slice(0,300)}:{}),
-     ...(/^\w{1,20}$/.test(extension)?{containerExtension:extension}:{}),...(typeof x.plot==='string'&&x.plot?{plot:x.plot.slice(0,10000)}:{}),
+     ...(/^\w{1,20}$/.test(extension)?{containerExtension:extension}:{}),...(imageRef?{imageRef}:{}),...(addedAt?{addedAt}:{}),...(typeof x.plot==='string'&&x.plot?{plot:x.plot.slice(0,10000)}:{}),
      ...(year!==undefined&&year!==''?{year}:{}),...(scalar(x.rating)!==undefined&&x.rating!==''?{rating:scalar(x.rating)}:{}),...(ageRating?{ageRating}:{})}));
  }
  return items;

@@ -82,6 +82,11 @@ void main() {
           }),
         ];
         final container = await navigation.launch(tester, repo);
+        // Home rows and catalog search are reachable without a subscription.
+        expect(repo.homeReads, 1);
+        await tester.enterText(find.byType(TextFormField), 'avail');
+        await tester.pump(const Duration(milliseconds: 351));
+        await tester.pumpAndSettle();
         expect(find.text('Available title'), findsOneWidget);
         for (final location in [
           '/users',

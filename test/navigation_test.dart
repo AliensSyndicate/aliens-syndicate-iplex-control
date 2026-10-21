@@ -8,7 +8,7 @@ import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/authentication/login_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/catalog_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/family_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
@@ -35,6 +35,12 @@ class SessionRepository extends fixtures.TestRepository {
   Completer<void>? initialization;
   Completer<List<Entry>>? pendingSources;
   Completer<CatalogPage>? pendingCatalog;
+  // readHome (Control Home rows): configurable payload, failure and latency.
+  Map<String, dynamic> home = {};
+  bool homeFailure = false;
+  Completer<Map<String, dynamic>>? pendingHome;
+  int homeReads = 0;
+  final mutationPayloads = <(String, Map<String, dynamic>)>[];
   final authEvents = StreamController<String?>.broadcast(sync: true);
   final accountEvents = StreamController<Account?>.broadcast(sync: true);
   final familyEvents = StreamController<Family?>.broadcast(sync: true);
@@ -110,15 +116,33 @@ class SessionRepository extends fixtures.TestRepository {
     catalogReads++;
     if (catalogFailure) throw const AppFailure('unavailable');
     if (pendingCatalog != null) return pendingCatalog!.future;
+    // Same contract as readSourceCatalog: title match, case-insensitive.
+    final all = [
+      Entry('film', {
+        'title': 'Available title',
+        'kind': 'movie',
+        'sourceId': source.id,
+      }),
+    ];
+    final key = search.trim().toLowerCase();
     return CatalogPage(
-      search.isEmpty
-          ? [
-              Entry('film', {'title': 'Available title'}),
-            ]
-          : [],
+      all.where((e) => e.name.toLowerCase().contains(key)).toList(),
       null,
       false,
     );
+  }
+
+  @override
+  Future<Map<String, dynamic>> mutate(
+    String action, [
+    Map<String, dynamic> payload = const {},
+  ]) async {
+    mutationPayloads.add((action, Map.of(payload)));
+    if (action != 'readHome') return super.mutate(action, payload);
+    homeReads++;
+    if (homeFailure) throw const AppFailure('unavailable');
+    if (pendingHome != null) return pendingHome!.future;
+    return home;
   }
 
   void restore(String? uid) {
@@ -333,7 +357,7 @@ void main() {
         expect(find.byType(FamilyPage), findsNothing);
       }
       expect(repo.initialized, ['u']);
-      expect(find.byType(CatalogPageView, skipOffstage: false), findsOneWidget);
+      expect(find.byType(HomePage, skipOffstage: false), findsOneWidget);
       expect(tester.takeException(), null);
     },
   );
@@ -505,61 +529,85 @@ void main() {
     },
   );
   testWidgets(
-    'loading catalog shows skeleton; a successful empty result shows welcome',
+    'loading Home shows skeleton; an empty Home shows a discreet empty state',
     (tester) async {
-      final pending = Completer<CatalogPage>();
+      final pending = Completer<Map<String, dynamic>>();
       final repo = SessionRepository(uid: 'u', linked: true)
         ..sources = [
           Entry('s', {'name': 'Source', 'version': 'v'}),
         ]
-        ..pendingCatalog = pending;
-      await launch(tester, repo);
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump();
+        ..pendingHome = pending;
+      await launch(tester, repo, settle: false);
+      for (var i = 0; i < 10 && repo.homeReads == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       expect(find.byType(AppLoadingSkeleton), findsOneWidget);
-      expect(find.text('No matching content'), findsNothing);
-      pending.complete(const CatalogPage([], null, false));
+      expect(
+        find.text('Your Home is still empty'),
+        findsNothing,
+        reason: 'loading is not absence of data',
+      );
+      pending.complete({});
       await tester.pumpAndSettle();
-      expect(find.text('Welcome to iPlex'), findsOneWidget);
-      expect(repo.catalogReads, 1);
+      expect(find.text('Your Home is still empty'), findsOneWidget);
+      expect(find.text('Favorites'), findsNothing);
+      expect(repo.homeReads, 1);
     },
   );
   testWidgets(
-    'catalog failure supports retry and displays real results only after success',
+    'Home failure supports retry and displays real rows only after success',
     (tester) async {
       final repo = SessionRepository(uid: 'u', linked: true)
         ..sources = [
           Entry('s', {'name': 'Source', 'version': 'v'}),
         ]
-        ..catalogFailure = true;
+        ..homeFailure = true;
       await launch(tester, repo);
       expect(find.text('Try again'), findsOneWidget);
       expect(find.text('Available title'), findsNothing);
-      repo.catalogFailure = false;
+      repo
+        ..homeFailure = false
+        ..home = {
+          'myList': [
+            {
+              'id': 'film',
+              'title': 'Available title',
+              'kind': 'movie',
+              'sourceId': 's',
+            },
+          ],
+        };
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
+      expect(find.text('My list'), findsOneWidget);
       expect(find.text('Available title'), findsOneWidget);
     },
   );
-  testWidgets('search without matches has clear feedback and can be cleared', (
-    tester,
-  ) async {
-    final repo = SessionRepository(uid: 'u', linked: true)
-      ..sources = [
-        Entry('s', {'name': 'Source', 'version': 'v'}),
-      ];
-    await launch(tester, repo);
-    await tester.enterText(find.byType(TextFormField), 'missing');
-    await tester.pump(const Duration(milliseconds: 351));
-    await tester.pumpAndSettle();
-    expect(find.text('No matching content'), findsOneWidget);
-    expect(find.text('Welcome to iPlex'), findsNothing);
-    await tester.ensureVisible(find.text('Clear search'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Clear search'));
-    await tester.pumpAndSettle();
-    expect(find.text('Available title'), findsOneWidget);
-  });
+  testWidgets(
+    'search finds catalog titles; no match has clear feedback and can be cleared',
+    (tester) async {
+      final repo = SessionRepository(uid: 'u', linked: true)
+        ..sources = [
+          Entry('s', {'name': 'Source', 'version': 'v'}),
+        ];
+      await launch(tester, repo);
+      await tester.enterText(find.byType(TextFormField), 'avail');
+      await tester.pump(const Duration(milliseconds: 351));
+      await tester.pumpAndSettle();
+      expect(find.text('Available title'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField), 'missing');
+      await tester.pump(const Duration(milliseconds: 351));
+      await tester.pumpAndSettle();
+      expect(find.text('No matching content'), findsOneWidget);
+      expect(find.text('Welcome to iPlex'), findsNothing);
+      await tester.ensureVisible(find.text('Clear search'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Clear search'));
+      await tester.pumpAndSettle();
+      expect(find.text('No matching content'), findsNothing);
+      expect(find.text('Your Home is still empty'), findsOneWidget);
+    },
+  );
   testWidgets(
     'auth stream error offers retry instead of pretending the session is signed out',
     (tester) async {
@@ -630,30 +678,32 @@ void main() {
     },
   );
   testWidgets(
-    'late catalog responses cannot repopulate Home after its family is removed',
+    'late Home responses cannot repopulate Home after its family is removed',
     (tester) async {
-      final pending = Completer<CatalogPage>();
+      final pending = Completer<Map<String, dynamic>>();
       final repo = SessionRepository(uid: 'u', linked: true)
         ..sources = [
           Entry('s', {'name': 'Source', 'version': 'v'}),
         ]
-        ..pendingCatalog = pending;
-      await launch(tester, repo);
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump();
-      expect(repo.catalogReads, 1);
+        ..pendingHome = pending;
+      await launch(tester, repo, settle: false);
+      for (var i = 0; i < 10 && repo.homeReads == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(repo.homeReads, 1);
       repo.linked = false;
       repo.accountEvents.add(repo.account);
       await tester.pumpAndSettle();
-      pending.complete(
-        CatalogPage(
-          [
-            Entry('removed', {'title': 'Old family content'}),
-          ],
-          null,
-          false,
-        ),
-      );
+      pending.complete({
+        'myList': [
+          {
+            'id': 'removed',
+            'title': 'Old family content',
+            'kind': 'movie',
+            'sourceId': 's',
+          },
+        ],
+      });
       await tester.pumpAndSettle();
       expect(find.text('Welcome to iPlex'), findsOneWidget);
       expect(find.text('Old family content'), findsNothing);
@@ -680,26 +730,67 @@ void main() {
     },
   );
   testWidgets(
-    'favorite without profiles explains the prerequisite and opens the existing profile form',
+    'details sheet: list actions only with a profile; favorite writes carry its generation',
     (tester) async {
+      final item = {
+        'id': 'film',
+        'title': 'Available title',
+        'kind': 'movie',
+        'sourceId': 's',
+      };
       final repo = SessionRepository(uid: 'u', linked: true)
         ..sources = [
           Entry('s', {'name': 'Source', 'version': 'v'}),
-        ];
-      final c = await launch(tester, repo);
-      await tester.tap(find.widgetWithText(EntryTile, 'Available title'));
+        ]
+        ..home = {
+          'recentMovies': [item],
+        };
+      await launch(tester, repo);
+      await tester.tap(find.byKey(const ValueKey('home-card-film')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add to favorites'));
+      expect(find.text('Watch on TV'), findsOneWidget);
+      expect(
+        find.text('Add to My list'),
+        findsNothing,
+        reason: 'no profile, no list write',
+      );
+      Navigator.of(tester.element(find.text('Watch on TV'))).pop();
+      await tester.pumpAndSettle();
+
+      repo.home = {
+        'profile': {
+          'id': 'admin',
+          'name': 'Account',
+          'type': 'admin',
+          'generations': {'favorites': 3},
+        },
+        'recentMovies': [item],
+      };
+      await tester.drag(
+        find.byType(CustomScrollView).first,
+        const Offset(0, 300),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('home-card-film')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add to My list'));
+      await tester.pumpAndSettle();
+      final write = repo.mutationPayloads
+          .lastWhere((m) => m.$1 == 'favorite')
+          .$2;
+      expect(write, {
+        'profileId': 'admin',
+        'contentId': 'film',
+        'title': 'Available title',
+        'generation': 3,
+      });
+      expect(find.text('Remove from My list'), findsOneWidget);
+      await tester.tap(find.text('Remove from My list'));
       await tester.pumpAndSettle();
       expect(
-        find.text('Create a viewing profile before adding favorites.'),
-        findsOneWidget,
+        repo.mutationPayloads.lastWhere((m) => m.$1 == 'favorite').$2['remove'],
+        true,
       );
-      await tester.ensureVisible(find.text('New viewing profile'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('New viewing profile'));
-      await tester.pumpAndSettle();
-      expect(path(c), '/users/add');
       expect(tester.takeException(), null);
     },
   );

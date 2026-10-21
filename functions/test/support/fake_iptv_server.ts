@@ -67,7 +67,7 @@ export async function startFakeProvider(): Promise<FakeProvider> {
         case null: return json(res, {user_info: {auth: 1, status: 'Active', exp_date: String(Math.floor(Date.now() / 1000) + 86400)}, server_info: {url: '127.0.0.1'}});
         case 'get_live_categories': return json(res, [{category_id: '1', category_name: 'Notícias'}, {category_id: '2', category_name: 'Infantil'}]);
         case 'get_live_streams': return json(res, [
-          {stream_id: 101, name: 'Canal Notícias', category_id: '1', epg_channel_id: 'news.br'},
+          {stream_id: 101, name: 'Canal Notícias', category_id: '1', epg_channel_id: 'news.br', stream_icon: 'https://img.example.com/logos/noticias.png'},
           {stream_id: 102, name: 'Canal Infantil', category_id: '2', age: 'L'},
           {stream_id: 102, name: 'Canal Infantil (repetido)', category_id: '2'},
           {name: 'Linha sem stream_id', category_id: '1'},
@@ -75,11 +75,11 @@ export async function startFakeProvider(): Promise<FakeProvider> {
         ]);
         case 'get_vod_categories': return json(res, [{category_id: '10', category_name: 'Filmes'}]);
         case 'get_vod_streams': return json(res, [
-          {stream_id: 201, name: 'Missão Fictícia', category_id: '10', container_extension: 'mkv', year: '2021', rating: '7.1'},
-          {stream_id: 202, name: 'Aventura no Parque', category_id: '10', container_extension: 'mp4', age: 'L'},
+          {stream_id: 201, name: 'Missão Fictícia', category_id: '10', container_extension: 'mkv', year: '2021', rating: '7.1', added: '1700000000', stream_icon: 'https://img.example.com/p/missao.jpg'},
+          {stream_id: 202, name: 'Aventura no Parque', category_id: '10', container_extension: 'mp4', age: 'L', added: '1710000000', stream_icon: 'https://img.example.com/p/aventura.jpg?token=segredo'},
         ]);
         case 'get_series_categories': return json(res, [{category_id: '20', category_name: 'Séries'}]);
-        case 'get_series': return json(res, [{series_id: 301, name: 'Série Exemplo', category_id: '20', plot: 'Uma série fictícia.'}]);
+        case 'get_series': return json(res, [{series_id: 301, name: 'Série Exemplo', category_id: '20', plot: 'Uma série fictícia.', last_modified: '1705000000', cover: 'http://img.example.com/s/serie.jpg'}]);
         case 'get_series_info':
           if (!state.mode.seriesInfo) { res.writeHead(501); res.end(); return; }
           return json(res, {seasons: [{id: 1, name: 'Temporada 1', season_number: 1, episode_count: 2}], info: {name: 'Série Exemplo'},

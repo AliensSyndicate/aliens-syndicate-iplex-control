@@ -281,3 +281,49 @@ test('personal IPTV space (account without family): the first TV gets the owner 
   await pair();
   assert.equal((await db().collection(`families/${ws}/profiles`).get()).size, 1);
 });
+
+test('Control Home: favorites, my list, continue watching and recently added, resolved from the real catalog', async () => {
+  const {admin, fid, ctx} = await family();
+  const ref = await save(admin, fid, {name: 'Xtream Home', format: 'xtream', url: provider.base, username: 'assinante', password: 'senha-1'});
+  assert.equal((await sync(ref)).source.status, 'ready');
+  const home = (input: Record<string, unknown> = {}) => execute('readHome', {...ctx, sourceId: ref.id, ...input}, admin) as Promise<any>;
+  let h = await home();
+  assert.deepEqual([h.profile.id, h.favorites, h.myList, h.continueWatching], ['admin', [], [], []]);
+  // Recently added: newest first, only titles whose provider published a date.
+  assert.deepEqual(h.recentMovies.map((i: any) => i.title), ['Aventura no Parque', 'Missão Fictícia']);
+  assert.deepEqual(h.recentSeries.map((i: any) => i.title), ['Série Exemplo']);
+  assert.equal(h.recentMovies[1].imageRef, 'https://img.example.com/p/missao.jpg');
+  assert.equal(h.recentMovies[0].imageRef, undefined, 'artwork URL with a token is dropped');
+  assert.equal(h.recentSeries[0].imageRef, undefined, 'http artwork is dropped');
+  assert.equal((await home({sourceId: null})).recentMovies.length, 0, 'recent rows depend on the selected source');
+
+  const page = await execute('readSourceCatalog', {...ctx, id: ref.id}, admin) as any;
+  const byTitle = (t: string) => page.items.find((i: any) => i.title === t);
+  const movie = byTitle('Missão Fictícia'), other = byTitle('Aventura no Parque'), channel = byTitle('Canal Notícias'), series = byTitle('Série Exemplo');
+  for (const item of [movie, channel]) await execute('favorite', {...ctx, profileId: 'admin', contentId: item.id, title: item.title, generation: 0}, admin);
+  await execute('watchProgress', {...ctx, profileId: 'admin', contentId: other.id, position: 30, duration: 100, generation: 0}, admin);
+  await execute('watchProgress', {...ctx, profileId: 'admin', contentId: `${series.id}_e3011`, position: 10, duration: 100, generation: 0}, admin);
+  await execute('watchProgress', {...ctx, profileId: 'admin', contentId: movie.id, position: 99, duration: 100, generation: 0}, admin);
+  h = await home();
+  assert.deepEqual(h.favorites.map((i: any) => i.title), ['Canal Notícias']);
+  assert.deepEqual(h.myList.map((i: any) => i.title), ['Missão Fictícia']);
+  assert.deepEqual(h.favoriteIds.sort(), [movie.id, channel.id].sort());
+  assert.deepEqual(h.continueWatching.map((i: any) => [i.title, i.episodeId ?? null, i.progress.position]).sort(), [['Aventura no Parque', null, 30], ['Série Exemplo', '3011', 10]], 'finished titles (≥95%) are not offered');
+  assert.equal(h.myList[0].id, movie.id, 'same public id as readSourceCatalog');
+  assert.equal(JSON.stringify(h).includes('senha-1'), false);
+
+  // A list cleared in the Gestor (new generation) disappears from the Home too.
+  await db().doc(`families/${fid}/profiles/admin`).update({'generations.favorites': 1});
+  h = await home();
+  assert.deepEqual([h.favorites, h.myList, h.favoriteIds], [[], [], []]);
+
+  // TMDB grant for the Control: movies/series only, same catalog rules.
+  assert.deepEqual(await execute('authorizeMetadata', {...ctx, sourceId: ref.id, itemId: movie.id}, admin), {kind: 'movie', title: 'Missão Fictícia', year: '2021'});
+  await assert.rejects(execute('authorizeMetadata', {...ctx, sourceId: ref.id, itemId: channel.id}, admin), /not-found/);
+
+  // "Continuar assistindo" on the TV: the play request carries resume.
+  const tvAuth = await tv(admin, fid);
+  const request = await execute('requestPlayback', {...ctx, deviceId: tvAuth.token.deviceId, sourceId: ref.id, itemId: other.id, requestId: randomBytes(16).toString('hex'), resume: true}, admin) as any;
+  const stored = (await db().doc(`families/${fid}/devices/${tvAuth.token.deviceId}/play_requests/${request.id}`).get()).data()!;
+  assert.equal(stored.resume, true);
+});

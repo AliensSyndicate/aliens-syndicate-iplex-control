@@ -11,11 +11,19 @@ import '../../core/domain/models.dart';
 /// "Assistir na TV": the Control searches and asks a linked TV to START a
 /// title (contract v1, docs/CONTRACTS.md). It is not a remote control: no
 /// pause, seek, stop, volume or TV navigation exists here.
-Future<void> showWatchOnTv(BuildContext context, Entry item) =>
-    showAppModalSheet<void>(
-      context: context,
-      builder: (_) => WatchOnTvSheet(item: item),
-    );
+///
+/// [resume] ("Continuar assistindo") asks the TV to resume from its active
+/// profile's saved progress; [episodeId] preselects that series episode.
+Future<void> showWatchOnTv(
+  BuildContext context,
+  Entry item, {
+  bool resume = false,
+  String? episodeId,
+}) => showAppModalSheet<void>(
+  context: context,
+  builder: (_) =>
+      WatchOnTvSheet(item: item, resume: resume, episodeId: episodeId),
+);
 
 /// One episode the phone can ask the TV to start.
 @immutable
@@ -66,8 +74,15 @@ String _requestId() => List.generate(
 ).join();
 
 class WatchOnTvSheet extends ConsumerStatefulWidget {
-  const WatchOnTvSheet({super.key, required this.item});
+  const WatchOnTvSheet({
+    super.key,
+    required this.item,
+    this.resume = false,
+    this.episodeId,
+  });
   final Entry item;
+  final bool resume;
+  final String? episodeId;
   @override
   ConsumerState<WatchOnTvSheet> createState() => _WatchOnTvSheetState();
 }
@@ -96,7 +111,13 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
         'seriesId': widget.item.text('providerRef'),
       },
     );
-    return parseEpisodes(result['details']);
+    final list = parseEpisodes(result['details']);
+    final preset = widget.episodeId;
+    if (preset != null && episode == null && mounted) {
+      final match = list.where((e) => e.id == preset).firstOrNull;
+      if (match != null) setState(() => episode = match);
+    }
+    return list;
   }
 
   Future<void> send(Entry device) async {
@@ -114,6 +135,8 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
           'itemId': widget.item.id,
           if (episode != null) 'episodeId': episode!.id,
           if (episode != null) 'episodeLabel': episode!.label(context),
+          if (widget.resume && widget.item.text('kind') != 'channel')
+            'resume': true,
           'requestId': _requestId(),
         },
       );

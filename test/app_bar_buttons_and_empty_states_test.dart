@@ -118,7 +118,7 @@ void main() {
       );
       final router = container.read(routerProvider);
       final l10n = AppLocalizations.of(
-        tester.element(find.byType(PageTemplate).first),
+        tester.element(find.byKey(const Key('home-search'))),
       );
 
       // Home has no subtitle
