@@ -242,12 +242,12 @@ export function parseM3u(body: string, sourceUrl = '', sourceName = ''): Catalog
   return parseM3uDetailed(body, sourceUrl, sourceName).catalog;
 }
 const scalar = (v: unknown) => typeof v === 'string' || typeof v === 'number' ? v : undefined;
-/** Artwork published by the source: https only, no credentials or account tokens in the URL. */
+/** Artwork published by the source: http or https exactly as published (many providers have no TLS), no credentials or account tokens in the URL. */
 export function safeImageUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.length > 1000) return undefined;
   try {
     const url = new URL(value.trim());
-    if (url.protocol !== 'https:' || url.username || url.password) return undefined;
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return undefined;
     if ([...url.searchParams.keys()].some(k => /^(user(name)?|pass(word)?|token|auth|key)$/i.test(k))) return undefined;
     return url.toString();
   } catch { return undefined; }

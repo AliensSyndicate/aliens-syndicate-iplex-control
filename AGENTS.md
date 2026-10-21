@@ -19,9 +19,11 @@
    - É proibido alterar tipografia arbitrariamente.
    - É proibido inventar novos padrões de cards ou substituir componentes funcionais por alternativas puramente visuais.
    - É proibido adicionar botões extras que não foram solicitados.
+   - É proibido remover ou tornar transparente o fundo sólido do menu principal (`BottomNavigation`), que deve ter a mesma cor do fundo das telas (`GraphiteBackdrop`).
 4. **Padrão de Notificações, Feedbacks e Modais**:
    - **Sheets em vez de SnackBars**: Todo aviso, mensagem de erro ou feedback informativo do projeto DEVE ser apresentado via Bottom Sheet modal (`showAppModalSheet` ou `showAppFeedbackSheet`). O uso de `SnackBar` para notificações gerais é proibido.
    - **Exceção Obrigatória — Erro ao Conectar Dispositivo**: A única exceção ao uso de Bottom Sheets é o erro ao conectar/parear dispositivo (`showDeviceConnectionFailure`), que DEVE ser exibido via `SnackBar`.
+   - **Margem superior dos Bottom Sheets**: todo sheet, inclusive o que ocupa a tela toda, tem margem superior igual à altura da status bar do dispositivo (`showAppModalSheet` aplica `useSafeArea: true`; não usar `showModalBottomSheet` direto sem ele).
    - **Sobreposição Obrigatória do Menu Principal**: Todo Bottom Sheet (`useRootNavigator: true`) e todo SnackBar DEVE se sobrepor ao menu principal (`BottomNavigation`), garantindo visibilidade limpa e sem cortes.
 
 ---

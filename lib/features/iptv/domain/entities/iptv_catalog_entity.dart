@@ -58,18 +58,18 @@ class IptvCatalogEntity {
 
   @override
   int get hashCode => Object.hash(
-        catalogId,
-        serverId,
-        schemaVersion,
-        version,
-        storagePath,
-        status,
-        contentCount,
-        activeSourceCount,
-        integrityHash,
-        createdAt,
-        lastSuccessfulSyncAt,
-        lastAttemptAt,
-        updatedAt,
-      );
+    catalogId,
+    serverId,
+    schemaVersion,
+    version,
+    storagePath,
+    status,
+    contentCount,
+    activeSourceCount,
+    integrityHash,
+    createdAt,
+    lastSuccessfulSyncAt,
+    lastAttemptAt,
+    updatedAt,
+  );
 }

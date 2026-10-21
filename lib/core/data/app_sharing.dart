@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+
 import '../domain/models.dart';
 
 /// Release builds supply an approved installation URL. Until then the user-
@@ -6,11 +7,20 @@ import '../domain/models.dart';
 class AppSharing {
   static const channel = MethodChannel('iplex/app_sharing');
   static const installationUrl = String.fromEnvironment('IPLEX_INSTALL_URL');
-  static String message(String title, String provisional, {String url = installationUrl}) {
+  static String message(
+    String title,
+    String provisional, {
+    String url = installationUrl,
+  }) {
     final uri = Uri.tryParse(url);
-    return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty && uri.userInfo.isEmpty
-        ? '$title\n$uri' : provisional;
+    return uri != null &&
+            uri.scheme == 'https' &&
+            uri.host.isNotEmpty &&
+            uri.userInfo.isEmpty
+        ? '$title\n$uri'
+        : provisional;
   }
+
   static Future<void> share(String text) async {
     try {
       await channel.invokeMethod<void>('share', {'text': text});

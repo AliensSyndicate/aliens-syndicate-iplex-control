@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of a family subscription in `subscriptions/{subscriptionId}`.
@@ -18,7 +19,8 @@ class SubscriptionModel {
 
   final String id;
   final String familyId;
-  final String status; // 'not_started' | 'trialing' | 'active' | 'cancelled' | 'expired'
+  final String
+  status; // 'not_started' | 'trialing' | 'active' | 'cancelled' | 'expired'
   final String plan;
   final DateTime? trialStartedAt;
   final DateTime? trialEndsAt;
@@ -71,7 +73,9 @@ class SubscriptionModel {
       if (trialEndsAt != null)
         'trialEndsAt': ModelUtils.toTimestampOrNull(trialEndsAt),
       if (currentPeriodEndsAt != null)
-        'currentPeriodEndsAt': ModelUtils.toTimestampOrNull(currentPeriodEndsAt),
+        'currentPeriodEndsAt': ModelUtils.toTimestampOrNull(
+          currentPeriodEndsAt,
+        ),
       if (updatedAt != null)
         'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
@@ -115,13 +119,13 @@ class SubscriptionModel {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        familyId,
-        status,
-        plan,
-        trialStartedAt,
-        trialEndsAt,
-        currentPeriodEndsAt,
-        updatedAt,
-      );
+    id,
+    familyId,
+    status,
+    plan,
+    trialStartedAt,
+    trialEndsAt,
+    currentPeriodEndsAt,
+    updatedAt,
+  );
 }

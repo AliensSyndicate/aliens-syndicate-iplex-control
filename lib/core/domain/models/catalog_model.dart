@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of catalog metadata in `catalogs/{catalogId}`.
@@ -43,8 +44,10 @@ class CatalogModel {
       'version': version,
       'storagePath': storagePath,
       'contentCount': contentCount,
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 
@@ -83,12 +86,12 @@ class CatalogModel {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        status,
-        version,
-        storagePath,
-        contentCount,
-        createdAt,
-        updatedAt,
-      );
+    id,
+    status,
+    version,
+    storagePath,
+    contentCount,
+    createdAt,
+    updatedAt,
+  );
 }

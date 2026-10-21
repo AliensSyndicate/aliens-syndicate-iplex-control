@@ -57,7 +57,8 @@ class PairingSessionEntity {
       nativeIdentityMasked: (data['nativeIdentityMasked'] ?? '') as String,
       fingerprint: (data['fingerprint'] ?? '') as String,
       identitySource: (data['identitySource'] ?? 'standard') as String,
-      identityStability: (data['identityStability'] ?? 'os_reinstall_stable') as String,
+      identityStability:
+          (data['identityStability'] ?? 'os_reinstall_stable') as String,
       isAlreadyLinked: data['isAlreadyLinked'] == true,
       isSameFamily: data['isSameFamily'] == true,
       currentFamilyId: data['currentFamilyId'] as String?,

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../../core/domain/models/model_utils.dart';
 import '../../domain/entities/iptv_sync_job_entity.dart';
 
@@ -21,9 +22,7 @@ class IptvSyncJobModel extends IptvSyncJobEntity {
     super.traceId,
     super.createdAt,
     super.updatedAt,
-  }) : super(
-          jobId: jobId ?? id ?? '',
-        );
+  }) : super(jobId: jobId ?? id ?? '');
 
   /// Compatibility getter for legacy callers expecting `id`
   String get id => jobId;
@@ -64,10 +63,14 @@ class IptvSyncJobModel extends IptvSyncJobEntity {
       'errorCode': errorCode,
       if (errorRetryable != null) 'errorRetryable': errorRetryable,
       if (traceId != null) 'traceId': traceId,
-      if (startedAt != null) 'startedAt': ModelUtils.toTimestampOrNull(startedAt),
-      if (finishedAt != null) 'finishedAt': ModelUtils.toTimestampOrNull(finishedAt),
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (startedAt != null)
+        'startedAt': ModelUtils.toTimestampOrNull(startedAt),
+      if (finishedAt != null)
+        'finishedAt': ModelUtils.toTimestampOrNull(finishedAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 

@@ -23,10 +23,13 @@ class NeumorphicStatusIndicator extends StatelessWidget {
     if (status != null) {
       resolvedStatus = status!;
     } else {
-      resolvedStatus = online ? IndicatorStatus.online : IndicatorStatus.offline;
+      resolvedStatus = online
+          ? IndicatorStatus.online
+          : IndicatorStatus.offline;
     }
 
-    final Color dotColor = color ??
+    final Color dotColor =
+        color ??
         switch (resolvedStatus) {
           IndicatorStatus.online => AppColors.success,
           IndicatorStatus.offline => AppColors.disabled,

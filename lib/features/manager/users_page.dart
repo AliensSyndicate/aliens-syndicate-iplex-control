@@ -13,8 +13,16 @@ class UsersPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l;
-    final hasFamily = ref.watch(accountProvider.select((a) => a.asData?.value?.familyId != null));
-    final hasGuest = ref.watch(entriesProvider('profiles')).asData?.value.any((p) => p.id == 'guest') ?? true;
+    final hasFamily = ref.watch(
+      accountProvider.select((a) => a.asData?.value?.familyId != null),
+    );
+    final hasGuest =
+        ref
+            .watch(entriesProvider('profiles'))
+            .asData
+            ?.value
+            .any((p) => p.id == 'guest') ??
+        true;
     final admin = ref.watch(adminProvider);
     return PageTemplate(
       title: l.familyTitle,
@@ -23,9 +31,8 @@ class UsersPage extends ConsumerWidget {
         label: l.add,
         icon: AppIcons.add,
         size: AppDimensions.touch,
-        onPressed: () => showModalBottomSheet<void>(
+        onPressed: () => showAppModalSheet<void>(
           context: context,
-          useRootNavigator: true,
           builder: (c) => SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(AppTokens.lg),
@@ -56,7 +63,10 @@ class UsersPage extends ConsumerWidget {
                       onTap: () async {
                         Navigator.pop(c);
                         try {
-                          await ref.read(repositoryProvider).mutate('setGuestEnabled', {'enabled': true, 'name': l.profileTypeGuest});
+                          await ref.read(repositoryProvider).mutate(
+                            'setGuestEnabled',
+                            {'enabled': true, 'name': l.profileTypeGuest},
+                          );
                         } catch (e) {
                           if (context.mounted) showFailure(context, e);
                         }
@@ -108,7 +118,10 @@ class UsersPage extends ConsumerWidget {
               title: l.emptyUsers,
               body: l.noProfilesBody,
               icon: AppIcons.users,
-              action: AppButton(label: l.newProfile, onPressed: () => context.push('/users/add')),
+              action: AppButton(
+                label: l.newProfile,
+                onPressed: () => context.push('/users/add'),
+              ),
             ),
             builder: (items) => Column(
               children: items
@@ -117,7 +130,9 @@ class UsersPage extends ConsumerWidget {
                       title: e.name,
                       subtitle: [
                         profileTypeLabel(context, e.text('type')),
-                        if (e.text('type') == 'guest' && e.data['enabled'] == false) l.disabled,
+                        if (e.text('type') == 'guest' &&
+                            e.data['enabled'] == false)
+                          l.disabled,
                       ].join(' · '),
                       onTap: () => context.push('/users/${e.id}'),
                     ),

@@ -9,7 +9,8 @@ final subscriptionProvider = StreamProvider.autoDispose<Entry?>((ref) {
   final familyId = ref.watch(
     accountProvider.select((account) => account.asData?.value?.resourceScopeId),
   );
-  if (familyId == null || !ref.watch(canManageResourcesProvider)) return Stream.value(null);
+  if (familyId == null || !ref.watch(canManageResourcesProvider))
+    return Stream.value(null);
   return ref
       .watch(repositoryProvider)
       .watchEntry(familyId, 'private', 'subscription');

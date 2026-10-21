@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of an active TV playback lease in `playback_sessions/{sessionId}`.
@@ -52,7 +53,8 @@ class PlaybackSessionModel {
       'profileId': profileId,
       'deviceId': deviceId,
       'status': status,
-      if (startedAt != null) 'startedAt': ModelUtils.toTimestampOrNull(startedAt),
+      if (startedAt != null)
+        'startedAt': ModelUtils.toTimestampOrNull(startedAt),
       if (lastHeartbeatAt != null)
         'lastHeartbeatAt': ModelUtils.toTimestampOrNull(lastHeartbeatAt),
       if (leaseExpiresAt != null)
@@ -98,13 +100,13 @@ class PlaybackSessionModel {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        familyId,
-        profileId,
-        deviceId,
-        status,
-        startedAt,
-        lastHeartbeatAt,
-        leaseExpiresAt,
-      );
+    id,
+    familyId,
+    profileId,
+    deviceId,
+    status,
+    startedAt,
+    lastHeartbeatAt,
+    leaseExpiresAt,
+  );
 }

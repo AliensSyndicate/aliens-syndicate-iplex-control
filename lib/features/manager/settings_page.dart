@@ -24,7 +24,10 @@ class SettingsPage extends ConsumerWidget {
                 initialValue: value,
                 label: l.language,
                 items: [
-                  DropdownMenuItem(value: 'system', child: Text(l.systemLanguage)),
+                  DropdownMenuItem(
+                    value: 'system',
+                    child: Text(l.systemLanguage),
+                  ),
                   const DropdownMenuItem(value: 'en', child: Text('English')),
                   const DropdownMenuItem(
                     value: 'pt_BR',
@@ -34,9 +37,10 @@ class SettingsPage extends ConsumerWidget {
                 ],
                 onChanged: (v) async {
                   try {
-                    await ref.read(repositoryProvider).mutate('savePreferences', {
-                      'locale': v,
-                    });
+                    await ref.read(repositoryProvider).mutate(
+                      'savePreferences',
+                      {'locale': v},
+                    );
                   } catch (e) {
                     if (context.mounted) showFailure(context, e);
                   }
@@ -44,10 +48,19 @@ class SettingsPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-            NeumorphicListTile(title: l.shareApplication, icon: AppIcons.link, onTap: () async {
-              try { await AppSharing.share(AppSharing.message('iPlex', l.provisionalShareMessage)); }
-              catch (e) { if (context.mounted) showFailure(context, e); }
-            }),
+            NeumorphicListTile(
+              title: l.shareApplication,
+              icon: AppIcons.link,
+              onTap: () async {
+                try {
+                  await AppSharing.share(
+                    AppSharing.message('iPlex', l.provisionalShareMessage),
+                  );
+                } catch (e) {
+                  if (context.mounted) showFailure(context, e);
+                }
+              },
+            ),
             NeumorphicSectionHeader(l.legal),
             NeumorphicListTile(
               title: l.terms,

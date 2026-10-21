@@ -46,47 +46,47 @@ class DeviceListPage extends ConsumerWidget {
                 );
               }
 
-                final devices = items.map((e) {
-                  final model = DeviceModel.fromMap(e.id, e.data);
-                  return DeviceEntity(
-                    id: model.id,
-                    familyId: model.familyId,
-                    displayName: model.displayName,
-                    platform: model.platform,
-                    status: model.status,
-                    manufacturer: model.manufacturer,
-                    model: model.model,
-                    nativeIdentityFingerprint: model.nativeIdentityFingerprint,
-                    identitySource: model.identitySource,
-                    identityScope: model.identityScope,
-                    identityStability: model.identityStability,
-                    linkedAt: model.linkedAt,
-                    lastSeenAt: model.lastSeenAt,
-                    linkedByUid: model.linkedByUid,
-                    onlineUntil: model.onlineUntil,
-                    sessionId: model.sessionId,
-                    createdAt: model.createdAt,
-                    updatedAt: model.updatedAt,
-                  );
-                }).toList();
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: devices.length,
-                  itemBuilder: (ctx, i) {
-                    final device = devices[i];
-                    return DeviceCard(
-                      key: ValueKey(device.id),
-                      device: device,
-                      onTap: () => context.push('/devices/${device.id}'),
-                    );
-                  },
+              final devices = items.map((e) {
+                final model = DeviceModel.fromMap(e.id, e.data);
+                return DeviceEntity(
+                  id: model.id,
+                  familyId: model.familyId,
+                  displayName: model.displayName,
+                  platform: model.platform,
+                  status: model.status,
+                  manufacturer: model.manufacturer,
+                  model: model.model,
+                  nativeIdentityFingerprint: model.nativeIdentityFingerprint,
+                  identitySource: model.identitySource,
+                  identityScope: model.identityScope,
+                  identityStability: model.identityStability,
+                  linkedAt: model.linkedAt,
+                  lastSeenAt: model.lastSeenAt,
+                  linkedByUid: model.linkedByUid,
+                  onlineUntil: model.onlineUntil,
+                  sessionId: model.sessionId,
+                  createdAt: model.createdAt,
+                  updatedAt: model.updatedAt,
                 );
-              },
-            );
-          },
-        ),
+              }).toList();
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: devices.length,
+                itemBuilder: (ctx, i) {
+                  final device = devices[i];
+                  return DeviceCard(
+                    key: ValueKey(device.id),
+                    device: device,
+                    onTap: () => context.push('/devices/${device.id}'),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

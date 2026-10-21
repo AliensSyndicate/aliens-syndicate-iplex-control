@@ -30,7 +30,8 @@ class _NameFormState extends ConsumerState<NameForm> {
   String profileType = 'regular';
   // Stable per form instance: a retried submit cannot create a second profile.
   late final String requestId = '${DateTime.now().microsecondsSinceEpoch}';
-  bool get creatingProfile => widget.action == 'saveProfile' && widget.id == null;
+  bool get creatingProfile =>
+      widget.action == 'saveProfile' && widget.id == null;
   @override
   void dispose() {
     name.dispose();
@@ -84,8 +85,14 @@ class _NameFormState extends ConsumerState<NameForm> {
                 label: context.l.profileType,
                 initialValue: profileType,
                 items: [
-                  DropdownMenuItem(value: 'regular', child: Text(context.l.profileTypeRegular)),
-                  DropdownMenuItem(value: 'kids', child: Text(context.l.profileTypeKids)),
+                  DropdownMenuItem(
+                    value: 'regular',
+                    child: Text(context.l.profileTypeRegular),
+                  ),
+                  DropdownMenuItem(
+                    value: 'kids',
+                    child: Text(context.l.profileTypeKids),
+                  ),
                 ],
                 onChanged: (v) => setState(() => profileType = v ?? 'regular'),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../../core/domain/models/model_utils.dart';
 import '../../domain/entities/iptv_source_entity.dart';
 
@@ -26,9 +27,9 @@ class IptvSourceModel extends IptvSourceEntity {
     super.lastSyncAt,
     this.updatedByUid = '',
   }) : super(
-          sourceId: sourceId ?? id ?? '',
-          ownerUid: ownerUid ?? createdByUid ?? '',
-        );
+         sourceId: sourceId ?? id ?? '',
+         ownerUid: ownerUid ?? createdByUid ?? '',
+       );
 
   final String updatedByUid;
 
@@ -45,7 +46,9 @@ class IptvSourceModel extends IptvSourceEntity {
         : (rawType == 'm3u' ? 'url' : rawType);
 
     final sourceId = (data['sourceId'] ?? id) as String;
-    final ownerUid = (data['ownerUid'] ?? data['createdByUid'] ?? data['ownerId'] ?? '') as String;
+    final ownerUid =
+        (data['ownerUid'] ?? data['createdByUid'] ?? data['ownerId'] ?? '')
+            as String;
 
     return IptvSourceModel(
       sourceId: sourceId,
@@ -59,13 +62,16 @@ class IptvSourceModel extends IptvSourceEntity {
       currentJobId: data['currentJobId'] as String?,
       credentialsRef: (data['credentialsRef'] ?? data['secretRef']) as String?,
       epgEnabled: (data['epgEnabled'] ?? data['hasEpg'] ?? false) as bool,
-      pinProtected: (data['pinProtected'] ?? data['isProtected'] ?? false) as bool,
+      pinProtected:
+          (data['pinProtected'] ?? data['isProtected'] ?? false) as bool,
       contentCount: (data['contentCount'] as num?)?.toInt() ?? 0,
       errorCode: data['errorCode'] as String?,
       updatedByUid: (data['updatedByUid'] ?? '') as String,
       createdAt: ModelUtils.parseDateTime(data['createdAt']),
       updatedAt: ModelUtils.parseDateTime(data['updatedAt']),
-      lastSyncAt: ModelUtils.parseDateTime(data['lastSuccessfulSyncAt'] ?? data['lastSyncAt']),
+      lastSyncAt: ModelUtils.parseDateTime(
+        data['lastSuccessfulSyncAt'] ?? data['lastSyncAt'],
+      ),
     );
   }
 
@@ -86,9 +92,12 @@ class IptvSourceModel extends IptvSourceEntity {
       'contentCount': contentCount,
       'errorCode': errorCode,
       'updatedByUid': updatedByUid,
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
-      if (lastSyncAt != null) 'lastSyncAt': ModelUtils.toTimestampOrNull(lastSyncAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (lastSyncAt != null)
+        'lastSyncAt': ModelUtils.toTimestampOrNull(lastSyncAt),
     };
   }
 

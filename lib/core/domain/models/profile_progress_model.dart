@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of playback progress in `profile_progress/{progressId}`.
@@ -31,8 +32,7 @@ class ProfileProgressModel {
   double get progressPercentage =>
       duration > 0 ? (position / duration).clamp(0.0, 1.0) : 0.0;
 
-  bool get isCompleted =>
-      duration > 0 && (position / duration) >= 0.95;
+  bool get isCompleted => duration > 0 && (position / duration) >= 0.95;
 
   factory ProfileProgressModel.fromMap(String id, Map<String, dynamic> data) {
     return ProfileProgressModel(
@@ -55,7 +55,8 @@ class ProfileProgressModel {
       'catalogId': catalogId,
       'position': position,
       'duration': duration,
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 
@@ -97,13 +98,13 @@ class ProfileProgressModel {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        familyId,
-        profileId,
-        contentId,
-        catalogId,
-        position,
-        duration,
-        updatedAt,
-      );
+    id,
+    familyId,
+    profileId,
+    contentId,
+    catalogId,
+    position,
+    duration,
+    updatedAt,
+  );
 }

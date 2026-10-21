@@ -155,7 +155,10 @@ class _NeumorphicPinModalState extends ConsumerState<NeumorphicPinModal> {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       errorMessage!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 13,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -164,7 +167,9 @@ class _NeumorphicPinModalState extends ConsumerState<NeumorphicPinModal> {
                   const SizedBox(height: AppSpacing.sm),
                   AppButton(
                     label: l.cancel,
-                    onPressed: busy ? null : () => Navigator.of(context).pop(false),
+                    onPressed: busy
+                        ? null
+                        : () => Navigator.of(context).pop(false),
                   ),
                 ],
               ),

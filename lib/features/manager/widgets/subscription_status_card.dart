@@ -23,7 +23,9 @@ class SubscriptionStatusCard extends ConsumerWidget {
         ['trial', 'active', 'cancelled'].contains(rawStatus) &&
         end <= now.millisecondsSinceEpoch;
     final status = expired ? 'expired' : rawStatus;
-    final plan = (entry?.text('basePlanId') ?? '').isNotEmpty ? entry!.text('basePlanId') : entry?.text('plan');
+    final plan = (entry?.text('basePlanId') ?? '').isNotEmpty
+        ? entry!.text('basePlanId')
+        : entry?.text('plan');
     return AppSurface(
       child: Column(
         children: [

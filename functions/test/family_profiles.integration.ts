@@ -177,6 +177,9 @@ test('kids and space permissions are enforced by the backend in listings, search
  assert.deepEqual(await read(kidAccount),['k1','k2','s1']);
  assert.deepEqual(await read(kidAccount,'drama'),[]);
  assert.deepEqual(await read(kidAccount,'xxx'),[]);
+ const recentSearchIds=catalog.items.map(i=>hash(`src1:${i.id}`));
+ const recents=async(a:Identity)=>(await execute('readHome',{sourceId:'src1',recentSearchIds,...ctx},a) as {recentSearches:{catalogItemId:string}[]}).recentSearches.map(i=>i.catalogItemId);
+ assert.deepEqual(await recents(kidAccount),['k1','k2','s1'],'search recents never restore restricted titles for kids');
  // Granting every space to a kids profile cannot widen it beyond children's content.
  await execute('setProfilePermissions',{profileId:kid,allSpaces:true,spaces:[],...ctx},admin);
  assert.deepEqual(await read(kidAccount),['k1','k2','s1']);
@@ -187,6 +190,7 @@ test('kids and space permissions are enforced by the backend in listings, search
  // Revoking a space takes effect on the next request; the space disappears.
  await execute('setProfilePermissions',{profileId:reg,allSpaces:false,spaces:['src1:channel'],...ctx},admin);
  assert.deepEqual(await read(regAccount),['c1']);
+ assert.deepEqual(await recents(regAccount),['c1'],'search recents respect current space permissions');
  const spaces=await execute('listProfileSpaces',{contextFamilyId:fid},regAccount) as {spaces:{sourceId:string;kinds:string[]}[];permissionsVersion:number};
  assert.deepEqual(spaces.spaces,[{sourceId:'src1',name:'Lista',kinds:['channel']}]);
  assert.equal(spaces.permissionsVersion,1);

@@ -19,7 +19,7 @@ Gerações limpas no Gestor são ignoradas, como na TV. O perfil é o vinculado 
 
 ## Backend
 - `manager` → `readHome` (`iptv_catalog_access.ts`): resolve favoritos/progresso em itens que o perfil ainda pode abrir (mesmas regras de `readSourceCatalog`/`canSee`, fontes protegidas bloqueadas são puladas) + recentes da fonte selecionada.
-- Itens do catálogo: `imageRef` (logo/capa da fonte — `https`, sem credenciais/tokens na URL) e `addedAt`. Versão do parser `parser-4`: a próxima sincronização de cada fonte regrava o catálogo com esses campos.
+- Itens do catálogo: `imageRef` (logo/capa da fonte — `http` ou `https` como publicado, sem credenciais/tokens na URL) e `addedAt`. Versão do parser `parser-5`: a próxima sincronização de cada fonte regrava o catálogo com esses campos.
 - `manager` → `authorizeMetadata` para contas do Control; `iplexWebTmdb` aceita a conta do Control **com App Check** (autoriza pela `manager`), TVs continuam pela `player`. A chave TMDB fica no servidor.
 - `requestPlayback` aceita `resume`; a TV (`PlayRequestCoordinator`) abre o player com `r=1`.
 
@@ -27,7 +27,7 @@ Gerações limpas no Gestor são ignoradas, como na TV. O perfil é o vinculado 
 Bottom sheet com todas as fontes, estado de sincronização e indicador da selecionada; só fontes com catálogo publicado podem ser escolhidas. A escolha vale por conta+escopo, persiste entre aberturas (`shared_preferences`) e afeta busca e recém-adicionados; as seções pessoais agregam todas as fontes.
 
 ## Publicação necessária (pendente de autorização)
-1. Functions do Control: `manager`, `player`, `processIptvSyncJobTrigger`, `recoverIptvJobs` (readHome, metadados, `resume`, parser-4).
+1. Functions do Control: `manager`, `player`, `processIptvSyncJobTrigger`, `recoverIptvJobs` (readHome, metadados, `resume`, parser-5).
 2. Functions do Web: `iplexWebTmdb` (rota do Control).
 3. Hosting do Web (`resume` na TV).
 4. Novo build do Control — **antes do passo 1 a Home do Control em produção mostraria erro**, então o app só deve ser distribuído depois.

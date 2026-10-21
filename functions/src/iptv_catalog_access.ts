@@ -281,6 +281,7 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
   if(actor.deviceId)throw new DomainError('permission-denied');
   const db=getFirestore();
   const selected=input.sourceId===undefined||input.sourceId===null?null:idSchema.parse(input.sourceId);
+  const recentSearchIds=z.array(idSchema).max(HOME_ROW).parse(input.recentSearchIds??[]);
   const context=await db.runTransaction(async tx=>{
     const scope=await iptvWorkspace(tx,actor,false,false);
     const profileId=(await tx.get(scope.ref.collection('profile_links').doc(actor.uid))).data()?.profileId;
@@ -305,6 +306,11 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
     recentMovies.push(...recent('movie'));recentSeries.push(...recent('series'));
   }
   const profile=context.profile;
+  const recentSearches:Record<string,unknown>[]=[];
+  if(profile?.type!=='guest')for(const id of new Set(recentSearchIds)){
+    const v=visible.get(id);
+    if(v)recentSearches.push(publicItem(v.sourceId,v.sourceName,v.version,v.item));
+  }
   let favoriteIds:string[]=[],favorites:Record<string,unknown>[]=[],myList:Record<string,unknown>[]=[],continueWatching:Record<string,unknown>[]=[];
   if(profile&&profile.type!=='guest'){
     const ref=context.ref.collection('profiles').doc(profile.id);
@@ -334,7 +340,7 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
   }
   return {schemaVersion:1,selectedSourceId:selected,
     profile:profile?{id:profile.id,name:profile.name,type:profile.type,generations:profile.generations}:null,
-    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries};
+    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries,recentSearches};
 }
 
 /** Library reads are now server-authorized; direct Firestore access is closed. */

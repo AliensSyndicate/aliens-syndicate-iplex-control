@@ -13,6 +13,7 @@ import '../devices/presentation/controllers/device_controller.dart';
 class ScanPage extends ConsumerStatefulWidget {
   const ScanPage({super.key, required this.device, this.parse});
   final bool device;
+
   /// Overrides the public user code parser (e.g. profile link codes).
   final String? Function(String raw)? parse;
   @override
@@ -68,7 +69,9 @@ class _ScanPageState extends ConsumerState<ScanPage> {
 
     if (widget.device) {
       try {
-        final session = await ref.read(devicePairingProvider.notifier).inspect(token: token);
+        final session = await ref
+            .read(devicePairingProvider.notifier)
+            .inspect(token: token);
         if (mounted && session != null) {
           context.push('/devices/confirm');
           return;
@@ -76,7 +79,9 @@ class _ScanPageState extends ConsumerState<ScanPage> {
       } catch (_) {
         // Fallback for legacy direct pairing
         try {
-          await ref.read(repositoryProvider).mutate('linkDevice', {'token': token});
+          await ref.read(repositoryProvider).mutate('linkDevice', {
+            'token': token,
+          });
           if (mounted) context.go('/devices');
           return;
         } catch (e) {
@@ -111,7 +116,9 @@ class _ScanPageState extends ConsumerState<ScanPage> {
                 AppSpacing.lg,
               ),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: AppDimensions.touch),
+                constraints: const BoxConstraints(
+                  minHeight: AppDimensions.touch,
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -123,10 +130,7 @@ class _ScanPageState extends ConsumerState<ScanPage> {
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
-                      child: Text(
-                        l.scan,
-                        style: AppTypography.headlineMedium,
-                      ),
+                      child: Text(l.scan, style: AppTypography.headlineMedium),
                     ),
                   ],
                 ),
@@ -134,7 +138,9 @@ class _ScanPageState extends ConsumerState<ScanPage> {
             ),
             Padding(
               padding: const EdgeInsets.all(AppTokens.lg),
-              child: Text(widget.device ? l.scanHelp : l.publicIdentityScanHelp),
+              child: Text(
+                widget.device ? l.scanHelp : l.publicIdentityScanHelp,
+              ),
             ),
             Expanded(
               child: MobileScanner(

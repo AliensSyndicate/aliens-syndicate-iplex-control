@@ -92,10 +92,14 @@ class Artwork extends ConsumerStatefulWidget {
     required this.item,
     this.fit = BoxFit.cover,
     this.backdrop = false,
+    this.alignment = Alignment.center,
+    this.background = AppColors.surfaceRecessed,
   });
   final Entry item;
   final BoxFit fit;
   final bool backdrop;
+  final Alignment alignment;
+  final Color background;
 
   @override
   ConsumerState<Artwork> createState() => _ArtworkState();
@@ -129,7 +133,13 @@ class _ArtworkState extends ConsumerState<Artwork> {
   Widget build(BuildContext context) {
     final item = widget.item, source = sourceImage;
     if (source != null) {
-      return _NetworkImage(url: source, fit: widget.fit, item: item);
+      return _NetworkImage(
+        url: source,
+        fit: widget.fit,
+        item: item,
+        alignment: widget.alignment,
+        background: widget.background,
+      );
     }
     if (metadata == null) return _Initials(item: item);
     return FutureBuilder<ContentMetadata?>(
@@ -139,7 +149,13 @@ class _ArtworkState extends ConsumerState<Artwork> {
             ? snapshot.data?.backdrop
             : snapshot.data?.poster;
         if (url != null) {
-          return _NetworkImage(url: url, fit: widget.fit, item: item);
+          return _NetworkImage(
+            url: url,
+            fit: widget.fit,
+            item: item,
+            alignment: widget.alignment,
+            background: widget.background,
+          );
         }
         return _Initials(
           item: item,
@@ -155,14 +171,18 @@ class _NetworkImage extends StatelessWidget {
     required this.url,
     required this.fit,
     required this.item,
+    this.alignment = Alignment.center,
+    this.background = AppColors.surfaceRecessed,
   });
   final String url;
   final BoxFit fit;
   final Entry item;
+  final Alignment alignment;
+  final Color background;
 
   @override
   Widget build(BuildContext context) => ColoredBox(
-    color: AppColors.surfaceRecessed,
+    color: background,
     child: Padding(
       padding: fit == BoxFit.contain
           ? const EdgeInsets.all(AppSpacing.md)
@@ -170,6 +190,7 @@ class _NetworkImage extends StatelessWidget {
       child: Image.network(
         url,
         fit: fit,
+        alignment: alignment,
         width: double.infinity,
         height: double.infinity,
         gaplessPlayback: true,

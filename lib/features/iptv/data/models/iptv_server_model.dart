@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../../core/domain/models/model_utils.dart';
 import '../../domain/entities/iptv_server_entity.dart';
 
@@ -33,8 +34,10 @@ class IptvServerModel extends IptvServerEntity {
       'canonicalEndpoint': canonicalEndpoint,
       'identityHash': identityHash,
       'status': status,
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 

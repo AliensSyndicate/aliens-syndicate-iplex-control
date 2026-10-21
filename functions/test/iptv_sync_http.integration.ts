@@ -294,12 +294,18 @@ test('Control Home: favorites, my list, continue watching and recently added, re
   assert.deepEqual(h.recentSeries.map((i: any) => i.title), ['Série Exemplo']);
   assert.equal(h.recentMovies[1].imageRef, 'https://img.example.com/p/missao.jpg');
   assert.equal(h.recentMovies[0].imageRef, undefined, 'artwork URL with a token is dropped');
-  assert.equal(h.recentSeries[0].imageRef, undefined, 'http artwork is dropped');
+  assert.equal(h.recentSeries[0].imageRef, 'http://img.example.com/s/serie.jpg', 'credential-free provider artwork is preserved');
   assert.equal((await home({sourceId: null})).recentMovies.length, 0, 'recent rows depend on the selected source');
 
   const page = await execute('readSourceCatalog', {...ctx, id: ref.id}, admin) as any;
   const byTitle = (t: string) => page.items.find((i: any) => i.title === t);
   const movie = byTitle('Missão Fictícia'), other = byTitle('Aventura no Parque'), channel = byTitle('Canal Notícias'), series = byTitle('Série Exemplo');
+  const recentSearchIds = [series.id, movie.id, series.id, 'missing-item'];
+  assert.deepEqual((await home({recentSearchIds})).recentSearches.map((i:any)=>i.id), [series.id, movie.id], 'search history preserves order, deduplicates and omits unavailable items');
+  await assert.rejects(home({recentSearchIds: Array(11).fill(movie.id)}), /too_big|at most|10/i);
+  await ref.update({enabled:false});
+  assert.deepEqual((await home({recentSearchIds})).recentSearches, [], 'disabled sources cannot leak cached search titles');
+  await ref.update({enabled:true});
   for (const item of [movie, channel]) await execute('favorite', {...ctx, profileId: 'admin', contentId: item.id, title: item.title, generation: 0}, admin);
   await execute('watchProgress', {...ctx, profileId: 'admin', contentId: other.id, position: 30, duration: 100, generation: 0}, admin);
   await execute('watchProgress', {...ctx, profileId: 'admin', contentId: `${series.id}_e3011`, position: 10, duration: 100, generation: 0}, admin);

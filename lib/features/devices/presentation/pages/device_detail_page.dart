@@ -20,7 +20,10 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
   bool unlinking = false;
 
   Future<void> unlink(String displayName) async {
-    final confirmed = await showDeviceUnlinkModal(context, deviceName: displayName);
+    final confirmed = await showDeviceUnlinkModal(
+      context,
+      deviceName: displayName,
+    );
     if (!confirmed || !mounted) return;
 
     setState(() => unlinking = true);
@@ -54,7 +57,8 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
       body: deviceAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
-          onRetry: () => ref.invalidate(deviceDetailStreamProvider(widget.deviceId)),
+          onRetry: () =>
+              ref.invalidate(deviceDetailStreamProvider(widget.deviceId)),
         ),
         data: (device) {
           if (device == null) {
@@ -81,8 +85,11 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
           }
 
           String lastSeenStr = l.neverActive;
-          if (device.lastSeenAt != null && device.lastSeenAt!.millisecondsSinceEpoch > 0) {
-            lastSeenStr = DateFormat.yMd(locale).add_Hm().format(device.lastSeenAt!);
+          if (device.lastSeenAt != null &&
+              device.lastSeenAt!.millisecondsSinceEpoch > 0) {
+            lastSeenStr = DateFormat.yMd(locale)
+                .add_Hm()
+                .format(device.lastSeenAt!);
           }
 
           return PageTemplate(
@@ -104,14 +111,18 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                               height: 50,
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceRecessed,
-                                borderRadius: BorderRadius.circular(AppRadii.sm),
+                                borderRadius: BorderRadius.circular(
+                                  AppRadii.sm,
+                                ),
                                 border: Border.all(color: AppColors.borderDark),
                               ),
                               child: Center(
                                 child: AppIcon(
                                   AppIcons.devices,
                                   size: AppTokens.xxl,
-                                  color: isOnline ? AppColors.accent : AppColors.textDisabled,
+                                  color: isOnline
+                                      ? AppColors.accent
+                                      : AppColors.textDisabled,
                                 ),
                               ),
                             ),
@@ -122,14 +133,18 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                                 children: [
                                   Row(
                                     children: [
-                                      NeumorphicStatusIndicator(online: isOnline),
+                                      NeumorphicStatusIndicator(
+                                        online: isOnline,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         isOnline ? l.online : l.offline,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w700,
                                           fontSize: 14,
-                                          color: isOnline ? AppColors.textPrimary : AppColors.textDisabled,
+                                          color: isOnline
+                                              ? AppColors.textPrimary
+                                              : AppColors.textDisabled,
                                         ),
                                       ),
                                     ],
@@ -150,13 +165,22 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                         const SizedBox(height: AppSpacing.lg),
                         Container(height: 1, color: AppColors.borderDark),
                         const SizedBox(height: AppSpacing.md),
-                        _InfoRow(label: l.platformLabel, value: device.platformLabel),
+                        _InfoRow(
+                          label: l.platformLabel,
+                          value: device.platformLabel,
+                        ),
                         if (device.manufacturer.isNotEmpty)
-                          _InfoRow(label: l.manufacturerLabel, value: device.manufacturer),
+                          _InfoRow(
+                            label: l.manufacturerLabel,
+                            value: device.manufacturer,
+                          ),
                         if (device.model.isNotEmpty)
                           _InfoRow(label: l.modelLabel, value: device.model),
                         _InfoRow(label: l.linkedAtLabel, value: linkedDateStr),
-                        _InfoRow(label: l.maskedIdLabel, value: device.maskedId),
+                        _InfoRow(
+                          label: l.maskedIdLabel,
+                          value: device.maskedId,
+                        ),
                       ],
                     ),
                   ),

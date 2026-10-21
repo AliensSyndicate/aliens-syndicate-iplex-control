@@ -9,7 +9,8 @@ class DeviceManualCodePage extends ConsumerStatefulWidget {
   const DeviceManualCodePage({super.key});
 
   @override
-  ConsumerState<DeviceManualCodePage> createState() => _DeviceManualCodePageState();
+  ConsumerState<DeviceManualCodePage> createState() =>
+      _DeviceManualCodePageState();
 }
 
 class _DeviceManualCodePageState extends ConsumerState<DeviceManualCodePage> {
@@ -36,7 +37,9 @@ class _DeviceManualCodePageState extends ConsumerState<DeviceManualCodePage> {
     });
 
     try {
-      final session = await ref.read(devicePairingProvider.notifier).inspect(code: raw);
+      final session = await ref
+          .read(devicePairingProvider.notifier)
+          .inspect(code: raw);
       if (!mounted) return;
       if (session != null) {
         context.push('/devices/confirm');
@@ -91,7 +94,10 @@ class _DeviceManualCodePageState extends ConsumerState<DeviceManualCodePage> {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       errorMessage!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ],
@@ -99,11 +105,7 @@ class _DeviceManualCodePageState extends ConsumerState<DeviceManualCodePage> {
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          AppButton(
-            label: l.save,
-            busy: busy,
-            onPressed: submit,
-          ),
+          AppButton(label: l.save, busy: busy, onPressed: submit),
         ],
       ),
     );

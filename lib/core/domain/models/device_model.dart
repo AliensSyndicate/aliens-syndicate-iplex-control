@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of a registered playback device in `devices/{deviceId}`.
@@ -78,7 +79,9 @@ class DeviceModel {
     final rawOnlineUntil = ModelUtils.parseDateTime(data['onlineUntil']);
     final rawCreatedAt = ModelUtils.parseDateTime(data['createdAt']);
     final rawUpdatedAt = ModelUtils.parseDateTime(data['updatedAt']);
-    final rawLinkedAt = ModelUtils.parseDateTime(data['linkedAt'] ?? data['createdAt']);
+    final rawLinkedAt = ModelUtils.parseDateTime(
+      data['linkedAt'] ?? data['createdAt'],
+    );
 
     return DeviceModel(
       id: id,
@@ -91,10 +94,12 @@ class DeviceModel {
       linkedByUid: (data['linkedByUid'] ?? data['issuer'] ?? '') as String,
       manufacturer: (data['manufacturer'] ?? '') as String,
       model: (data['model'] ?? '') as String,
-      nativeIdentityFingerprint: (data['nativeIdentityFingerprint'] ?? '') as String,
+      nativeIdentityFingerprint:
+          (data['nativeIdentityFingerprint'] ?? '') as String,
       identitySource: (data['identitySource'] ?? 'standard') as String,
       identityScope: (data['identityScope'] ?? 'app_scoped') as String,
-      identityStability: (data['identityStability'] ?? 'os_reinstall_stable') as String,
+      identityStability:
+          (data['identityStability'] ?? 'os_reinstall_stable') as String,
       onlineUntil: rawOnlineUntil,
       sessionId: data['sessionId'] as String?,
       createdAt: rawCreatedAt,
@@ -117,11 +122,15 @@ class DeviceModel {
       'identityScope': identityScope,
       'identityStability': identityStability,
       if (sessionId != null) 'sessionId': sessionId,
-      if (onlineUntil != null) 'onlineUntil': ModelUtils.toTimestampOrNull(onlineUntil),
-      if (lastSeenAt != null) 'lastSeenAt': ModelUtils.toTimestampOrNull(lastSeenAt),
+      if (onlineUntil != null)
+        'onlineUntil': ModelUtils.toTimestampOrNull(onlineUntil),
+      if (lastSeenAt != null)
+        'lastSeenAt': ModelUtils.toTimestampOrNull(lastSeenAt),
       if (linkedAt != null) 'linkedAt': ModelUtils.toTimestampOrNull(linkedAt),
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 
@@ -156,7 +165,8 @@ class DeviceModel {
       linkedByUid: linkedByUid ?? this.linkedByUid,
       manufacturer: manufacturer ?? this.manufacturer,
       model: model ?? this.model,
-      nativeIdentityFingerprint: nativeIdentityFingerprint ?? this.nativeIdentityFingerprint,
+      nativeIdentityFingerprint:
+          nativeIdentityFingerprint ?? this.nativeIdentityFingerprint,
       identitySource: identitySource ?? this.identitySource,
       identityScope: identityScope ?? this.identityScope,
       identityStability: identityStability ?? this.identityStability,
@@ -193,23 +203,23 @@ class DeviceModel {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        familyId,
-        displayName,
-        platform,
-        status,
-        lastSeenAt,
-        linkedAt,
-        linkedByUid,
-        manufacturer,
-        model,
-        nativeIdentityFingerprint,
-        identitySource,
-        identityScope,
-        identityStability,
-        onlineUntil,
-        sessionId,
-        createdAt,
-        updatedAt,
-      );
+    id,
+    familyId,
+    displayName,
+    platform,
+    status,
+    lastSeenAt,
+    linkedAt,
+    linkedByUid,
+    manufacturer,
+    model,
+    nativeIdentityFingerprint,
+    identitySource,
+    identityScope,
+    identityStability,
+    onlineUntil,
+    sessionId,
+    createdAt,
+    updatedAt,
+  );
 }

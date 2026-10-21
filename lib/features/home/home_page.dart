@@ -3,21 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
-import '../manager/iptv_source_status.dart';
 import '../manager/widgets/home_welcome_state.dart';
 import 'content_details_sheet.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
 import 'home_widgets.dart';
 
-/// Home ("Meu iPlex" of the Control): search over the authorized catalog of
-/// the selected IPTV source, the profile's own rows (favorites, continue
-/// watching, my list — aggregated over all sources) and the recently added
-/// titles of the selected source. Rows only appear when they have content.
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
   @override
@@ -176,7 +172,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final header = Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.xl,
+        AppSpacing.sm,
         AppSpacing.lg,
         AppSpacing.md,
       ),
@@ -279,6 +275,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           (l.homeMyList, data.myList),
           (l.homeRecentMovies, data.recentMovies),
           (l.homeRecentSeries, data.recentSeries),
+          (l.homeRecentSearches, data.recentSearches),
         ].where((row) => row.$2.isNotEmpty);
         if (rows.isEmpty) {
           return [
@@ -368,7 +365,15 @@ class _HomePageState extends ConsumerState<HomePage> {
           delegate: SliverChildBuilderDelegate(
             (context, index) => _SearchCard(
               item: results[index],
-              onTap: () => open(results[index], home, sourceId),
+              onTap: () {
+                final item = results[index];
+                if (home?.profile?.type != 'guest') {
+                  unawaited(
+                    ref.read(recentSearchProvider.notifier).record(item.id),
+                  );
+                }
+                open(item, home, sourceId);
+              },
             ),
             childCount: results.length,
           ),
@@ -480,10 +485,19 @@ class _SourcePicker extends ConsumerWidget {
             EntryTile(
               key: ValueKey('source-option-${source.id}'),
               title: source.name,
-              subtitle: source.id == current
-                  ? '${l.selectedSource} · ${iptvSourceStatus(context, source)}'
-                  : iptvSourceStatus(context, source),
+              subtitle: [
+                if (_lastSync(context, source) case final String date) date,
+                if (source.id == current) l.selectedSource,
+              ].join('\n'),
               icon: source.id == current ? AppIcons.check : AppIcons.iptv,
+              trailing: Semantics(
+                label: switch (_status(source)) {
+                  IndicatorStatus.online => l.online,
+                  IndicatorStatus.offline => l.offline,
+                  IndicatorStatus.error => l.sourceFailure,
+                },
+                child: NeumorphicStatusIndicator(status: _status(source)),
+              ),
               onTap: ready.contains(source.id)
                   ? () => Navigator.pop(context, source.id)
                   : null,
@@ -491,6 +505,32 @@ class _SourcePicker extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String? _lastSync(BuildContext context, Entry source) {
+    final timestamp = source.data['lastSuccessfulSyncAt'] != null
+        ? source.number('lastSuccessfulSyncAt')
+        : source.number('lastSyncAt');
+    if (timestamp <= 0) return null;
+    final locale = Localizations.localeOf(context).toString();
+    final format = locale.startsWith('pt')
+        ? DateFormat('dd/MM/yyyy HH:mm', locale)
+        : DateFormat.yMd(locale).add_Hm();
+    return format.format(DateTime.fromMillisecondsSinceEpoch(timestamp));
+  }
+
+  IndicatorStatus _status(Entry source) {
+    final status = source.text('status');
+    final retrying = status == 'queued' && source.text('errorCode').isNotEmpty;
+    if (status == 'error' ||
+        (source.text('errorCode').isNotEmpty && !retrying)) {
+      return IndicatorStatus.error;
+    }
+    if ((status == 'ready' || status == 'online') &&
+        source.data['enabled'] != false) {
+      return IndicatorStatus.online;
+    }
+    return IndicatorStatus.offline;
   }
 }
 

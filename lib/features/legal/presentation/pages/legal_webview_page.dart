@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,7 +11,10 @@ import '../../domain/enums/legal_document_type.dart';
 import '../widgets/legal_document_error_state.dart';
 import '../widgets/legal_document_loading_indicator.dart';
 
-typedef ExternalUrlLauncher = Future<bool> Function(Uri url, {LaunchMode? mode});
+typedef ExternalUrlLauncher = Future<bool> Function(
+  Uri url, {
+  LaunchMode? mode,
+});
 
 /// Reusable legal document viewer page embedding a secure, Dark-Industrial styled WebView.
 class LegalWebViewPage extends StatefulWidget {
@@ -48,7 +52,8 @@ class _LegalWebViewPageState extends State<LegalWebViewPage> {
   @override
   void initState() {
     super.initState();
-    _resolver = widget.resolver ??
+    _resolver =
+        widget.resolver ??
         LegalDocumentUrlResolver(environment: LegalEnvironment.current());
   }
 
@@ -292,9 +297,7 @@ class _LegalWebViewPageState extends State<LegalWebViewPage> {
                 ),
 
               // Body content
-              Expanded(
-                child: _buildBody(),
-              ),
+              Expanded(child: _buildBody()),
             ],
           ),
         ),

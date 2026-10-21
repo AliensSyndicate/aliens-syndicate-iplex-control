@@ -17,6 +17,8 @@ class NeumorphicTextField extends StatefulWidget {
     this.keyboardType,
     this.prefixIcon,
     this.focusNode,
+    this.height = AppDimensions.input,
+    this.bottomSpacing = AppSpacing.md,
   });
 
   final String label;
@@ -28,6 +30,8 @@ class NeumorphicTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final Widget? prefixIcon;
   final FocusNode? focusNode;
+  final double height;
+  final double bottomSpacing;
 
   @override
   State<NeumorphicTextField> createState() => _NeumorphicTextFieldState();
@@ -59,9 +63,10 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: EdgeInsets.only(bottom: widget.bottomSpacing),
       child: AppInputFrame(
         label: widget.label,
+        height: widget.height,
         focusNode: _effectiveFocusNode,
         errorText: _fieldKey.currentState?.errorText,
         padding: EdgeInsets.only(
@@ -93,21 +98,30 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
             _refreshValidation();
             return error;
           },
+          maxLines: 1,
+          textAlignVertical: TextAlignVertical.center,
           errorBuilder: (_, _) => const SizedBox.shrink(),
           maxLength: widget.secret ? 512 : 2048,
           cursorColor: Colors.white,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+            height: 1.25,
+          ),
           decoration: InputDecoration(
             hintText: widget.hintText,
             hintStyle: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 16,
+              height: 1.25,
             ),
             counterText: '',
             prefixIcon: widget.prefixIcon,
-            prefixIconConstraints: const BoxConstraints(
+            prefixIconConstraints: BoxConstraints(
               minWidth: 40,
-              minHeight: 40,
+              minHeight: widget.height,
+              maxWidth: 44,
+              maxHeight: widget.height,
             ),
             filled: false,
             isDense: true,

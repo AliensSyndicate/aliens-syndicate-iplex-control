@@ -8,7 +8,11 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 /// A store plan as priced by the store itself (never a hard-coded price).
 @immutable
 class StorePlan {
-  const StorePlan({required this.basePlanId, required this.price, required this.native});
+  const StorePlan({
+    required this.basePlanId,
+    required this.price,
+    required this.native,
+  });
   final String basePlanId;
   final String price;
   final Object native;
@@ -34,7 +38,11 @@ class StoreFailed extends StoreEvent {
 
 /// A purchase the backend must verify before it is completed (acknowledged).
 class StorePurchased extends StoreEvent {
-  const StorePurchased({required this.token, required this.complete, required this.restored});
+  const StorePurchased({
+    required this.token,
+    required this.complete,
+    required this.restored,
+  });
   final String token;
   final Future<void> Function() complete;
   final bool restored;
@@ -57,7 +65,10 @@ class UnsupportedStoreBilling implements StoreBilling {
   @override
   Stream<StoreEvent> get events => const Stream.empty();
   @override
-  Future<List<StorePlan>> plans(String productId, List<String> basePlans) async => const [];
+  Future<List<StorePlan>> plans(
+    String productId,
+    List<String> basePlans,
+  ) async => const [];
   @override
   Future<void> buy(StorePlan plan, {required String accountId}) async =>
       throw UnsupportedError('store-unavailable');
@@ -69,7 +80,8 @@ class UnsupportedStoreBilling implements StoreBilling {
 
 /// Google Play Billing through the official in_app_purchase plugin.
 class GooglePlayStoreBilling implements StoreBilling {
-  GooglePlayStoreBilling([InAppPurchase? iap]) : _iap = iap ?? InAppPurchase.instance;
+  GooglePlayStoreBilling([InAppPurchase? iap])
+    : _iap = iap ?? InAppPurchase.instance;
   final InAppPurchase _iap;
   GooglePlayPurchaseDetails? _active;
 
@@ -77,7 +89,8 @@ class GooglePlayStoreBilling implements StoreBilling {
   bool get supported => defaultTargetPlatform == TargetPlatform.android;
 
   @override
-  Stream<StoreEvent> get events => _iap.purchaseStream.expand((list) => list.map(_map));
+  Stream<StoreEvent> get events =>
+      _iap.purchaseStream.expand((list) => list.map(_map));
 
   StoreEvent _map(PurchaseDetails p) {
     switch (p.status) {
@@ -101,20 +114,35 @@ class GooglePlayStoreBilling implements StoreBilling {
   }
 
   @override
-  Future<List<StorePlan>> plans(String productId, List<String> basePlans) async {
+  Future<List<StorePlan>> plans(
+    String productId,
+    List<String> basePlans,
+  ) async {
     if (!supported || !await _iap.isAvailable()) return const [];
     final response = await _iap.queryProductDetails({productId});
     final plans = <StorePlan>[];
-    for (final details in response.productDetails.whereType<GooglePlayProductDetails>()) {
+    for (final details
+        in response.productDetails.whereType<GooglePlayProductDetails>()) {
       final offers = details.productDetails.subscriptionOfferDetails;
       final index = details.subscriptionIndex;
       if (offers == null || index == null) continue;
       final offer = offers[index];
       // Only the base plans themselves: no promotional or free-trial offers.
-      if (offer.offerId != null || !basePlans.contains(offer.basePlanId)) continue;
-      plans.add(StorePlan(basePlanId: offer.basePlanId, price: details.price, native: details));
+      if (offer.offerId != null || !basePlans.contains(offer.basePlanId))
+        continue;
+      plans.add(
+        StorePlan(
+          basePlanId: offer.basePlanId,
+          price: details.price,
+          native: details,
+        ),
+      );
     }
-    plans.sort((a, b) => basePlans.indexOf(a.basePlanId).compareTo(basePlans.indexOf(b.basePlanId)));
+    plans.sort(
+      (a, b) => basePlans
+          .indexOf(a.basePlanId)
+          .compareTo(basePlans.indexOf(b.basePlanId)),
+    );
     return plans;
   }
 
@@ -127,9 +155,14 @@ class GooglePlayStoreBilling implements StoreBilling {
         productDetails: details,
         applicationUserName: accountId,
         // Monthly <-> annual: replace the running subscription instead of stacking two.
-        changeSubscriptionParam: current == null || current.billingClientPurchase.isAutoRenewing == false
+        changeSubscriptionParam:
+            current == null ||
+                current.billingClientPurchase.isAutoRenewing == false
             ? null
-            : ChangeSubscriptionParam(oldPurchaseDetails: current, replacementMode: ReplacementMode.withTimeProration),
+            : ChangeSubscriptionParam(
+                oldPurchaseDetails: current,
+                replacementMode: ReplacementMode.withTimeProration,
+              ),
       ),
     );
   }
@@ -139,11 +172,13 @@ class GooglePlayStoreBilling implements StoreBilling {
 
   @override
   Uri manageUri(String productId, String packageName) => Uri.https(
-        'play.google.com',
-        '/store/account/subscriptions',
-        {'sku': productId, 'package': packageName},
-      );
+    'play.google.com',
+    '/store/account/subscriptions',
+    {'sku': productId, 'package': packageName},
+  );
 }
 
 StoreBilling defaultStoreBilling() =>
-    !kIsWeb && defaultTargetPlatform == TargetPlatform.android ? GooglePlayStoreBilling() : const UnsupportedStoreBilling();
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+    ? GooglePlayStoreBilling()
+    : const UnsupportedStoreBilling();

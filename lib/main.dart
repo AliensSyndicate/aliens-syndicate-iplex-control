@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'app/bootstrap.dart';
+import 'app/splash_gate.dart';
 import 'core/data/firebase_repository.dart';
 import 'core/data/providers.dart';
 
 Future<void> main() async {
-  final binding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: binding);
+  WidgetsFlutterBinding.ensureInitialized();
+  // Home artwork (posters/logos) stays decoded in memory while the user
+  // scrolls rows and moves between tabs, instead of being fetched again.
+  PaintingBinding.instance.imageCache
+    ..maximumSize = 1500
+    ..maximumSizeBytes = 256 << 20;
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -23,10 +27,7 @@ Future<void> main() async {
       systemNavigationBarContrastEnforced: false,
     ),
   );
-  // Keep the native splash visible for a minimum time so it is actually seen.
-  final minimumSplash = Future<void>.delayed(const Duration(milliseconds: 1500));
   final configured = await initializeServices();
-  await minimumSplash;
   runApp(
     ProviderScope(
       overrides: [
@@ -34,8 +35,7 @@ Future<void> main() async {
           FirebaseManagerRepository(configured: configured),
         ),
       ],
-      child: const IplexApp(),
+      child: const SplashGate(child: IplexApp()),
     ),
   );
-  FlutterNativeSplash.remove();
 }

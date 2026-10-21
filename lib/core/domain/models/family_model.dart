@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of a family in `families/{familyId}`.
@@ -44,8 +45,10 @@ class FamilyModel {
       'name': name,
       'status': status,
       'maxMembers': maxMembers,
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 
@@ -83,13 +86,6 @@ class FamilyModel {
           updatedAt == other.updatedAt;
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        adminUid,
-        name,
-        status,
-        maxMembers,
-        createdAt,
-        updatedAt,
-      );
+  int get hashCode =>
+      Object.hash(id, adminUid, name, status, maxMembers, createdAt, updatedAt);
 }

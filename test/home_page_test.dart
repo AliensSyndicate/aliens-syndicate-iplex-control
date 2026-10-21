@@ -341,11 +341,16 @@ void main() {
       ),
     );
     expect(find.text('Missão Fictícia'), findsOneWidget);
-    expect(find.text('2021 · 118 min · Rated 14'), findsOneWidget);
+    expect(find.text('2021 | Ação | 1h 58min'), findsOneWidget);
+    expect(find.byKey(const Key('details-stars')), findsNothing);
+    expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
+    expect(find.text('Rated 14'), findsOneWidget);
     expect(find.text('Ação, Drama'), findsOneWidget);
+    expect(find.text('Filmes'), findsOneWidget);
+    expect(find.text('Minha IPTV'), findsNothing);
     expect(find.text('Uma missão.'), findsOneWidget);
     expect(find.text('Cast: Ana, Rui'), findsOneWidget);
-    expect(find.text('Continue watching on TV'), findsNothing);
+    expect(find.byKey(const Key('details-continue')), findsNothing);
     await tester.tap(find.text('Add to My list'));
     await tester.pumpAndSettle();
     expect(repo.payloads.last.$1, 'favorite');
@@ -358,6 +363,14 @@ void main() {
     expect(find.text('Remove from My list'), findsOneWidget);
   });
 
+  testWidgets('dragging the full-screen sheet down closes it', (tester) async {
+    await _openSheet(tester, item('m1', 'Missão Fictícia', 'movie'));
+    expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
+    await tester.drag(find.text('Missão Fictícia'), const Offset(0, 400));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('details-watch-on-tv')), findsNothing);
+  });
+
   testWidgets('movie without a TMDB match keeps source data only', (
     tester,
   ) async {
@@ -365,7 +378,7 @@ void main() {
       ...item('m2', 'Filme Raro', 'movie', year: '1999'),
       'plot': 'Sinopse da fonte.',
     });
-    expect(find.text('1999'), findsOneWidget);
+    expect(find.text('1999 | Filmes'), findsOneWidget);
     expect(find.text('Sinopse da fonte.'), findsOneWidget);
     expect(find.textContaining('Cast'), findsNothing);
     expect(find.textContaining('min'), findsNothing);
@@ -386,7 +399,7 @@ void main() {
         metadata: const ContentMetadata(seasonCount: 2, genres: ['Drama']),
       );
       expect(find.textContaining('2 seasons'), findsOneWidget);
-      await tester.tap(find.text('Continue watching on TV'));
+      await tester.tap(find.byKey(const Key('details-continue')));
       await tester.pumpAndSettle();
       final sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
       expect(
@@ -423,7 +436,7 @@ void main() {
       item('m1', 'Missão', 'movie'),
       profile: const HomeProfile('guest', 'Visitante', 'guest', 0),
     );
-    expect(find.text('Watch on TV'), findsOneWidget);
+    expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
     expect(find.text('Add to My list'), findsNothing);
   });
 
@@ -449,7 +462,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('home-card-se1')).last);
       await tester.pumpAndSettle();
-      expect(find.text('Continue watching on TV'), findsOneWidget);
+      expect(find.byKey(const Key('details-continue')), findsOneWidget);
     },
   );
 }

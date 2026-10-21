@@ -1431,7 +1431,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeSearchHint => 'Search channels, movies and series';
+  String get homeRecentSearches => 'Recently searched';
+
+  @override
+  String get homeSearchHint => 'Search';
 
   @override
   String get selectIptvSource => 'Select IPTV source';
@@ -1508,6 +1511,31 @@ class AppLocalizationsEn extends AppLocalizations {
       one: '1 season',
     );
     return '$_temp0';
+  }
+
+  @override
+  String episodesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count episodes',
+      one: '1 episode',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get episodesTitle => 'Episodes';
+
+  @override
+  String get showMore => 'Show more';
+
+  @override
+  String get showLess => 'Show less';
+
+  @override
+  String seasonEpisodeShort(int season, String episode) {
+    return 'S${season}E$episode';
   }
 
   @override

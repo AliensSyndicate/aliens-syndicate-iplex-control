@@ -63,14 +63,20 @@ class FirebaseManagerRepository implements ManagerRepository {
         );
       });
   @override
-  Stream<List<Entry>> watchEntries(String familyId, String collection) => (collection == 'invitations'
-      ? _db.collection('family_requests').where('recipientUid', isEqualTo: familyId).where('status', isEqualTo: 'pending')
-      : _db.collection('families/$familyId/$collection'))
-      .limit(100)
-      .snapshots()
-      .map(
-        (s) => s.docs.map((d) => Entry(d.id, d.data())).toList(growable: false),
-      );
+  Stream<List<Entry>> watchEntries(String familyId, String collection) =>
+      (collection == 'invitations'
+              ? _db
+                    .collection('family_requests')
+                    .where('recipientUid', isEqualTo: familyId)
+                    .where('status', isEqualTo: 'pending')
+              : _db.collection('families/$familyId/$collection'))
+          .limit(100)
+          .snapshots()
+          .map(
+            (s) => s.docs
+                .map((d) => Entry(d.id, d.data()))
+                .toList(growable: false),
+          );
   @override
   Stream<Entry?> watchEntry(String familyId, String collection, String id) =>
       _db
@@ -142,10 +148,13 @@ class FirebaseManagerRepository implements ManagerRepository {
     if (!kIsWeb && _auth.currentUser != null) {
       try {
         final token = _pushToken;
-        if (token != null) await mutate('unregisterPushToken', {'token': token});
+        if (token != null)
+          await mutate('unregisterPushToken', {'token': token});
         await FirebaseMessaging.instance.unregister();
         _pushToken = null;
-      } catch (_) { /* Logout remains available offline. */ }
+      } catch (_) {
+        /* Logout remains available offline. */
+      }
     }
     await _auth.signOut();
     if (!kIsWeb && _googleInitialization != null) {
@@ -193,10 +202,16 @@ class FirebaseManagerRepository implements ManagerRepository {
             'manager',
             options: HttpsCallableOptions(timeout: const Duration(seconds: 30)),
           )
-          .call<dynamic>({'action': action, 'payload': {'contextFamilyId': _contextFamilyId, ...payload}});
-      if (action == 'selectContext') _contextFamilyId = payload['familyId'] as String?;
-      if (action == 'createFamily') _contextFamilyId = (result.data as Map)['id'] as String;
-      if (action == 'registerPushToken') _pushToken = payload['token'] as String?;
+          .call<dynamic>({
+            'action': action,
+            'payload': {'contextFamilyId': _contextFamilyId, ...payload},
+          });
+      if (action == 'selectContext')
+        _contextFamilyId = payload['familyId'] as String?;
+      if (action == 'createFamily')
+        _contextFamilyId = (result.data as Map)['id'] as String;
+      if (action == 'registerPushToken')
+        _pushToken = payload['token'] as String?;
       return Map<String, dynamic>.from(result.data as Map);
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'unauthenticated' && _auth.currentUser != null) {
@@ -223,16 +238,21 @@ class FirebaseManagerRepository implements ManagerRepository {
           // Attestation still unavailable: the retry reports app-verification-failed.
         }
         try {
-          final retryResult = await FirebaseFunctions.instanceFor(
-            region: 'us-central1',
-          )
-              .httpsCallable(
-                'manager',
-                options: HttpsCallableOptions(
-                  timeout: const Duration(seconds: 30),
-                ),
-              )
-              .call<dynamic>({'action': action, 'payload': {'contextFamilyId': _contextFamilyId, ...payload}});
+          final retryResult =
+              await FirebaseFunctions.instanceFor(region: 'us-central1')
+                  .httpsCallable(
+                    'manager',
+                    options: HttpsCallableOptions(
+                      timeout: const Duration(seconds: 30),
+                    ),
+                  )
+                  .call<dynamic>({
+                    'action': action,
+                    'payload': {
+                      'contextFamilyId': _contextFamilyId,
+                      ...payload,
+                    },
+                  });
           return Map<String, dynamic>.from(retryResult.data as Map);
         } on FirebaseFunctionsException catch (retryError) {
           if (retryError.code != 'unauthenticated') {
@@ -244,8 +264,10 @@ class FirebaseManagerRepository implements ManagerRepository {
           }
           if (kDebugMode) {
             // Safe diagnostic: action and code only, no tokens or user data.
-            debugPrint('manager/$action rejected with a valid ID token: '
-                'App Check verification failed.');
+            debugPrint(
+              'manager/$action rejected with a valid ID token: '
+              'App Check verification failed.',
+            );
           }
           throw const AppFailure('app-verification-failed');
         }

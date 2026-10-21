@@ -2,13 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/components.dart';
 
-enum LegalErrorType {
-  network,
-  timeout,
-  http,
-  security,
-  generic,
-}
+enum LegalErrorType { network, timeout, http, security, generic }
 
 /// Error state for Legal WebView failures with retry capability.
 class LegalDocumentErrorState extends StatelessWidget {

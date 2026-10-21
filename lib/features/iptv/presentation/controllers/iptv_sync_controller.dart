@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,47 +11,51 @@ import '../../domain/repositories/iptv_repository.dart';
 
 final iptvRepositoryProvider = Provider<IptvRepository>((ref) {
   final managerRepo = ref.watch(repositoryProvider);
-  return IptvRepositoryImpl(
-    managerRepository: managerRepo,
-  );
+  return IptvRepositoryImpl(managerRepository: managerRepo);
 });
 
 /// Stream of all currently active (queued, running, pending) IPTV sync jobs for the active scope.
-final activeIptvSyncJobsProvider = StreamProvider.autoDispose<List<IptvSyncJobModel>>((ref) {
-  final repo = ref.watch(repositoryProvider);
-  if (!repo.configured) {
-    return Stream.value(const []);
-  }
+final activeIptvSyncJobsProvider =
+    StreamProvider.autoDispose<List<IptvSyncJobModel>>((ref) {
+      final repo = ref.watch(repositoryProvider);
+      if (!repo.configured) {
+        return Stream.value(const []);
+      }
 
-  final scopeId = ref.watch(
-    accountProvider.select((val) => val.asData?.value?.iptvScopeId),
-  );
-  if (scopeId == null || scopeId.isEmpty) {
-    return Stream.value(const []);
-  }
-
-  return ref.watch(iptvRepositoryProvider).watchActiveSyncJobs(scopeId).map(
-        (list) => list
-            .map((e) => e is IptvSyncJobModel
-                ? e
-                : IptvSyncJobModel(
-                    jobId: e.jobId,
-                    familyId: e.familyId,
-                    sourceId: e.sourceId,
-                    requestedByUid: e.requestedByUid,
-                    status: e.status,
-                    stage: e.stage,
-                    progress: e.progress,
-                    messageCode: e.messageCode,
-                    startedAt: e.startedAt,
-                    finishedAt: e.finishedAt,
-                    errorCode: e.errorCode,
-                    createdAt: e.createdAt,
-                    updatedAt: e.updatedAt,
-                  ))
-            .toList(),
+      final scopeId = ref.watch(
+        accountProvider.select((val) => val.asData?.value?.iptvScopeId),
       );
-}, retry: (retryCount, error) => null);
+      if (scopeId == null || scopeId.isEmpty) {
+        return Stream.value(const []);
+      }
+
+      return ref
+          .watch(iptvRepositoryProvider)
+          .watchActiveSyncJobs(scopeId)
+          .map(
+            (list) => list
+                .map(
+                  (e) => e is IptvSyncJobModel
+                      ? e
+                      : IptvSyncJobModel(
+                          jobId: e.jobId,
+                          familyId: e.familyId,
+                          sourceId: e.sourceId,
+                          requestedByUid: e.requestedByUid,
+                          status: e.status,
+                          stage: e.stage,
+                          progress: e.progress,
+                          messageCode: e.messageCode,
+                          startedAt: e.startedAt,
+                          finishedAt: e.finishedAt,
+                          errorCode: e.errorCode,
+                          createdAt: e.createdAt,
+                          updatedAt: e.updatedAt,
+                        ),
+                )
+                .toList(),
+          );
+    }, retry: (retryCount, error) => null);
 
 @immutable
 class GlobalSyncProgressState {
@@ -71,48 +76,54 @@ class GlobalSyncProgressState {
   final String? message;
 
   const GlobalSyncProgressState.idle()
-      : isActive = false,
-        isIndeterminate = false,
-        progress = null,
-        activeCount = 0,
-        stage = null,
-        message = null;
+    : isActive = false,
+      isIndeterminate = false,
+      progress = null,
+      activeCount = 0,
+      stage = null,
+      message = null;
 }
 
 /// Computes combined global progress across all active sync jobs.
-final globalIptvSyncProgressProvider = Provider.autoDispose<GlobalSyncProgressState>((ref) {
-  final activeJobsAsync = ref.watch(activeIptvSyncJobsProvider);
-  final jobs = activeJobsAsync.asData?.value ?? const [];
+final globalIptvSyncProgressProvider =
+    Provider.autoDispose<GlobalSyncProgressState>((ref) {
+      final activeJobsAsync = ref.watch(activeIptvSyncJobsProvider);
+      final jobs = activeJobsAsync.asData?.value ?? const [];
 
-  if (jobs.isEmpty) {
-    return const GlobalSyncProgressState.idle();
-  }
+      if (jobs.isEmpty) {
+        return const GlobalSyncProgressState.idle();
+      }
 
-  // If any job has null progress or is in queued stage, present indeterminate
-  final hasIndeterminate = jobs.length > 1 || jobs.any((j) => j.isIndeterminate || j.stage == 'queued' || j.progress == null);
+      // If any job has null progress or is in queued stage, present indeterminate
+      final hasIndeterminate =
+          jobs.length > 1 ||
+          jobs.any(
+            (j) =>
+                j.isIndeterminate || j.stage == 'queued' || j.progress == null,
+          );
 
-  if (hasIndeterminate) {
-    return GlobalSyncProgressState(
-      isActive: true,
-      isIndeterminate: true,
-      progress: null,
-      activeCount: jobs.length,
-      stage: jobs.first.stage,
-      message: jobs.first.messageCode,
-    );
-  }
+      if (hasIndeterminate) {
+        return GlobalSyncProgressState(
+          isActive: true,
+          isIndeterminate: true,
+          progress: null,
+          activeCount: jobs.length,
+          stage: jobs.first.stage,
+          message: jobs.first.messageCode,
+        );
+      }
 
-  final progress = (jobs.single.progress ?? 0).clamp(0, 100) / 100.0;
+      final progress = (jobs.single.progress ?? 0).clamp(0, 100) / 100.0;
 
-  return GlobalSyncProgressState(
-    isActive: true,
-    isIndeterminate: false,
-    progress: progress,
-    activeCount: jobs.length,
-    stage: jobs.first.stage,
-    message: jobs.first.messageCode,
-  );
-});
+      return GlobalSyncProgressState(
+        isActive: true,
+        isIndeterminate: false,
+        progress: progress,
+        activeCount: jobs.length,
+        stage: jobs.first.stage,
+        message: jobs.first.messageCode,
+      );
+    });
 
 /// Maps real backend error codes to user-friendly messages.
 String mapIptvErrorCodeToMessage(BuildContext context, String? errorCode) {
@@ -186,4 +197,6 @@ class SyncNotificationNotifier extends Notifier<Set<String>> {
 }
 
 final syncNotificationTrackerProvider =
-    NotifierProvider<SyncNotificationNotifier, Set<String>>(SyncNotificationNotifier.new);
+    NotifierProvider<SyncNotificationNotifier, Set<String>>(
+      SyncNotificationNotifier.new,
+    );

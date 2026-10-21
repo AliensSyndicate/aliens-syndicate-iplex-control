@@ -2632,10 +2632,16 @@ abstract class AppLocalizations {
   /// **'{channels} channels · {movies} movies · {series} series'**
   String catalogKinds(int channels, int movies, int series);
 
+  /// No description provided for @homeRecentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently searched'**
+  String get homeRecentSearches;
+
   /// No description provided for @homeSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search channels, movies and series'**
+  /// **'Search'**
   String get homeSearchHint;
 
   /// No description provided for @selectIptvSource.
@@ -2769,6 +2775,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 season} other{{count} seasons}}'**
   String seasonsCount(int count);
+
+  /// No description provided for @episodesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 episode} other{{count} episodes}}'**
+  String episodesCount(int count);
+
+  /// No description provided for @episodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Episodes'**
+  String get episodesTitle;
+
+  /// No description provided for @showMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get showMore;
+
+  /// No description provided for @showLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get showLess;
+
+  /// No description provided for @seasonEpisodeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'S{season}E{episode}'**
+  String seasonEpisodeShort(int season, String episode);
 
   /// No description provided for @ageRatingLabel.
   ///

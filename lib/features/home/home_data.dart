@@ -10,10 +10,13 @@ extension HomeItem on Entry {
   bool get isChannel => kind == 'channel';
   bool get isPlayableTitle => kind == 'movie' || kind == 'series';
 
-  /// Artwork published by the source (https, credential-free by the backend).
+  /// Artwork published by the source (http or https as published,
+  /// credential-free by the backend).
   String? get sourceImage {
     final value = text('imageRef');
-    return value.startsWith('https://') ? value : null;
+    return value.startsWith('https://') || value.startsWith('http://')
+        ? value
+        : null;
   }
 
   /// Year as published by the source ("2021", 2021 or absent).
@@ -67,6 +70,7 @@ class HomeData {
     this.myList = const [],
     this.recentMovies = const [],
     this.recentSeries = const [],
+    this.recentSearches = const [],
   });
 
   factory HomeData.fromJson(Map<String, dynamic> json) {
@@ -96,6 +100,7 @@ class HomeData {
       myList: items('myList'),
       recentMovies: items('recentMovies'),
       recentSeries: items('recentSeries'),
+      recentSearches: items('recentSearches'),
     );
   }
 
@@ -103,13 +108,15 @@ class HomeData {
   final Set<String> favoriteIds;
   final List<Entry> favorites, continueWatching, myList;
   final List<Entry> recentMovies, recentSeries;
+  final List<Entry> recentSearches;
 
   bool get isEmpty =>
       favorites.isEmpty &&
       continueWatching.isEmpty &&
       myList.isEmpty &&
       recentMovies.isEmpty &&
-      recentSeries.isEmpty;
+      recentSeries.isEmpty &&
+      recentSearches.isEmpty;
 
   bool isFavorite(Entry item) => favoriteIds.contains(item.id);
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of a family membership in `family_members/{membershipId}`.
@@ -76,12 +77,6 @@ class FamilyMemberModel {
           joinedAt == other.joinedAt;
 
   @override
-  int get hashCode => Object.hash(
-        id,
-        familyId,
-        userUid,
-        role,
-        status,
-        joinedAt,
-      );
+  int get hashCode =>
+      Object.hash(id, familyId, userUid, role, status, joinedAt);
 }

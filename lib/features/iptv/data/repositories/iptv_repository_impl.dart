@@ -8,10 +8,7 @@ import '../models/iptv_source_model.dart';
 import '../models/iptv_sync_job_model.dart';
 
 class IptvRepositoryImpl implements IptvRepository {
-  IptvRepositoryImpl({
-    this.firestore,
-    required this.managerRepository,
-  });
+  IptvRepositoryImpl({this.firestore, required this.managerRepository});
 
   final FirebaseFirestore? firestore;
   final ManagerRepository managerRepository;
@@ -32,13 +29,18 @@ class IptvRepositoryImpl implements IptvRepository {
     return db
         .collection('iptv_sync_jobs')
         .where('familyId', isEqualTo: familyId)
-        .where('requestedByUid', isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '')
+        .where(
+          'requestedByUid',
+          isEqualTo: FirebaseAuth.instance.currentUser?.uid ?? '',
+        )
         .where('trigger', isEqualTo: 'manual')
         .where('status', whereIn: ['queued', 'running', 'pending'])
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => IptvSyncJobModel.fromMap(doc.id, doc.data()))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => IptvSyncJobModel.fromMap(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -49,7 +51,10 @@ class IptvRepositoryImpl implements IptvRepository {
     return db
         .doc('iptv_sync_jobs/$jobId')
         .snapshots()
-        .map((doc) => doc.exists ? IptvSyncJobModel.fromMap(doc.id, doc.data()!) : null);
+        .map(
+          (doc) =>
+              doc.exists ? IptvSyncJobModel.fromMap(doc.id, doc.data()!) : null,
+        );
   }
 
   @override
@@ -60,7 +65,10 @@ class IptvRepositoryImpl implements IptvRepository {
     return db
         .doc('iptv_sources/$sourceId')
         .snapshots()
-        .map((doc) => doc.exists ? IptvSourceModel.fromMap(doc.id, doc.data()!) : null);
+        .map(
+          (doc) =>
+              doc.exists ? IptvSourceModel.fromMap(doc.id, doc.data()!) : null,
+        );
   }
 
   @override
@@ -80,17 +88,25 @@ class IptvRepositoryImpl implements IptvRepository {
     final db = _db;
     if (uid.isEmpty || jobId.isEmpty || db == null) return;
 
-    await db
-        .doc('users/$uid/sync_notifications/$jobId')
-        .set({'delivered': true, 'deliveredAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    await db.doc('users/$uid/sync_notifications/$jobId').set({
+      'delivered': true,
+      'deliveredAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
-  Future<void> registerFcmToken(String uid, String token, {String? platform}) async {
+  Future<void> registerFcmToken(
+    String uid,
+    String token, {
+    String? platform,
+  }) async {
     final db = _db;
     if (uid.isEmpty || token.isEmpty || db == null) return;
 
-    await managerRepository.mutate('registerPushToken', {'token': token, 'platform': platform ?? 'flutter'});
+    await managerRepository.mutate('registerPushToken', {
+      'token': token,
+      'platform': platform ?? 'flutter',
+    });
   }
 
   @override

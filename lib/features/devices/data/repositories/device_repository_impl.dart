@@ -51,24 +51,33 @@ class DeviceRepositoryImpl implements DeviceRepository {
 
   @override
   Stream<DeviceEntity?> watchDevice(String familyId, String deviceId) {
-    return _managerRepository.watchEntry(familyId, 'devices', deviceId).map((e) {
+    return _managerRepository.watchEntry(familyId, 'devices', deviceId).map((
+      e,
+    ) {
       if (e == null) return null;
       return _toEntity(DeviceModel.fromMap(e.id, e.data));
     });
   }
 
   @override
-  Future<PairingSessionEntity> inspectPairingSession({String? token, String? code}) async {
-    final payload = <String, dynamic>{
-      'token': ?token,
-      'code': ?code,
-    };
-    final result = await _managerRepository.mutate('inspectPairingSession', payload);
+  Future<PairingSessionEntity> inspectPairingSession({
+    String? token,
+    String? code,
+  }) async {
+    final payload = <String, dynamic>{'token': ?token, 'code': ?code};
+    final result = await _managerRepository.mutate(
+      'inspectPairingSession',
+      payload,
+    );
     return PairingSessionEntity.fromMap(result);
   }
 
   @override
-  Future<DeviceEntity> linkDevice({String? token, String? code, String? name}) async {
+  Future<DeviceEntity> linkDevice({
+    String? token,
+    String? code,
+    String? name,
+  }) async {
     final trimmedName = name?.trim();
     final payload = <String, dynamic>{
       'token': ?token,
@@ -95,8 +104,6 @@ class DeviceRepositoryImpl implements DeviceRepository {
 
   @override
   Future<void> unlinkDevice(String deviceId) async {
-    await _managerRepository.mutate('deleteDevice', {
-      'id': deviceId,
-    });
+    await _managerRepository.mutate('deleteDevice', {'id': deviceId});
   }
 }

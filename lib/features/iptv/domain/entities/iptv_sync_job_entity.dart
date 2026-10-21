@@ -25,7 +25,8 @@ class IptvSyncJobEntity {
   final String familyId;
   final String sourceId;
   final String requestedByUid;
-  final String status; // 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  final String
+  status; // 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
   final String stage; // 'queued' | 'identifying_server' | 'validating_source' | 'downloading' | 'parsing' | 'normalizing' | 'uploading_catalog' | 'publishing_catalog' | 'completed' | 'failed'
   final int? progress; // 0 to 100, null for indeterminate
   final String messageCode;
@@ -38,8 +39,10 @@ class IptvSyncJobEntity {
   final DateTime? updatedAt;
 
   bool get isCompleted => status == 'completed' || stage == 'completed';
-  bool get isFailed => status == 'failed' || stage == 'failed' || errorCode != null;
-  bool get isRunning => status == 'running' || status == 'queued' || status == 'pending';
+  bool get isFailed =>
+      status == 'failed' || stage == 'failed' || errorCode != null;
+  bool get isRunning =>
+      status == 'running' || status == 'queued' || status == 'pending';
   bool get isIndeterminate => progress == null;
 
   @override
@@ -63,18 +66,18 @@ class IptvSyncJobEntity {
 
   @override
   int get hashCode => Object.hash(
-        jobId,
-        familyId,
-        sourceId,
-        requestedByUid,
-        status,
-        stage,
-        progress,
-        messageCode,
-        startedAt,
-        finishedAt,
-        errorCode,
-        createdAt,
-        updatedAt,
-      );
+    jobId,
+    familyId,
+    sourceId,
+    requestedByUid,
+    status,
+    stage,
+    progress,
+    messageCode,
+    startedAt,
+    finishedAt,
+    errorCode,
+    createdAt,
+    updatedAt,
+  );
 }

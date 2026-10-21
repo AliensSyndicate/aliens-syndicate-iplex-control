@@ -36,7 +36,6 @@ dependencies:
   in_app_purchase: ^3.3.1
   in_app_purchase_android: ^0.5.4
   http: ^1.6.0
-  flutter_native_splash: ^2.4.8
   shared_preferences: ^2.5.6
 
 dev_dependencies:
@@ -44,6 +43,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
   webview_flutter_platform_interface: ^2.15.1
   shared_preferences_platform_interface: ^2.4.2
 

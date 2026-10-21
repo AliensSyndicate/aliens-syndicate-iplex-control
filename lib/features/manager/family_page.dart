@@ -12,7 +12,9 @@ class FamilyPage extends ConsumerWidget {
 
   Future<void> select(BuildContext context, WidgetRef ref, String? id) async {
     try {
-      await ref.read(repositoryProvider).mutate('selectContext', {'familyId': id});
+      await ref.read(repositoryProvider).mutate('selectContext', {
+        'familyId': id,
+      });
     } catch (e) {
       if (context.mounted) showFailure(context, e);
     }
@@ -32,19 +34,21 @@ class FamilyPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionHeader(l.membershipRequests),
-          ...items.map((request) => EntryTile(
-            title: request.text('familyName'),
-            icon: AppIcons.users,
-            onTap: () => showAppModalSheet<void>(
-              context: context,
+          ...items.map(
+            (request) => EntryTile(
               title: request.text('familyName'),
-              description: l.membershipAcceptHelp,
-              builder: (c) => _MembershipResponse(
-                id: request.id,
-                name: request.text('familyName'),
+              icon: AppIcons.users,
+              onTap: () => showAppModalSheet<void>(
+                context: context,
+                title: request.text('familyName'),
+                description: l.membershipAcceptHelp,
+                builder: (c) => _MembershipResponse(
+                  id: request.id,
+                  name: request.text('familyName'),
+                ),
               ),
             ),
-          )),
+          ),
         ],
       ),
     );
@@ -67,21 +71,26 @@ class FamilyPage extends ConsumerWidget {
             // a membership before the backend started activating the first family).
             if (ids.length > 1 || (ids.isNotEmpty && !hasFamily)) ...[
               for (final id in ids)
-                ref.watch(availableFamilyProvider(id)).when(
-                  loading: () => const AppLoadingSkeleton(rows: 1),
-                  error: (e, s) => ErrorState(
-                    onRetry: () => ref.invalidate(availableFamilyProvider(id)),
-                  ),
-                  data: (family) => family == null
-                      ? const SizedBox.shrink()
-                      : EntryTile(
-                          title: family.name.isEmpty ? l.family : family.name,
-                          subtitle:
-                              '${family.isAdmin(account!.uid) ? l.administrator : l.member}${account.familyId == id ? ' · ${l.selectedContext}' : ''}',
-                          icon: AppIcons.users,
-                          onTap: () => select(context, ref, id),
-                        ),
-                ),
+                ref
+                    .watch(availableFamilyProvider(id))
+                    .when(
+                      loading: () => const AppLoadingSkeleton(rows: 1),
+                      error: (e, s) => ErrorState(
+                        onRetry: () =>
+                            ref.invalidate(availableFamilyProvider(id)),
+                      ),
+                      data: (family) => family == null
+                          ? const SizedBox.shrink()
+                          : EntryTile(
+                              title: family.name.isEmpty
+                                  ? l.family
+                                  : family.name,
+                              subtitle:
+                                  '${family.isAdmin(account!.uid) ? l.administrator : l.member}${account.familyId == id ? ' · ${l.selectedContext}' : ''}',
+                              icon: AppIcons.users,
+                              onTap: () => select(context, ref, id),
+                            ),
+                    ),
               const SizedBox(height: AppTokens.md),
             ],
             if (hasFamily)
@@ -137,7 +146,8 @@ class _MembershipResponse extends ConsumerStatefulWidget {
   const _MembershipResponse({required this.id, required this.name});
   final String id, name;
   @override
-  ConsumerState<_MembershipResponse> createState() => _MembershipResponseState();
+  ConsumerState<_MembershipResponse> createState() =>
+      _MembershipResponseState();
 }
 
 class _MembershipResponseState extends ConsumerState<_MembershipResponse> {
@@ -146,7 +156,10 @@ class _MembershipResponseState extends ConsumerState<_MembershipResponse> {
     if (busy) return;
     setState(() => busy = true);
     try {
-      await ref.read(repositoryProvider).mutate('respondMembership', {'id': widget.id, 'accept': accept});
+      await ref.read(repositoryProvider).mutate('respondMembership', {
+        'id': widget.id,
+        'accept': accept,
+      });
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) showFailure(context, e);

@@ -55,6 +55,11 @@ async function scenarioA() {
   assert.equal(status, 'ready', `sync ended as ${status} (${errorCode})`);
   assert.ok(synced.lastSuccessfulSyncAt > 0 && synced.count > 0);
   step(`IPTV source saved and synced by the job trigger: ${synced.count} items, catalog ${String(synced.catalogId).slice(0, 12)}…`);
+  const catalog = await a.call('readSourceCatalog', {id: source.id, contextFamilyId: null});
+  const selectedItem = catalog.items[0];
+  const recent = await a.call('readHome', {sourceId: source.id, recentSearchIds: [selectedItem.id, selectedItem.id], contextFamilyId: null});
+  assert.deepEqual(recent.recentSearches.map((item: any) => item.id), [selectedItem.id]);
+  step('search recent items resolve through the real callable without duplicates');
   await a.call('deleteDevice', {id: device.id, contextFamilyId: null});
   await a.call('deleteSource', {id: source.id, contextFamilyId: null});
   step('TV unlinked and source deleted by the owner');

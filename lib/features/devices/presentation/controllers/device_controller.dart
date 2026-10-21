@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/data/providers.dart';
 import '../../data/repositories/device_repository_impl.dart';
 import '../../domain/entities/device_entity.dart';
@@ -19,14 +20,16 @@ final familyDevicesStreamProvider = StreamProvider<List<DeviceEntity>>((ref) {
   return repo.watchDevices(familyId);
 });
 
-final deviceDetailStreamProvider = StreamProvider.family<DeviceEntity?, String>((ref, deviceId) {
-  final familyId = ref.watch(accountProvider).asData?.value?.resourceScopeId;
-  if (familyId == null || familyId.isEmpty) {
-    return Stream.value(null);
-  }
-  final repo = ref.watch(deviceRepositoryProvider);
-  return repo.watchDevice(familyId, deviceId);
-});
+final deviceDetailStreamProvider = StreamProvider.family<DeviceEntity?, String>(
+  (ref, deviceId) {
+    final familyId = ref.watch(accountProvider).asData?.value?.resourceScopeId;
+    if (familyId == null || familyId.isEmpty) {
+      return Stream.value(null);
+    }
+    final repo = ref.watch(deviceRepositoryProvider);
+    return repo.watchDevice(familyId, deviceId);
+  },
+);
 
 class DevicePairingState {
   const DevicePairingState({
@@ -68,7 +71,10 @@ class DevicePairingNotifier extends Notifier<DevicePairingState> {
     state = state.copyWith(inspecting: true, error: null);
     try {
       final repo = ref.read(deviceRepositoryProvider);
-      final session = await repo.inspectPairingSession(token: token, code: code);
+      final session = await repo.inspectPairingSession(
+        token: token,
+        code: code,
+      );
       state = state.copyWith(inspecting: false, session: session);
       return session;
     } catch (e) {
@@ -101,5 +107,5 @@ class DevicePairingNotifier extends Notifier<DevicePairingState> {
 
 final devicePairingProvider =
     NotifierProvider<DevicePairingNotifier, DevicePairingState>(
-  DevicePairingNotifier.new,
-);
+      DevicePairingNotifier.new,
+    );

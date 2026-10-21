@@ -16,12 +16,14 @@ class NeumorphicListTile extends StatelessWidget {
     this.icon = AppIcons.account,
     this.onTap,
     this.online,
+    this.trailing,
   });
   final String title;
   final String? subtitle;
   final List<List<dynamic>> icon;
   final VoidCallback? onTap;
   final bool? online;
+  final Widget? trailing;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -68,7 +70,9 @@ class NeumorphicListTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                if (online != null)
+                if (trailing != null)
+                  trailing!
+                else if (online != null)
                   Semantics(
                     label: online! ? context.l.online : context.l.offline,
                     child: NeumorphicStatusIndicator(online: online!),

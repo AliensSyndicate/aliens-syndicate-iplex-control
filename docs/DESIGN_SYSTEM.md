@@ -25,7 +25,7 @@ Os valores estão em `AppColors`, `AppSpacing`, `AppDimensions`, `AppRadii`, `Ap
 - `AppTextField` e `AppDropdownField`: compartilham `AppInputFrame`, com label fixo acima, controle de 56 dp (`AppDimensions.input`) e label/borda brancos em foco. Erros aparecem abaixo, sem alterar a altura do controle. Busca e PIN usam o mesmo componente; o `FocusNode` externo permanece sob responsabilidade de quem o forneceu.
 - `AppAvatar`: dimensões quadradas fixas para que o avatar permaneça circular.
 - `EntryTile`, `EmptyState`, `ErrorState`, `PageTemplate`: listas e estados reutilizáveis.
-- `BottomNavigation`: cinco botões circulares em superfície reta, sem cápsula ou contorno externo.
+- `BottomNavigation`: cinco botões circulares em superfície reta, sem cápsula ou contorno externo, **sobre fundo opaco idêntico ao das telas (o mesmo `GraphiteBackdrop`, recortado na barra; a barra de navegação do sistema, transparente, mostra essa mesma cor). O fundo é decisão do responsável: não torná-lo transparente nem removê-lo.**
 - `RemoteDirectionalPad`: disco circular único, direções integradas à face e botão OK em cavidade central. Voltar e reproduzir/pausar têm símbolos das ações reais.
 
 O catálogo da tela Início consulta fontes reais. Cartazes estáticos e botões sem ação não são utilizados para simular conteúdo disponível.

@@ -21,48 +21,71 @@ class PaymentsConfig {
     required this.accountId,
   });
   factory PaymentsConfig.fromMap(Map<String, dynamic> d) => PaymentsConfig(
-        paymentsEnabled: d['paymentsEnabled'] == true,
-        checkoutAllowed: d['checkoutAllowed'] == true,
-        productId: d['productId'] as String? ?? '',
-        basePlans: List<String>.from(d['basePlans'] as List? ?? const []),
-        packageName: d['packageName'] as String? ?? '',
-        accountId: d['obfuscatedAccountId'] as String? ?? '',
-      );
+    paymentsEnabled: d['paymentsEnabled'] == true,
+    checkoutAllowed: d['checkoutAllowed'] == true,
+    productId: d['productId'] as String? ?? '',
+    basePlans: List<String>.from(d['basePlans'] as List? ?? const []),
+    packageName: d['packageName'] as String? ?? '',
+    accountId: d['obfuscatedAccountId'] as String? ?? '',
+  );
   static const disabled = PaymentsConfig(
-      paymentsEnabled: false, checkoutAllowed: false, productId: '', basePlans: [], packageName: '', accountId: '');
+    paymentsEnabled: false,
+    checkoutAllowed: false,
+    productId: '',
+    basePlans: [],
+    packageName: '',
+    accountId: '',
+  );
   final bool paymentsEnabled, checkoutAllowed;
   final String productId, packageName, accountId;
   final List<String> basePlans;
 }
 
-final storeBillingProvider = Provider<StoreBilling>((ref) => defaultStoreBilling());
+final storeBillingProvider = Provider<StoreBilling>(
+  (ref) => defaultStoreBilling(),
+);
 
-final paymentsConfigProvider = FutureProvider.autoDispose<PaymentsConfig>((ref) async {
+final paymentsConfigProvider = FutureProvider.autoDispose<PaymentsConfig>((
+  ref,
+) async {
   final uid = ref.watch(accountProvider.select((a) => a.asData?.value?.uid));
   if (uid == null) return PaymentsConfig.disabled;
   try {
-    return PaymentsConfig.fromMap(await ref.watch(repositoryProvider).mutate('getPaymentsConfig'));
+    return PaymentsConfig.fromMap(
+      await ref.watch(repositoryProvider).mutate('getPaymentsConfig'),
+    );
   } on AppFailure {
     // Fail closed: an unknown switch state never offers checkout.
     return PaymentsConfig.disabled;
   }
 });
 
-final storePlansProvider = FutureProvider.autoDispose<List<StorePlan>>((ref) async {
+final storePlansProvider = FutureProvider.autoDispose<List<StorePlan>>((
+  ref,
+) async {
   final config = await ref.watch(paymentsConfigProvider.future);
   final billing = ref.watch(storeBillingProvider);
   if (!config.checkoutAllowed || !billing.supported) return const [];
   return billing.plans(config.productId, config.basePlans);
 });
 
-enum CheckoutPhase { idle, purchasing, pending, verifying, confirmed, canceled, failed }
+enum CheckoutPhase {
+  idle,
+  purchasing,
+  pending,
+  verifying,
+  confirmed,
+  canceled,
+  failed,
+}
 
 @immutable
 class CheckoutState {
   const CheckoutState(this.phase, [this.error]);
   final CheckoutPhase phase;
   final Object? error;
-  bool get busy => phase == CheckoutPhase.purchasing || phase == CheckoutPhase.verifying;
+  bool get busy =>
+      phase == CheckoutPhase.purchasing || phase == CheckoutPhase.verifying;
 }
 
 class CheckoutController extends Notifier<CheckoutState> {
@@ -89,7 +112,9 @@ class CheckoutController extends Notifier<CheckoutState> {
         try {
           // The backend validates with Google, binds the token to this admin's
           // scope and acknowledges; only then is the store transaction finished.
-          await ref.read(repositoryProvider).mutate('verifyPlayPurchase', {'purchaseToken': token});
+          await ref.read(repositoryProvider).mutate('verifyPlayPurchase', {
+            'purchaseToken': token,
+          });
           await complete();
           state = const CheckoutState(CheckoutPhase.confirmed);
         } catch (e) {
@@ -102,12 +127,17 @@ class CheckoutController extends Notifier<CheckoutState> {
     if (state.busy) return;
     final config = await ref.read(paymentsConfigProvider.future);
     if (!config.checkoutAllowed) {
-      state = const CheckoutState(CheckoutPhase.failed, AppFailure('payments-disabled'));
+      state = const CheckoutState(
+        CheckoutPhase.failed,
+        AppFailure('payments-disabled'),
+      );
       return;
     }
     state = const CheckoutState(CheckoutPhase.purchasing);
     try {
-      await ref.read(storeBillingProvider).buy(plan, accountId: config.accountId);
+      await ref
+          .read(storeBillingProvider)
+          .buy(plan, accountId: config.accountId);
     } catch (e) {
       state = CheckoutState(CheckoutPhase.failed, e);
     }
@@ -123,4 +153,5 @@ class CheckoutController extends Notifier<CheckoutState> {
   }
 }
 
-final checkoutControllerProvider = NotifierProvider<CheckoutController, CheckoutState>(CheckoutController.new);
+final checkoutControllerProvider =
+    NotifierProvider<CheckoutController, CheckoutState>(CheckoutController.new);

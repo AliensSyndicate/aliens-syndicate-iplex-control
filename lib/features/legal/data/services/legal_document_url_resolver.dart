@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../domain/enums/legal_document_type.dart';
 
 /// Execution environment for resolving legal document endpoints.
@@ -13,7 +14,9 @@ enum LegalEnvironment {
       return LegalEnvironment.staging;
     }
     const emulator = bool.fromEnvironment('USE_EMULATORS');
-    if (emulator || env.toLowerCase() == 'development' || env.toLowerCase() == 'dev') {
+    if (emulator ||
+        env.toLowerCase() == 'development' ||
+        env.toLowerCase() == 'dev') {
       return LegalEnvironment.development;
     }
     return LegalEnvironment.production;
@@ -50,10 +53,7 @@ class LegalDocumentUrlResolver {
   };
 
   /// Resolves the canonical public URL for a given legal document type.
-  Uri resolve(
-    LegalDocumentType type, {
-    String? languageCode,
-  }) {
+  Uri resolve(LegalDocumentType type, {String? languageCode}) {
     // 1. Check compile-time environment overrides
     final customUrl = type == LegalDocumentType.termsOfUse
         ? customTermsUrl.trim()
@@ -80,12 +80,7 @@ class LegalDocumentUrlResolver {
       case LegalEnvironment.development:
         final isAndroid = defaultTargetPlatform == TargetPlatform.android;
         final host = isAndroid ? devAndroidHost : devLocalHost;
-        baseUri = Uri(
-          scheme: 'http',
-          host: host,
-          port: 5000,
-          path: path,
-        );
+        baseUri = Uri(scheme: 'http', host: host, port: 5000, path: path);
         break;
     }
 
@@ -136,11 +131,16 @@ class LegalDocumentUrlResolver {
 
     // Custom build-time hosts if explicitly injected
     final customTermsHost = Uri.tryParse(customTermsUrl)?.host.toLowerCase();
-    if (customTermsHost != null && customTermsHost.isNotEmpty && host == customTermsHost) {
+    if (customTermsHost != null &&
+        customTermsHost.isNotEmpty &&
+        host == customTermsHost) {
       return uri.scheme.toLowerCase() == 'https';
     }
-    final customPrivacyHost = Uri.tryParse(customPrivacyUrl)?.host.toLowerCase();
-    if (customPrivacyHost != null && customPrivacyHost.isNotEmpty && host == customPrivacyHost) {
+    final customPrivacyHost = Uri.tryParse(customPrivacyUrl)?.host
+        .toLowerCase();
+    if (customPrivacyHost != null &&
+        customPrivacyHost.isNotEmpty &&
+        host == customPrivacyHost) {
       return uri.scheme.toLowerCase() == 'https';
     }
 

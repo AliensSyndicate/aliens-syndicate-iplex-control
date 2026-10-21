@@ -37,7 +37,9 @@ class _PublicIdentitySheetContentState
   void _ensureCode() {
     final account = ref.read(accountProvider).asData?.value;
     if (widget.initialCode == null &&
-        (account == null || account.publicCode == null || account.publicCode!.isEmpty)) {
+        (account == null ||
+            account.publicCode == null ||
+            account.publicCode!.isEmpty)) {
       _runBootstrap();
     }
   }
@@ -110,10 +112,8 @@ class _PublicIdentitySheetContentState
           const SizedBox(height: AppTokens.lg),
           SelectableText(
             code,
-            style: Theme.of(c).textTheme.titleLarge?.copyWith(
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(c).textTheme.titleLarge
+                ?.copyWith(letterSpacing: 2, fontWeight: FontWeight.w700),
           ),
         ],
       );

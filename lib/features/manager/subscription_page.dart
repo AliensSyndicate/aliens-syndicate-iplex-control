@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/data/providers.dart';
 import '../../core/data/subscription_provider.dart';
 import '../../core/design_system/components.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/payments/subscription_checkout.dart';
@@ -99,17 +100,26 @@ class _Plans extends ConsumerWidget {
       CheckoutPhase.verifying => l.purchaseVerifying,
       CheckoutPhase.confirmed => l.purchaseConfirmed,
       CheckoutPhase.canceled => l.purchaseCanceled,
-      CheckoutPhase.failed => failureText(context, checkout.error ?? const Object()),
+      CheckoutPhase.failed => failureText(
+        context,
+        checkout.error ?? const Object(),
+      ),
       _ => null,
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l.playbackSubscriptionNote, style: const TextStyle(color: AppColors.textSecondary)),
+        Text(
+          l.playbackSubscriptionNote,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
         const SizedBox(height: AppSpacing.md),
-        ref.watch(storePlansProvider).when(
+        ref
+            .watch(storePlansProvider)
+            .when(
               loading: () => const AppLoadingSkeleton(rows: 2),
-              error: (e, s) => ErrorState(onRetry: () => ref.invalidate(storePlansProvider)),
+              error: (e, s) =>
+                  ErrorState(onRetry: () => ref.invalidate(storePlansProvider)),
               data: (plans) => plans.isEmpty
                   ? Text(l.storeUnavailable)
                   : Column(
@@ -118,9 +128,14 @@ class _Plans extends ConsumerWidget {
                         for (final plan in plans) ...[
                           AppButton(
                             key: Key('buy-${plan.basePlanId}'),
-                            label: '${plan.basePlanId == 'annual' ? l.annual : l.monthly} · ${plan.price}',
+                            label:
+                                '${plan.basePlanId == 'annual' ? l.annual : l.monthly} · ${plan.price}',
                             busy: checkout.busy,
-                            onPressed: checkout.busy ? null : () => ref.read(checkoutControllerProvider.notifier).buy(plan),
+                            onPressed: checkout.busy
+                                ? null
+                                : () => ref
+                                      .read(checkoutControllerProvider.notifier)
+                                      .buy(plan),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                         ],
@@ -129,19 +144,27 @@ class _Plans extends ConsumerWidget {
             ),
         if (message != null) ...[
           const SizedBox(height: AppSpacing.sm),
-          Text(message, key: const Key('checkout-message'), textAlign: TextAlign.center),
+          Text(
+            message,
+            key: const Key('checkout-message'),
+            textAlign: TextAlign.center,
+          ),
         ],
         const SizedBox(height: AppSpacing.md),
         EntryTile(
           title: l.restorePurchases,
           icon: AppIcons.refresh,
-          onTap: checkout.busy ? null : () => ref.read(checkoutControllerProvider.notifier).restore(),
+          onTap: checkout.busy
+              ? null
+              : () => ref.read(checkoutControllerProvider.notifier).restore(),
         ),
         EntryTile(
           title: l.manageSubscriptionPlay,
           icon: AppIcons.link,
           onTap: () => launchUrl(
-            ref.read(storeBillingProvider).manageUri(cfg.productId, cfg.packageName),
+            ref
+                .read(storeBillingProvider)
+                .manageUri(cfg.productId, cfg.packageName),
             mode: LaunchMode.externalApplication,
           ),
         ),

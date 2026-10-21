@@ -20,6 +20,7 @@ Future<void> showContentDetails(
   required VoidCallback onLibraryChanged,
 }) => showAppModalSheet<void>(
   context: context,
+  backgroundColor: Colors.black,
   builder: (_) => ContentDetailsSheet(
     item: item,
     profile: profile,
@@ -51,6 +52,7 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
   bool busy = false;
   Future<ContentMetadata?>? metadata;
   Future<List<_Programme>>? guide;
+  List<TvEpisode> episodes = const [];
 
   Entry get item => widget.item;
 
@@ -62,6 +64,22 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
     }
     final epgId = item.text('epgId');
     if (item.isChannel && epgId.isNotEmpty) guide = _loadGuide(epgId);
+    if (item.kind == 'series') _loadEpisodes();
+  }
+
+  /// Seasons and episodes come from the source itself (never from TMDB), so
+  /// they show even when no TMDB match exists.
+  Future<void> _loadEpisodes() async {
+    try {
+      final result = await ref.read(repositoryProvider).mutate(
+        'readSourceSeries',
+        {'id': item.sourceId, 'seriesId': item.text('providerRef')},
+      );
+      final list = parseEpisodes(result['details']);
+      if (mounted) setState(() => episodes = list);
+    } catch (_) {
+      // Optional section: the sheet stays complete without it.
+    }
   }
 
   Future<List<_Programme>> _loadGuide(String epgId) async {
@@ -107,6 +125,14 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
     }
   }
 
+  /// The one episode shown for a series: the one in progress, else the first
+  /// available. Never the whole list.
+  TvEpisode? get _episode {
+    if (item.kind != 'series' || episodes.isEmpty) return null;
+    return episodes.where((e) => e.id == item.episodeId).firstOrNull ??
+        episodes.first;
+  }
+
   void watchOnTv({bool resume = false}) {
     final navigator = Navigator.of(context);
     final host = navigator.context;
@@ -115,80 +141,205 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
       host,
       item,
       resume: resume,
-      episodeId: resume ? item.episodeId : null,
+      episodeId: resume ? item.episodeId : _episode?.id,
     );
   }
 
+  /// "1h 58min" / "45 min" — locale-neutral.
+  String _duration(int minutes) => minutes >= 60
+      ? '${minutes ~/ 60}h${minutes % 60 == 0 ? '' : ' ${minutes % 60}min'}'
+      : context.l.runtimeMinutes(minutes);
+
   @override
   Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: FutureBuilder<ContentMetadata?>(
-            future: metadata,
-            builder: (context, snapshot) {
-              final meta = snapshot.data;
-              final loading =
-                  metadata != null &&
-                  snapshot.connectionState != ConnectionState.done;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (meta?.backdrop != null)
-                    AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Artwork(item: item, backdrop: true),
-                          const DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  AppColors.surfaceDefault,
-                                ],
-                                stops: [0.55, 1],
-                              ),
-                            ),
-                          ),
+    final padding = MediaQuery.paddingOf(context);
+    final channel = item.isChannel;
+    // showAppModalSheet keeps the top margin equal to the status bar, so the
+    // available height is the full-screen sheet.
+    return LayoutBuilder(
+      builder: (context, box) => SizedBox(
+        height: box.maxHeight,
+        child: FutureBuilder<ContentMetadata?>(
+          future: metadata,
+          builder: (context, snapshot) {
+            final meta = snapshot.data;
+            final loading =
+                metadata != null &&
+                snapshot.connectionState != ConnectionState.done;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // Fixed artwork over the whole sheet; only the content scrolls.
+                Positioned.fill(
+                  // Full width; the height follows the image and the rest of the
+                  // sheet is the deep background the gradient fades into.
+                  child: Artwork(
+                    item: item,
+                    fit: channel ? BoxFit.contain : BoxFit.fitWidth,
+                    alignment: Alignment.topCenter,
+                    background: Colors.black,
+                  ),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0),
+                          Colors.black.withValues(alpha: 0.75),
+                          Colors.black,
                         ],
+                        stops: const [0.35, 0.62, 0.8],
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
+                  ),
+                ),
+                SheetDragDismiss(
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: ClampingScrollPhysics(),
+                    ),
+                    padding: EdgeInsets.fromLTRB(
                       AppSpacing.lg,
+                      box.maxHeight * 0.55,
                       AppSpacing.lg,
-                      AppSpacing.lg,
-                      AppSpacing.xl,
+                      AppSpacing.xl + padding.bottom,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _Header(item: item, meta: meta),
+                        ..._summary(context, meta),
                         if (loading) ...[
                           const SizedBox(height: AppSpacing.lg),
-                          const AppLoadingSkeleton(rows: 1),
+                          const _TextSkeleton(),
                         ],
-                        ..._body(context, meta),
+                        ..._details(context, meta),
                         const SizedBox(height: AppSpacing.lg),
                         ..._actions(context),
                       ],
                     ),
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
+  }
+
+  /// Title, "2021 | Gênero | 1h 25min", rating stars and the play control.
+  List<Widget> _summary(BuildContext context, ContentMetadata? meta) {
+    final l = context.l;
+    final channel = item.isChannel;
+    final resume = item.progress != null && !channel;
+    final year = meta?.year ?? item.year;
+    final genres = meta?.genres ?? const <String>[];
+    final category = item.text('category');
+    final minutes = meta?.runtimeMinutes;
+    final facts = <String>[
+      if (channel) l.liveChannel,
+      if (!channel && year != null) '$year',
+      if (genres.isNotEmpty)
+        genres.first
+      else if (category.isNotEmpty)
+        category,
+      if (minutes != null && item.kind == 'movie') _duration(minutes),
+      if (_episode case final e?)
+        e.number.isEmpty
+            ? l.seasonNumber(e.season)
+            : l.seasonEpisodeShort(e.season, e.number)
+      else if (item.kind == 'series' && _seasons(meta) > 0)
+        l.seasonsCount(_seasons(meta)),
+    ];
+    final score = meta?.rating ?? double.tryParse(item.text('rating'));
+    final stars = score == null || channel
+        ? null
+        : (score.clamp(0, 10) / 2).toDouble();
+    return [
+      Text(
+        item.name,
+        textAlign: TextAlign.center,
+        style: AppTypography.headlineMedium.copyWith(
+          color: AppColors.textPrimary,
+        ),
+      ),
+      if (facts.isNotEmpty) ...[
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          facts.join(' | '),
+          textAlign: TextAlign.center,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+      if (stars != null) ...[
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          key: const Key('details-stars'),
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < 5; i++)
+              Icon(
+                stars >= i + 1
+                    ? Icons.star_rounded
+                    : stars >= i + 0.5
+                    ? Icons.star_half_rounded
+                    : Icons.star_outline_rounded,
+                size: 22,
+                color: AppColors.warning,
+              ),
+          ],
+        ),
+      ],
+      const SizedBox(height: AppSpacing.lg),
+      AppButton(
+        key: Key(resume ? 'details-continue' : 'details-watch-on-tv'),
+        label: resume ? l.continueWatchingOnTv : l.watchOnTv,
+        onPressed: () => watchOnTv(resume: resume),
+      ),
+      const SizedBox(height: AppSpacing.lg),
+    ];
+  }
+
+  int _seasons(ContentMetadata? meta) =>
+      meta?.seasonCount ?? {for (final e in episodes) e.season}.length;
+
+  /// Everything else, revealed by "Show more".
+  List<Widget> _details(BuildContext context, ContentMetadata? meta) {
+    final l = context.l;
+    final age =
+        meta?.certification ??
+        (item.text('ageRating').isEmpty ? null : item.text('ageRating'));
+    final genres = meta?.genres ?? const <String>[];
+    final category = item.text('category');
+    final rows = <(String, bool)>[
+      if (age != null) (l.ageRatingLabel(age), true),
+      if (meta?.runtimeMinutes != null && item.kind != 'movie')
+        (_duration(meta!.runtimeMinutes!), true),
+      if (item.kind == 'series' && episodes.isNotEmpty)
+        (l.episodesCount(episodes.length), true),
+      if (genres.isNotEmpty) (genres.take(6).join(', '), false),
+      if (category.isNotEmpty &&
+          !genres.any((g) => g.toLowerCase() == category.toLowerCase()))
+        (category, false),
+    ];
+    // One item per line, in a single column.
+    return [
+      for (final (text, primary) in rows) ...[
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          text,
+          style: AppTypography.bodyMedium.copyWith(
+            color: primary ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
+      ],
+      ..._body(context, meta),
+    ];
   }
 
   List<Widget> _body(BuildContext context, ContentMetadata? meta) {
@@ -210,7 +361,27 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
       if (meta != null && meta.cast.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.md),
         Text(
-          '${l.castLabel}: ${meta.cast.take(6).join(', ')}',
+          '${l.castLabel}: ${meta.cast.take(10).join(', ')}',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+      if (_episode case final e?) ...[
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          l.episodesTitle,
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          [
+            l.seasonNumber(e.season),
+            if (e.number.isNotEmpty) l.episodeNumber(e.number),
+            if (e.title.isNotEmpty) e.title,
+          ].join(' · '),
           style: AppTypography.bodyMedium.copyWith(
             color: AppColors.textSecondary,
           ),
@@ -253,23 +424,7 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
   List<Widget> _actions(BuildContext context) {
     final l = context.l;
     final profile = widget.profile;
-    final progress = item.progress;
     return [
-      if (progress != null && !item.isChannel) ...[
-        AppButton(
-          key: const Key('details-continue'),
-          label: l.continueWatchingOnTv,
-          icon: AppIcons.play,
-          onPressed: () => watchOnTv(resume: true),
-        ),
-        const SizedBox(height: AppSpacing.md),
-      ],
-      AppButton(
-        key: const Key('details-watch-on-tv'),
-        label: l.watchOnTv,
-        icon: AppIcons.devices,
-        onPressed: watchOnTv,
-      ),
       if (profile != null && profile.persistent) ...[
         const SizedBox(height: AppSpacing.md),
         AppButton(
@@ -278,9 +433,6 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
           label: item.isChannel
               ? (favorite ? l.removeFromFavorites : l.addToFavorites)
               : (favorite ? l.removeFromMyList : l.addToMyList),
-          icon: item.isChannel
-              ? AppIcons.favorite
-              : (favorite ? AppIcons.check : AppIcons.add),
           onPressed: toggleFavorite,
         ),
       ],
@@ -288,94 +440,39 @@ class _ContentDetailsSheetState extends ConsumerState<ContentDetailsSheet> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.item, required this.meta});
-  final Entry item;
-  final ContentMetadata? meta;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l;
-    final channel = item.isChannel;
-    final year = meta?.year ?? item.year;
-    final age =
-        meta?.certification ??
-        (item.text('ageRating').isEmpty ? null : item.text('ageRating'));
-    final facts = <String>[
-      if (channel) l.liveChannel,
-      if (!channel && year != null) '$year',
-      if (meta?.runtimeMinutes != null && item.kind == 'movie')
-        l.runtimeMinutes(meta!.runtimeMinutes!),
-      if (meta?.seasonCount != null && item.kind == 'series')
-        l.seasonsCount(meta!.seasonCount!),
-      if (age != null) l.ageRatingLabel(age),
-    ];
-    final genres = meta?.genres ?? const <String>[];
-    final category = item.text('category');
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-          child: SizedBox(
-            width: channel ? 112 : 80,
-            height: channel ? 64 : 120,
-            child: Artwork(
-              item: item,
-              fit: channel ? BoxFit.contain : BoxFit.cover,
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name,
-                style: AppTypography.titleLarge.copyWith(
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              if (facts.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  facts.join(' · '),
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-              if (genres.isNotEmpty || category.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  genres.isNotEmpty ? genres.take(3).join(', ') : category,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-              if (item.text('sourceName').isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  item.text('sourceName'),
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _Programme {
   const _Programme(this.title, this.start, this.end);
   final String title;
   final DateTime start, end;
+}
+
+/// Loading placeholder for this sheet: text only, no boxes.
+class _TextSkeleton extends StatefulWidget {
+  const _TextSkeleton();
+  @override
+  State<_TextSkeleton> createState() => _TextSkeletonState();
+}
+
+class _TextSkeletonState extends State<_TextSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: Tween<double>(begin: 0.35, end: 1).animate(controller),
+    child: Text(
+      '${context.l.loading}…',
+      textAlign: TextAlign.center,
+      style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+    ),
+  );
 }

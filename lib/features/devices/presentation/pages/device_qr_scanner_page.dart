@@ -12,7 +12,8 @@ class DeviceQrScannerPage extends ConsumerStatefulWidget {
   const DeviceQrScannerPage({super.key});
 
   @override
-  ConsumerState<DeviceQrScannerPage> createState() => _DeviceQrScannerPageState();
+  ConsumerState<DeviceQrScannerPage> createState() =>
+      _DeviceQrScannerPageState();
 }
 
 class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
@@ -29,7 +30,8 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
   String? _extractToken(String raw) {
     final uri = Uri.tryParse(raw);
     if (uri != null && uri.scheme == 'iplex') {
-      if ((uri.host == 'pair' || (uri.host == 'link' && uri.path == '/device')) &&
+      if ((uri.host == 'pair' ||
+              (uri.host == 'link' && uri.path == '/device')) &&
           uri.queryParameters.containsKey('token')) {
         final token = uri.queryParameters['token']!;
         if (RegExp(r'^[a-f0-9]{32,64}$').hasMatch(token)) {
@@ -62,7 +64,9 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
 
     try {
       await controller.stop();
-      final session = await ref.read(devicePairingProvider.notifier).inspect(token: token);
+      final session = await ref
+          .read(devicePairingProvider.notifier)
+          .inspect(token: token);
       if (!mounted) return;
       if (session != null) {
         context.push('/devices/confirm');
@@ -114,7 +118,10 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
               child: Text(
                 l.scanHelp,
                 style: const TextStyle(
@@ -136,7 +143,10 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
                   ),
                   child: Text(
                     errorMessage!,
-                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -159,12 +169,18 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const AppIcon(AppIcons.alert, size: AppTokens.xxl, color: AppColors.warning),
+                              const AppIcon(
+                                AppIcons.alert,
+                                size: AppTokens.xxl,
+                                color: AppColors.warning,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               Text(
                                 l.cameraPermissionHelp,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: AppColors.textSecondary),
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                               const SizedBox(height: AppSpacing.lg),
                               AppButton(
@@ -189,8 +205,15 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
                                     width: 240,
                                     height: 240,
                                     decoration: BoxDecoration(
-                                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.6), width: 2),
-                                      borderRadius: BorderRadius.circular(AppRadii.md),
+                                      border: Border.all(
+                                        color: AppColors.accent.withValues(
+                                          alpha: 0.6,
+                                        ),
+                                        width: 2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadii.md,
+                                      ),
                                     ),
                                   ),
                                 ),

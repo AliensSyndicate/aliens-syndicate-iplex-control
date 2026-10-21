@@ -17,7 +17,8 @@ class IptvSourceCard extends ConsumerWidget {
     // Retryable failures stay queued and are retried by the worker: pending, not failed.
     final isRetrying =
         entry.text('status') == 'queued' && entry.text('errorCode').isNotEmpty;
-    final isError = entry.text('status') == 'error' ||
+    final isError =
+        entry.text('status') == 'error' ||
         (entry.text('errorCode').isNotEmpty && !isRetrying);
     final isSyncing =
         entry.text('status') == 'syncing' ||
@@ -29,12 +30,17 @@ class IptvSourceCard extends ConsumerWidget {
         !isError && !isSyncing && isReady && entry.data['enabled'] != false;
     final isProtected = entry.data['isProtected'] == true;
 
-    final lastSyncTimestamp = (entry.data['lastSuccessfulSyncAt'] != null ? entry.number('lastSuccessfulSyncAt') : entry.number('lastSyncAt'));
+    final lastSyncTimestamp = (entry.data['lastSuccessfulSyncAt'] != null
+        ? entry.number('lastSuccessfulSyncAt')
+        : entry.number('lastSyncAt'));
     final String syncInfo;
     if (lastSyncTimestamp > 0) {
       final locale = Localizations.localeOf(context).toString();
-      final formattedTime = (locale.startsWith('pt') ? DateFormat("dd/MM/yyyy 'às' HH:mm", locale) : DateFormat.yMd(locale).add_Hm())
-          .format(DateTime.fromMillisecondsSinceEpoch(lastSyncTimestamp));
+      final formattedTime =
+          (locale.startsWith('pt')
+                  ? DateFormat("dd/MM/yyyy 'às' HH:mm", locale)
+                  : DateFormat.yMd(locale).add_Hm())
+              .format(DateTime.fromMillisecondsSinceEpoch(lastSyncTimestamp));
       syncInfo = l.lastSync(formattedTime);
     } else {
       syncInfo = l.neverSynced;
@@ -69,9 +75,7 @@ class IptvSourceCard extends ConsumerWidget {
                   const GraphiteSurface(
                     circle: true,
                     recessed: true,
-                    padding: EdgeInsets.all(
-                      AppSpacing.sm + AppSpacing.xs,
-                    ),
+                    padding: EdgeInsets.all(AppSpacing.sm + AppSpacing.xs),
                     child: AppIcon(
                       AppIcons.iptv,
                       color: AppColors.textSecondary,
@@ -109,16 +113,14 @@ class IptvSourceCard extends ConsumerWidget {
                           isSyncing
                               ? l.sourceSyncing
                               : (isError
-                                  ? l.sourceFailure
-                                  : (isOnline
-                                      ? l.online
-                                      : l.offline)),
+                                    ? l.sourceFailure
+                                    : (isOnline ? l.online : l.offline)),
                           style: TextStyle(
                             color: isError
                                 ? AppColors.error
                                 : (isSyncing
-                                    ? AppColors.brandBlue
-                                    : AppColors.textSecondary),
+                                      ? AppColors.brandBlue
+                                      : AppColors.textSecondary),
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),

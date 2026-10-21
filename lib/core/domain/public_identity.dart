@@ -38,7 +38,9 @@ String? parseProfileLinkCode(String raw) {
   String? code = value;
   if (uri != null && uri.scheme == 'iplex') {
     final params = uri.queryParameters;
-    code = uri.host == 'profile-link' && uri.path.isEmpty &&
+    code =
+        uri.host == 'profile-link' &&
+            uri.path.isEmpty &&
             params.keys.every((k) => k == 'code' || k == 'v') &&
             (params['v'] == null || params['v'] == '1')
         ? params['code']

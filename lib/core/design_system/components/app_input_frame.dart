@@ -11,6 +11,7 @@ class AppInputFrame extends StatelessWidget {
     required this.focusNode,
     required this.child,
     this.errorText,
+    this.height = AppDimensions.input,
     this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.md),
   });
 
@@ -18,6 +19,7 @@ class AppInputFrame extends StatelessWidget {
   final FocusNode focusNode;
   final Widget child;
   final String? errorText;
+  final double height;
   final EdgeInsets padding;
 
   @override
@@ -57,7 +59,7 @@ class AppInputFrame extends StatelessWidget {
               behavior: HitTestBehavior.translucent,
               onTap: focusNode.requestFocus,
               child: SizedBox(
-                height: AppDimensions.input,
+                height: height,
                 child: GraphiteSurface(
                   recessed: true,
                   radius: AppRadii.pill,

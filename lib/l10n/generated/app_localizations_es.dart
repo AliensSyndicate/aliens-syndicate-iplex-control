@@ -1450,7 +1450,10 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get homeSearchHint => 'Buscar canales, películas y series';
+  String get homeRecentSearches => 'Recientes de la búsqueda';
+
+  @override
+  String get homeSearchHint => 'Buscar';
 
   @override
   String get selectIptvSource => 'Seleccionar fuente IPTV';
@@ -1471,10 +1474,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeMyList => 'Mi lista';
 
   @override
-  String get homeRecentMovies => 'Películas añadidas recientemente';
+  String get homeRecentMovies => 'Películas recientes';
 
   @override
-  String get homeRecentSeries => 'Series añadidas recientemente';
+  String get homeRecentSeries => 'Series recientes';
 
   @override
   String get homeEmptyTitle => 'Tu inicio aún está vacío';
@@ -1527,6 +1530,31 @@ class AppLocalizationsEs extends AppLocalizations {
       one: '1 temporada',
     );
     return '$_temp0';
+  }
+
+  @override
+  String episodesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count episodios',
+      one: '1 episodio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get episodesTitle => 'Episodios';
+
+  @override
+  String get showMore => 'Mostrar más';
+
+  @override
+  String get showLess => 'Mostrar menos';
+
+  @override
+  String seasonEpisodeShort(int season, String episode) {
+    return 'T${season}E$episode';
   }
 
   @override

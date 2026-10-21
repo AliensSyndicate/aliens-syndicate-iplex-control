@@ -189,7 +189,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (family.isLoading || family.hasError) {
           return path == '/loading' ? null : gate;
         }
-        if (!ref.read(canManageResourcesProvider)) return '/access?reason=permission';
+        if (!ref.read(canManageResourcesProvider))
+          return '/access?reason=permission';
       }
       if (path == '/login' || path == '/loading' || path == '/') {
         return target == '/' ? '/home' : target;
@@ -266,7 +267,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (c, s) =>
                         _appPage(key: s.pageKey, child: const InvitePage()),
                   ),
-                  GoRoute(path: 'scan', pageBuilder: (c, s) => _appPage(key: s.pageKey, child: const ScanPage(device: false))),
+                  GoRoute(
+                    path: 'scan',
+                    pageBuilder: (c, s) => _appPage(
+                      key: s.pageKey,
+                      child: const ScanPage(device: false),
+                    ),
+                  ),
                   GoRoute(
                     path: 'add',
                     pageBuilder: (c, s) => _appPage(
@@ -361,10 +368,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'join',
                     redirect: (c, s) => '/family',
-                    pageBuilder: (c, s) => _appPage(
-                      key: s.pageKey,
-                      child: const FamilyPage(),
-                    ),
+                    pageBuilder: (c, s) =>
+                        _appPage(key: s.pageKey, child: const FamilyPage()),
                   ),
                 ],
               ),
@@ -379,10 +384,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'add',
-                    pageBuilder: (c, s) => _appPage(
-                      key: s.pageKey,
-                      child: const DeviceAddPage(),
-                    ),
+                    pageBuilder: (c, s) =>
+                        _appPage(key: s.pageKey, child: const DeviceAddPage()),
                   ),
                   GoRoute(
                     path: 'scan',

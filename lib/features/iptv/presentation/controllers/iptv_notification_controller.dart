@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -21,11 +22,15 @@ class IptvNotificationRouteObserver extends NavigatorObserver {
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (route is PopupRoute) _popups.add(route);
   }
+
   @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => _popups.remove(route);
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      _popups.remove(route);
   @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) => _popups.remove(route);
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      _popups.remove(route);
 }
+
 final iptvNotificationRouteObserver = IptvNotificationRouteObserver();
 
 /// Firestore is the single completion inbox. FCM only opens a source; it never
@@ -67,22 +72,34 @@ class IptvNotificationController with WidgetsBindingObserver {
     _pendingSource = null;
     _uid = uid;
     if (uid == null || !_ref.read(repositoryProvider).configured) return;
-    _notificationsSub = _ref.read(iptvRepositoryProvider).watchPendingNotifications(uid).listen((events) {
-      if (_disposed || _uid != uid) return;
-      for (final event in events) {
-        final id = event['jobId'] as String?;
-        if (id != null && !_shown.contains(id)) _pending[id] = event;
-      }
-      _scheduleDrain();
-    }, onError: (Object _) { /* Persistent inbox is retried after session recovery. */ });
+    _notificationsSub = _ref
+        .read(iptvRepositoryProvider)
+        .watchPendingNotifications(uid)
+        .listen(
+          (events) {
+            if (_disposed || _uid != uid) return;
+            for (final event in events) {
+              final id = event['jobId'] as String?;
+              if (id != null && !_shown.contains(id)) _pending[id] = event;
+            }
+            _scheduleDrain();
+          },
+          onError: (Object _) {
+            /* Persistent inbox is retried after session recovery. */
+          },
+        );
     unawaited(_setupFcm(uid));
   }
 
-  bool get _foreground => WidgetsBinding.instance.lifecycleState == null ||
+  bool get _foreground =>
+      WidgetsBinding.instance.lifecycleState == null ||
       WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
   void _scheduleDrain() {
-    if (_disposed || _timer != null || (_pending.isEmpty && _pendingSource == null)) return;
+    if (_disposed ||
+        _timer != null ||
+        (_pending.isEmpty && _pendingSource == null))
+      return;
     _timer = Timer(const Duration(milliseconds: 600), () {
       _timer = null;
       unawaited(_drain());
@@ -92,18 +109,27 @@ class IptvNotificationController with WidgetsBindingObserver {
   Future<void> _drain() async {
     if (_disposed || _showing || !_foreground || _uid == null) return;
     final context = rootNavigatorKey.currentContext;
-    if (context == null || !context.mounted) { _scheduleDrain(); return; }
+    if (context == null || !context.mounted) {
+      _scheduleDrain();
+      return;
+    }
     final path = GoRouter.of(context).routeInformationProvider.value.uri.path;
-    if (iptvNotificationRouteObserver.hasPopup || path.endsWith('/add') ||
-        path.endsWith('/edit') || path == '/login' || path == '/loading' ||
-        path.contains('/scan') || MediaQuery.viewInsetsOf(context).bottom > 0) {
-      _scheduleDrain(); return;
+    if (iptvNotificationRouteObserver.hasPopup ||
+        path.endsWith('/add') ||
+        path.endsWith('/edit') ||
+        path == '/login' ||
+        path == '/loading' ||
+        path.contains('/scan') ||
+        MediaQuery.viewInsetsOf(context).bottom > 0) {
+      _scheduleDrain();
+      return;
     }
     if (_pendingSource != null) {
       final id = _pendingSource!;
       _pendingSource = null;
       context.push('/iptv/${Uri.encodeComponent(id)}');
-      _scheduleDrain(); return;
+      _scheduleDrain();
+      return;
     }
     if (_pending.isEmpty) return;
     final uid = _uid!;
@@ -113,12 +139,23 @@ class IptvNotificationController with WidgetsBindingObserver {
     final sourceId = event['sourceId'] as String? ?? '';
     _showing = true;
     try {
-      await IptvSyncResultSheet.show(context, jobId: entry.key, sourceId: sourceId,
+      await IptvSyncResultSheet.show(
+        context,
+        jobId: entry.key,
+        sourceId: sourceId,
         sourceName: event['sourceName'] as String? ?? 'IPTV',
-        isSuccess: event['status'] == 'completed', errorCode: event['errorCode'] as String?,
-        onRetry: event['status'] == 'completed' ? null : () async {
-          try { await repo.triggerSync(sourceId); } catch (_) { /* Source page retains backend error state. */ }
-        });
+        isSuccess: event['status'] == 'completed',
+        errorCode: event['errorCode'] as String?,
+        onRetry: event['status'] == 'completed'
+            ? null
+            : () async {
+                try {
+                  await repo.triggerSync(sourceId);
+                } catch (_) {
+                  /* Source page retains backend error state. */
+                }
+              },
+      );
       if (!_disposed && _uid == uid) {
         _shown.add(entry.key);
         _pending.remove(entry.key);
@@ -136,26 +173,40 @@ class IptvNotificationController with WidgetsBindingObserver {
     if (kIsWeb || Firebase.apps.isEmpty) return;
     try {
       final messaging = FirebaseMessaging.instance;
-      final settings = await messaging.requestPermission(alert: true, badge: true, sound: true);
+      final settings = await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
       if (_disposed || _uid != uid) return;
       if (settings.authorizationStatus != AuthorizationStatus.authorized &&
-          settings.authorizationStatus != AuthorizationStatus.provisional) { return; }
+          settings.authorizationStatus != AuthorizationStatus.provisional) {
+        return;
+      }
       _tokenRefreshSub = messaging.onRegistered.listen((token) async {
         if (_disposed || _uid != uid) return;
-        try { await _ref.read(iptvRepositoryProvider).registerFcmToken(uid, token); } catch (_) {}
+        try {
+          await _ref.read(iptvRepositoryProvider).registerFcmToken(uid, token);
+        } catch (_) {}
       });
       await messaging.register();
       if (_disposed || _uid != uid) return;
-      _fcmOpenSub = FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationClick);
+      _fcmOpenSub = FirebaseMessaging.onMessageOpenedApp.listen(
+        _handleNotificationClick,
+      );
       final initial = await messaging.getInitialMessage();
-      if (!_disposed && _uid == uid && initial != null) _handleNotificationClick(initial);
-    } catch (_) { /* Persistent completion inbox also works without APNs/FCM. */ }
+      if (!_disposed && _uid == uid && initial != null)
+        _handleNotificationClick(initial);
+    } catch (_) {
+      /* Persistent completion inbox also works without APNs/FCM. */
+    }
   }
 
   void _handleNotificationClick(RemoteMessage message) {
     if (message.data['recipientUid'] != _uid) return;
     final source = message.data['sourceId'] as String?;
-    if (source == null || !RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(source)) return;
+    if (source == null || !RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(source))
+      return;
     _pendingSource = source;
     _scheduleDrain();
   }
@@ -164,6 +215,7 @@ class IptvNotificationController with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _scheduleDrain();
   }
+
   void dispose() {
     _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
@@ -174,8 +226,10 @@ class IptvNotificationController with WidgetsBindingObserver {
   }
 }
 
-final iptvNotificationControllerProvider = Provider<IptvNotificationController>((ref) {
-  final controller = IptvNotificationController(ref)..initialize();
-  ref.onDispose(controller.dispose);
-  return controller;
-});
+final iptvNotificationControllerProvider = Provider<IptvNotificationController>(
+  (ref) {
+    final controller = IptvNotificationController(ref)..initialize();
+    ref.onDispose(controller.dispose);
+    return controller;
+  },
+);

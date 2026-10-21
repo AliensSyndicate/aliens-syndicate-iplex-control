@@ -14,7 +14,8 @@ class SessionLoadingPage extends ConsumerWidget {
     final family = ref.watch(familyProvider);
     final failed = auth.hasError || account.hasError || family.hasError;
     final accountError = account.error;
-    final appVerificationFailed = accountError is AppFailure &&
+    final appVerificationFailed =
+        accountError is AppFailure &&
         accountError.code == 'app-verification-failed';
     return Scaffold(
       body: SafeArea(

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of a playback profile in `profiles/{profileId}`.
@@ -47,8 +48,10 @@ class ProfileModel {
       'avatarKey': avatarKey,
       'status': status,
       'createdByUid': createdByUid,
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 
@@ -90,13 +93,13 @@ class ProfileModel {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        familyId,
-        name,
-        avatarKey,
-        status,
-        createdByUid,
-        createdAt,
-        updatedAt,
-      );
+    id,
+    familyId,
+    name,
+    avatarKey,
+    status,
+    createdByUid,
+    createdAt,
+    updatedAt,
+  );
 }

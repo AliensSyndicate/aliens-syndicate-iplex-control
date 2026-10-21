@@ -178,7 +178,7 @@ test('regression: host names resolve through the pinned lookup (Node happy eyeba
 test('source artwork and "added" date: https only, no credentials, nothing guessed', async () => {
   const {safeImageUrl, providerAddedAt} = await import('../src/catalog');
   assert.equal(safeImageUrl('https://img.example.com/a.png'), 'https://img.example.com/a.png');
-  for (const bad of ['http://img.example.com/a.png', 'https://u:p@img.example.com/a.png', 'https://img.example.com/a.png?token=x', 'https://img.example.com/a.png?password=x', 'javascript:alert(1)', 42, '']) {
+  for (const bad of ['http://u:p@img.example.com/a.png', 'https://u:p@img.example.com/a.png', 'https://img.example.com/a.png?token=x', 'https://img.example.com/a.png?password=x', 'javascript:alert(1)', 42, '']) {
     assert.equal(safeImageUrl(bad), undefined, String(bad));
   }
   assert.equal(providerAddedAt('1700000000'), 1700000000000);
@@ -188,5 +188,14 @@ test('source artwork and "added" date: https only, no credentials, nothing guess
   assert.deepEqual([a!.addedAt, a!.imageRef], [1700000000000, 'https://x.example/a.jpg']);
   assert.deepEqual([b!.addedAt, b!.imageRef], [undefined, undefined]);
   const m3u = parseM3uDetailed('#EXTM3U\n#EXTINF:-1 tvg-logo="https://x.example/l.png",Canal\nhttps://s.example/c.m3u8\n#EXTINF:-1 tvg-logo="http://x.example/l.png",Outro\nhttps://s.example/o.m3u8\n').catalog;
-  assert.deepEqual(m3u.items.map(i => i.imageRef), ['https://x.example/l.png', undefined]);
+  assert.deepEqual(m3u.items.map(i => i.imageRef), ['https://x.example/l.png', 'http://x.example/l.png']);
+});
+
+test('safeImageUrl keeps http and https as published and still rejects credentials and tokens', async () => {
+  const {safeImageUrl} = await import('../src/catalog');
+  assert.equal(safeImageUrl('http://cdn.example.com/p.jpg'), 'http://cdn.example.com/p.jpg');
+  assert.equal(safeImageUrl('https://cdn.example.com/p.jpg'), 'https://cdn.example.com/p.jpg');
+  assert.equal(safeImageUrl('http://cdn.example.com/p.jpg?token=x'), undefined);
+  assert.equal(safeImageUrl('http://u:p@cdn.example.com/p.jpg'), undefined);
+  assert.equal(safeImageUrl('ftp://cdn.example.com/p.jpg'), undefined);
 });

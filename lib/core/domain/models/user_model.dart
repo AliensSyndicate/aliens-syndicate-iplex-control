@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import 'model_utils.dart';
 
 /// Representation of a user in `users/{uid}`.
@@ -52,8 +53,10 @@ class UserModel {
       'primaryFamilyId': primaryFamilyId,
       'locale': locale,
       'status': status,
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 
@@ -98,14 +101,14 @@ class UserModel {
 
   @override
   int get hashCode => Object.hash(
-        uid,
-        displayName,
-        photoUrl,
-        email,
-        primaryFamilyId,
-        locale,
-        status,
-        createdAt,
-        updatedAt,
-      );
+    uid,
+    displayName,
+    photoUrl,
+    email,
+    primaryFamilyId,
+    locale,
+    status,
+    createdAt,
+    updatedAt,
+  );
 }

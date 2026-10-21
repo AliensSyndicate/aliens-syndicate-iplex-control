@@ -592,7 +592,8 @@
       }
     }
   },
-  "homeSearchHint": "Search channels, movies and series",
+  "homeRecentSearches": "Recently searched",
+  "homeSearchHint": "Search",
   "selectIptvSource": "Select IPTV source",
   "iptvSources": "IPTV sources",
   "selectedSource": "Selected",
@@ -617,6 +618,13 @@
   "@runtimeMinutes": {"placeholders": {"minutes": {"type": "int"}}},
   "seasonsCount": "{count, plural, =1{1 season} other{{count} seasons}}",
   "@seasonsCount": {"placeholders": {"count": {"type": "int"}}},
+    "episodesCount": "{count, plural, =1{1 episode} other{{count} episodes}}",
+  "@episodesCount": {"placeholders": {"count": {"type": "int"}}},
+  "episodesTitle": "Episodes",
+    "showMore": "Show more",
+  "showLess": "Show less",
+    "seasonEpisodeShort": "S{season}E{episode}",
+  "@seasonEpisodeShort": {"placeholders": {"season": {"type": "int"}, "episode": {"type": "String"}}},
   "ageRatingLabel": "Rated {rating}",
   "@ageRatingLabel": {"placeholders": {"rating": {"type": "String"}}}
 }

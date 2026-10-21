@@ -15,4 +15,3 @@ abstract class IptvRepository implements IptvSyncRepository {
   Future<Map<String, dynamic>> triggerSync(String sourceId);
   Future<Map<String, dynamic>> saveSource(Map<String, dynamic> payload);
 }
-

@@ -46,7 +46,8 @@ final adminProvider = Provider<bool>((ref) {
 // Permission belongs to the selected resource context, never to a global role.
 final canManageResourcesProvider = Provider<bool>((ref) {
   final account = ref.watch(accountProvider).asData?.value;
-  return account != null && (account.familyId == null || ref.watch(adminProvider));
+  return account != null &&
+      (account.familyId == null || ref.watch(adminProvider));
 });
 final canManageIptvProvider = Provider<bool>((ref) {
   final account = ref.watch(accountProvider).asData?.value;
@@ -55,9 +56,10 @@ final canManageIptvProvider = Provider<bool>((ref) {
           account.familyId == null ||
           ref.watch(adminProvider));
 });
-final availableFamilyProvider = StreamProvider.autoDispose.family<Family?, String>(
-  (ref, id) => ref.watch(repositoryProvider).watchFamily(id),
-);
+final availableFamilyProvider = StreamProvider.autoDispose
+    .family<Family?, String>(
+      (ref, id) => ref.watch(repositoryProvider).watchFamily(id),
+    );
 final entriesProvider = StreamProvider.autoDispose.family<List<Entry>, String>((
   ref,
   collection,
@@ -77,6 +79,7 @@ final entriesProvider = StreamProvider.autoDispose.family<List<Entry>, String>((
       ? Stream.value([])
       : ref.watch(repositoryProvider).watchEntries(fid, collection);
 }, retry: (retryCount, error) => null);
+
 /// IPTV sources of the selected family: the spaces a family profile can be given.
 final familySourcesProvider = StreamProvider.autoDispose<List<Entry>>((ref) {
   final fid = ref.watch(

@@ -54,6 +54,60 @@ final selectedSourceProvider =
       SelectedSourceNotifier.new,
     );
 
+/// Only public item IDs are stored locally. readHome resolves them against the
+/// current catalog and permissions before any title is displayed again.
+class RecentSearchNotifier extends Notifier<List<String>> {
+  String? _key;
+  Future<void> _restored = Future.value();
+  Future<void> _writes = Future.value();
+
+  @override
+  List<String> build() {
+    final account = ref.watch(accountProvider).asData?.value;
+    final scope = account?.iptvScopeId;
+    final key = _key = account == null || scope == null
+        ? null
+        : 'iplex.home.recentSearch.${account.uid}.$scope';
+    _restored = key == null ? Future.value() : _restore(key);
+    return const [];
+  }
+
+  Future<void> _restore(String key) async {
+    try {
+      final prefs = await ref.read(preferencesProvider.future);
+      final saved = await prefs.getStringList(key) ?? const <String>[];
+      if (ref.mounted && _key == key) {
+        state = saved.toSet().take(10).toList();
+      }
+    } catch (_) {
+      // Local history is optional; search still works if storage is unavailable.
+    }
+  }
+
+  Future<void> record(String id) async {
+    final key = _key;
+    if (key == null) return;
+    await _restored;
+    if (!ref.mounted || key != _key) return;
+    final ids = [id, ...state.where((saved) => saved != id)].take(10).toList();
+    state = ids;
+    _writes = _writes.then((_) async {
+      try {
+        await (await ref.read(preferencesProvider.future))
+            .setStringList(key, ids);
+      } catch (_) {
+        // Keep the session's history even if persistence fails.
+      }
+    });
+    await _writes;
+  }
+}
+
+final recentSearchProvider =
+    NotifierProvider<RecentSearchNotifier, List<String>>(
+      RecentSearchNotifier.new,
+    );
+
 /// The selected source if it is still available, otherwise the first one.
 String? effectiveSourceId(String? selected, List<Entry> ready) {
   final ids = [for (final e in ready) e.id];
@@ -68,9 +122,23 @@ final homeProvider = FutureProvider.autoDispose.family<HomeData, String?>((
   sourceId,
 ) async {
   ref.watch(accountProvider.select((a) => a.asData?.value?.iptvScopeId));
+  // A finished (re)sync publishes a new catalog version: reload the rows
+  // without the user having to leave and re-enter the Home.
+  ref.watch(
+    entriesProvider('sources').select(
+      (sources) => [
+        for (final s in sources.asData?.value ?? const <Entry>[])
+          if (sourceId == null || s.id == sourceId) s.text('version'),
+      ].join(','),
+    ),
+  );
+  final recentSearchIds = ref.watch(recentSearchProvider);
   final result = await ref
       .watch(repositoryProvider)
-      .mutate('readHome', {'sourceId': sourceId})
+      .mutate('readHome', {
+        'sourceId': sourceId,
+        if (recentSearchIds.isNotEmpty) 'recentSearchIds': recentSearchIds,
+      })
       .timeout(const Duration(seconds: 30));
   return HomeData.fromJson(result);
 }, retry: (retryCount, error) => null);

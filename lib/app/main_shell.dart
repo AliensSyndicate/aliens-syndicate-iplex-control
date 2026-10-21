@@ -53,7 +53,8 @@ class _PurchaseUpdates extends ConsumerWidget {
   const _PurchaseUpdates();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (ref.watch(paymentsConfigProvider).asData?.value.checkoutAllowed == true) {
+    if (ref.watch(paymentsConfigProvider).asData?.value.checkoutAllowed ==
+        true) {
       ref.watch(checkoutControllerProvider);
     }
     return const SizedBox.shrink();

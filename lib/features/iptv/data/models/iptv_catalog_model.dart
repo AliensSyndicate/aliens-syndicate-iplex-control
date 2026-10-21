@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../../core/domain/models/model_utils.dart';
 import '../../domain/entities/iptv_catalog_entity.dart';
 
@@ -35,7 +36,9 @@ class IptvCatalogModel extends IptvCatalogEntity {
       activeSourceCount: (data['activeSourceCount'] as num?)?.toInt() ?? 0,
       integrityHash: data['integrityHash'] as String?,
       createdAt: ModelUtils.parseDateTime(data['createdAt']),
-      lastSuccessfulSyncAt: ModelUtils.parseDateTime(data['lastSuccessfulSyncAt']),
+      lastSuccessfulSyncAt: ModelUtils.parseDateTime(
+        data['lastSuccessfulSyncAt'],
+      ),
       lastAttemptAt: ModelUtils.parseDateTime(data['lastAttemptAt']),
       updatedAt: ModelUtils.parseDateTime(data['updatedAt']),
     );
@@ -52,12 +55,16 @@ class IptvCatalogModel extends IptvCatalogEntity {
       'contentCount': contentCount,
       'activeSourceCount': activeSourceCount,
       if (integrityHash != null) 'integrityHash': integrityHash,
-      if (createdAt != null) 'createdAt': ModelUtils.toTimestampOrNull(createdAt),
+      if (createdAt != null)
+        'createdAt': ModelUtils.toTimestampOrNull(createdAt),
       if (lastSuccessfulSyncAt != null)
-        'lastSuccessfulSyncAt': ModelUtils.toTimestampOrNull(lastSuccessfulSyncAt),
+        'lastSuccessfulSyncAt': ModelUtils.toTimestampOrNull(
+          lastSuccessfulSyncAt,
+        ),
       if (lastAttemptAt != null)
         'lastAttemptAt': ModelUtils.toTimestampOrNull(lastAttemptAt),
-      if (updatedAt != null) 'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
+      if (updatedAt != null)
+        'updatedAt': ModelUtils.toTimestampOrNull(updatedAt),
     };
   }
 

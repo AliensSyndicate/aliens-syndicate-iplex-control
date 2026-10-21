@@ -31,8 +31,9 @@ class HomeWelcomeState extends ConsumerWidget {
           AppButton(
             label: canAdd || noFamily ? l.addDevice : l.devices,
             icon: AppIcons.devices,
-            onPressed: () =>
-                context.go(ref.watch(adminProvider) ? '/devices/add' : '/devices'),
+            onPressed: () => context.go(
+              ref.watch(adminProvider) ? '/devices/add' : '/devices',
+            ),
           ),
           const SizedBox(height: AppTokens.lg),
           AppButton(

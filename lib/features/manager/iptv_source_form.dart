@@ -342,8 +342,10 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                           }
                           final u = Uri.tryParse(raw);
                           return u == null ||
-                                  !['http', 'https']
-                                      .contains(u.scheme.toLowerCase()) ||
+                                  ![
+                                    'http',
+                                    'https',
+                                  ].contains(u.scheme.toLowerCase()) ||
                                   u.host.isEmpty ||
                                   u.userInfo.isNotEmpty
                               ? l.requiredField
@@ -473,8 +475,10 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                           }
                           final u = Uri.tryParse(raw);
                           return u == null ||
-                                  !['http', 'https']
-                                      .contains(u.scheme.toLowerCase()) ||
+                                  ![
+                                    'http',
+                                    'https',
+                                  ].contains(u.scheme.toLowerCase()) ||
                                   u.host.isEmpty ||
                                   u.userInfo.isNotEmpty
                               ? l.requiredField
@@ -523,8 +527,10 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                           }
                           final u = Uri.tryParse(raw);
                           return u == null ||
-                                  !['http', 'https']
-                                      .contains(u.scheme.toLowerCase()) ||
+                                  ![
+                                    'http',
+                                    'https',
+                                  ].contains(u.scheme.toLowerCase()) ||
                                   u.host.isEmpty ||
                                   u.userInfo.isNotEmpty
                               ? l.requiredField
@@ -544,8 +550,10 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                         if (raw.length > 2048) return l.requiredField;
                         final u = Uri.tryParse(raw);
                         return u == null ||
-                                !['http', 'https']
-                                    .contains(u.scheme.toLowerCase()) ||
+                                ![
+                                  'http',
+                                  'https',
+                                ].contains(u.scheme.toLowerCase()) ||
                                 u.host.isEmpty ||
                                 u.userInfo.isNotEmpty
                             ? l.requiredField

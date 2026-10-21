@@ -42,7 +42,8 @@ class IptvSourceEntity {
   final DateTime? lastSyncAt;
 
   bool get isReady => status == 'ready';
-  bool get isSyncing => status == 'syncing' || status == 'queued' || currentJobId != null;
+  bool get isSyncing =>
+      status == 'syncing' || status == 'queued' || currentJobId != null;
   bool get hasError => status == 'error' || errorCode != null;
 
   @override
@@ -70,22 +71,22 @@ class IptvSourceEntity {
 
   @override
   int get hashCode => Object.hashAll([
-        sourceId,
-        familyId,
-        ownerUid,
-        serverId,
-        name,
-        type,
-        status,
-        catalogId,
-        currentJobId,
-        credentialsRef,
-        epgEnabled,
-        pinProtected,
-        contentCount,
-        errorCode,
-        createdAt,
-        updatedAt,
-        lastSyncAt,
-      ]);
+    sourceId,
+    familyId,
+    ownerUid,
+    serverId,
+    name,
+    type,
+    status,
+    catalogId,
+    currentJobId,
+    credentialsRef,
+    epgEnabled,
+    pinProtected,
+    contentCount,
+    errorCode,
+    createdAt,
+    updatedAt,
+    lastSyncAt,
+  ]);
 }

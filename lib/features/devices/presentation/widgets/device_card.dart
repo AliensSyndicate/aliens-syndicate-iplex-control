@@ -7,11 +7,7 @@ import '../../../../core/design_system/components.dart';
 import '../../domain/entities/device_entity.dart';
 
 class DeviceCard extends ConsumerWidget {
-  const DeviceCard({
-    super.key,
-    required this.device,
-    required this.onTap,
-  });
+  const DeviceCard({super.key, required this.device, required this.onTap});
 
   final DeviceEntity device;
   final VoidCallback onTap;
@@ -58,13 +54,18 @@ class DeviceCard extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.surfaceRecessed,
                         borderRadius: BorderRadius.circular(AppRadii.sm),
-                        border: Border.all(color: AppColors.borderDark, width: 1),
+                        border: Border.all(
+                          color: AppColors.borderDark,
+                          width: 1,
+                        ),
                       ),
                       child: Center(
                         child: AppIcon(
                           _platformIcon(device.platform),
                           size: AppTokens.xl,
-                          color: isOnline ? AppColors.accent : AppColors.textDisabled,
+                          color: isOnline
+                              ? AppColors.accent
+                              : AppColors.textDisabled,
                         ),
                       ),
                     ),
@@ -105,10 +106,7 @@ class DeviceCard extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Container(
-                  height: 1,
-                  color: AppColors.borderDark,
-                ),
+                Container(height: 1, color: AppColors.borderDark),
                 const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
@@ -119,7 +117,9 @@ class DeviceCard extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isOnline ? AppColors.textPrimary : AppColors.textDisabled,
+                        color: isOnline
+                            ? AppColors.textPrimary
+                            : AppColors.textDisabled,
                       ),
                     ),
                     const Spacer(),

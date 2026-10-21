@@ -126,8 +126,10 @@ class _IptvPageState extends ConsumerState<IptvPage> {
               // A retryable failure keeps the source queued: the worker tries again
               // by itself, so it is shown as pending, not as a final failure.
               final isRetrying =
-                  e.text('status') == 'queued' && e.text('errorCode').isNotEmpty;
-              final isError = e.text('status') == 'error' ||
+                  e.text('status') == 'queued' &&
+                  e.text('errorCode').isNotEmpty;
+              final isError =
+                  e.text('status') == 'error' ||
                   (e.text('errorCode').isNotEmpty && !isRetrying);
               final isSyncing =
                   e.text('status') == 'syncing' ||
@@ -136,7 +138,10 @@ class _IptvPageState extends ConsumerState<IptvPage> {
               final isReady =
                   e.text('status') == 'ready' || e.text('status') == 'online';
               final isOnline =
-                  !isError && !isSyncing && isReady && e.data['enabled'] != false;
+                  !isError &&
+                  !isSyncing &&
+                  isReady &&
+                  e.data['enabled'] != false;
               final formatName = switch (e.text('format')) {
                 'file' => l.sourceFormatFile,
                 'xtream' => l.sourceFormatXtream,
@@ -146,12 +151,20 @@ class _IptvPageState extends ConsumerState<IptvPage> {
               };
               final locale = Localizations.localeOf(context).toString();
 
-              final lastSyncTimestamp = (e.data['lastSuccessfulSyncAt'] != null ? e.number('lastSuccessfulSyncAt') : e.number('lastSyncAt'));
+              final lastSyncTimestamp = (e.data['lastSuccessfulSyncAt'] != null
+                  ? e.number('lastSuccessfulSyncAt')
+                  : e.number('lastSyncAt'));
               final String lastSyncStr;
               if (lastSyncTimestamp > 0) {
-                lastSyncStr = (locale.startsWith('pt') ? DateFormat("dd/MM/yyyy 'às' HH:mm", locale) : DateFormat.yMd(locale).add_Hm()).format(
-                  DateTime.fromMillisecondsSinceEpoch(lastSyncTimestamp),
-                );
+                lastSyncStr =
+                    (locale.startsWith('pt')
+                            ? DateFormat("dd/MM/yyyy 'às' HH:mm", locale)
+                            : DateFormat.yMd(locale).add_Hm())
+                        .format(
+                          DateTime.fromMillisecondsSinceEpoch(
+                            lastSyncTimestamp,
+                          ),
+                        );
               } else {
                 lastSyncStr = l.neverSynced;
               }
@@ -210,7 +223,9 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
-                                              isRetrying ? l.sourceRetrying : l.sourceSyncing,
+                                              isRetrying
+                                                  ? l.sourceRetrying
+                                                  : l.sourceSyncing,
                                               style: const TextStyle(
                                                 color: AppColors.brandBlue,
                                                 fontSize: 13,
@@ -326,7 +341,9 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                           ],
                           const SizedBox(height: AppSpacing.sm),
                           _SourceDetailRow(
-                            label: lastSyncTimestamp > 0 ? l.lastSync(lastSyncStr) : l.neverSynced,
+                            label: lastSyncTimestamp > 0
+                                ? l.lastSync(lastSyncStr)
+                                : l.neverSynced,
                             value: '',
                             isFullLabel: true,
                           ),
@@ -337,7 +354,8 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                                 ? l.singleStream
                                 : l.itemCount(itemCount),
                           ),
-                          if (!isSingleStream && e.data['channelCount'] is num) ...[
+                          if (!isSingleStream &&
+                              e.data['channelCount'] is num) ...[
                             const SizedBox(height: AppSpacing.sm),
                             _SourceDetailRow(
                               label: l.catalogKinds(
@@ -370,8 +388,12 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                                 children: [
                                   Text(
                                     [
-                                      mapIptvErrorCodeToMessage(context, e.text('errorCode')),
-                                      if (e.text('version').isNotEmpty) l.previousCatalogKept,
+                                      mapIptvErrorCodeToMessage(
+                                        context,
+                                        e.text('errorCode'),
+                                      ),
+                                      if (e.text('version').isNotEmpty)
+                                        l.previousCatalogKept,
                                     ].join(' '),
                                     key: const Key('source-error-message'),
                                     style: const TextStyle(
@@ -439,10 +461,7 @@ class _SourceDetailRow extends StatelessWidget {
   Widget build(BuildContext context) => isFullLabel || value.isEmpty
       ? Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 14,
-          ),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
         )
       : Row(
           children: [

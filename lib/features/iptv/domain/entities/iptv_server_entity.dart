@@ -38,12 +38,12 @@ class IptvServerEntity {
 
   @override
   int get hashCode => Object.hash(
-        serverId,
-        type,
-        canonicalEndpoint,
-        identityHash,
-        status,
-        createdAt,
-        updatedAt,
-      );
+    serverId,
+    type,
+    canonicalEndpoint,
+    identityHash,
+    status,
+    createdAt,
+    updatedAt,
+  );
 }

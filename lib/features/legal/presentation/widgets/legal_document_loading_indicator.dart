@@ -33,8 +33,9 @@ class LegalDocumentLoadingIndicator extends StatelessWidget {
                 child: CircularProgressIndicator(
                   value: value > 0 && value < 1.0 ? value : null,
                   strokeWidth: 3,
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.accent,
+                  ),
                   backgroundColor: AppColors.borderLight,
                 ),
               ),
