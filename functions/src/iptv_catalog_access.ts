@@ -89,13 +89,15 @@ export async function readSourceCatalog(input:Record<string,unknown>,actor:Ident
   if(input.version && input.version!==version)throw new DomainError('source-conflict');
   const search=z.string().max(300).parse(input.search??'').trim().toLowerCase().normalize('NFKD');
   const offset=z.number().int().min(0).max(100000).parse(input.cursor??0);
+  // Optional: one kind only (Control tabs Canais / Filmes / Séries).
+  const kind=input.kind===undefined||input.kind===null?null:z.enum(['channel','movie','series']).parse(input.kind);
   const catalog=await load(version);
   const visible=catalog.items.filter(i=>canSee(access.viewer,id,i));
   // A space the profile cannot use does not exist for it.
   if(access.viewer&&!visible.length&&catalog.items.length)throw new DomainError('not-found');
   // Matches anywhere in the title, ignoring case and accents.
   const needle=fold(search);
-  const items=visible.filter(i=>!needle||fold(i.titleKey).includes(needle)).sort((a,b)=>a.titleKey.localeCompare(b.titleKey)||a.id.localeCompare(b.id));
+  const items=visible.filter(i=>(!kind||i.kind===kind)&&(!needle||fold(i.titleKey).includes(needle))).sort((a,b)=>a.titleKey.localeCompare(b.titleKey)||a.id.localeCompare(b.id));
   const latest=await authorize(actor,id,false,input.profileId);
   if(latest.fid!==access.fid||latest.data.version!==version||latest.data.revision!==access.data.revision)throw new DomainError('source-conflict');
   const shown=new Set(visible.map(i=>`${i.kind}:${i.categoryId??i.category}`));

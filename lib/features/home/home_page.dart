@@ -9,6 +9,7 @@ import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../manager/widgets/home_welcome_state.dart';
+import '../manager/widgets/account_avatar.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
@@ -23,84 +24,11 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  final search = TextEditingController();
-  final searchFocus = FocusNode();
-  Timer? debounce;
-  String query = '';
-  int generation = 0;
-  List<Entry> results = [];
-  Object? cursor, searchError;
-  bool searching = false, more = false;
+  /// Home tab: 0 Meu iPlex, 1 Canais, 2 Filmes, 3 Séries.
+  int tab = 0;
 
-  /// Room below the content: the menu, plus the floating bar when shown.
-  double get _bottomSpace =>
-      AppDimensions.bottomNav +
-      AppSpacing.xl +
-      (ref.read(nowPlayingProvider) == null
-          ? 0
-          : NowPlayingBar.height + NowPlayingBar.gap);
-
-  @override
-  void dispose() {
-    debounce?.cancel();
-    search.dispose();
-    searchFocus.dispose();
-    super.dispose();
-  }
-
-  Future<void> runSearch(Entry source, {bool reset = true}) async {
-    final fid = ref.read(accountProvider).asData?.value?.iptvScopeId;
-    if (fid == null || query.trim().isEmpty) return;
-    final request = ++generation;
-    setState(() {
-      searching = true;
-      searchError = null;
-      if (reset) {
-        results = [];
-        cursor = null;
-        more = false;
-      }
-    });
-    try {
-      final page = await ref
-          .read(repositoryProvider)
-          .catalog(fid, source, query.trim(), cursor: cursor)
-          .timeout(const Duration(seconds: 30));
-      if (!mounted || request != generation) return;
-      setState(() {
-        results = {
-          for (final item in [...results, ...page.items]) item.id: item,
-        }.values.toList();
-        cursor = page.cursor;
-        more = page.hasMore;
-      });
-    } catch (e) {
-      if (mounted && request == generation) setState(() => searchError = e);
-    } finally {
-      if (mounted && request == generation) setState(() => searching = false);
-    }
-  }
-
-  void onQuery(String value, Entry? source) {
-    debounce?.cancel();
-    debounce = Timer(const Duration(milliseconds: 350), () {
-      if (!mounted) return;
-      setState(() => query = value);
-      if (source != null) runSearch(source);
-    });
-  }
-
-  void clearSearch() {
-    debounce?.cancel();
-    generation++;
-    search.clear();
-    setState(() {
-      query = '';
-      results = [];
-      searchError = null;
-      searching = false;
-    });
-  }
+  /// Room below the content for the main menu.
+  static const _bottomSpace = AppDimensions.bottomNav + AppSpacing.xl;
 
   /// Opens the full details page of [item]; when the same title has saved
   /// progress (from any row or the search), that entry is used so "continue"
@@ -113,11 +41,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     openTitle(context, withProgress);
   }
 
-  /// Long press on a card: Favoritos / Lista de desejos without leaving the Home.
-  ValueChanged<Entry>? libraryActions(HomeData? home) =>
-      home?.profile?.persistent == true
-      ? (item) => showLibraryActions(context, item: item, home: home!)
-      : null;
+  /// "⋮" / long press on a card: content options (the list actions only
+  /// for persistent profiles, inside the sheet).
+  ValueChanged<Entry>? libraryActions(HomeData? home) => home == null
+      ? null
+      : (item) => showLibraryActions(context, item: item, home: home);
 
   Future<void> pickSource(List<Entry> sources, String? current) async {
     final picked = await showAppModalSheet<String>(
@@ -126,23 +54,12 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
     if (picked == null || picked == current) return;
     await ref.read(selectedSourceProvider.notifier).select(picked);
-    if (query.trim().isNotEmpty) {
-      final source = sources.where((s) => s.id == picked).firstOrNull;
-      if (source != null) runSearch(source);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(accountProvider.select((a) => a.asData?.value?.iptvScopeId), (
-      previous,
-      next,
-    ) {
-      if (previous != next) clearSearch();
-    });
     final account = ref.watch(accountProvider);
-    final playing = ref.watch(nowPlayingProvider);
-    final page = SafeArea(
+    return SafeArea(
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppDimensions.maxWidth),
@@ -172,22 +89,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
     );
-    if (playing == null) return page;
-    // Floating "now playing" bar right above the main menu (Home only).
-    return Stack(
-      children: [
-        page,
-        Positioned(
-          left: AppSpacing.md,
-          right: AppSpacing.md,
-          bottom:
-              MediaQuery.viewPaddingOf(context).bottom +
-              AppDimensions.bottomNav +
-              NowPlayingBar.gap,
-          child: NowPlayingBar(playing: playing),
-        ),
-      ],
-    );
   }
 
   Widget _content(BuildContext context, List<Entry> sources) {
@@ -197,39 +98,69 @@ class _HomePageState extends ConsumerState<HomePage> {
       ready,
     );
     final source = ready.where((s) => s.id == sourceId).firstOrNull;
-    final header = Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Focus(
-              focusNode: searchFocus,
-              skipTraversal: true,
-              child: NeumorphicSearchField(
-                key: const Key('home-search'),
-                controller: search,
-                hintText: context.l.homeSearchHint,
-                onChanged: (value) => onQuery(value, source),
+    final l = context.l;
+    // App bar: "iPlex", IPTV list picker and the account avatar; then tabs.
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.md,
+            0,
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'iPlex',
+                  key: Key('home-title'),
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.6,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
               ),
-            ),
+              _BarButton(
+                key: const Key('home-source-picker'),
+                label: l.selectIptvSource,
+                onTap: sources.isEmpty
+                    ? null
+                    : () => pickSource(sources, sourceId),
+                child: const AppIcon(AppIcons.iptv),
+              ),
+              _BarButton(
+                key: const Key('home-account'),
+                label: l.account,
+                onTap: () => context.go('/account'),
+                child: const AccountAvatarFace(size: 32),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          CircularButton(
-            key: const Key('home-source-picker'),
-            label: context.l.selectIptvSource,
-            icon: AppIcons.iptv,
-            size: AppDimensions.touch,
-            onPressed: sources.isEmpty
-                ? null
-                : () => pickSource(sources, sourceId),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(
+            left: AppSpacing.sm,
+            top: AppSpacing.sm,
           ),
-        ],
-      ),
+          child: AppTabs<int>(
+            key: const Key('home-tabs'),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            options: [
+              (0, l.myIplex),
+              (1, l.filterChannels),
+              (2, l.filterMovies),
+              (3, l.filterSeries),
+            ],
+            selected: tab,
+            onSelected: (i) => setState(() => tab = i),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+      ],
     );
     if (ready.isEmpty) {
       // Saved titles stay reachable even without a ready source.
@@ -270,10 +201,31 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-          if (query.trim().isNotEmpty)
-            ..._searchSlivers(context, source, home.asData?.value)
-          else
-            ..._homeSlivers(context, home, sourceId),
+          // Item playing, between the tabs and the rows (Meu iPlex).
+          if (tab == 0)
+            if (ref.watch(nowPlayingProvider) case final playing?)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    0,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                  ),
+                  child: NowPlayingBar(playing: playing),
+                ),
+              ),
+          if (tab == 0)
+            ..._homeSlivers(context, home, sourceId)
+          else if (source != null)
+            SliverToBoxAdapter(
+              child: CatalogTab(
+                key: ValueKey('catalog-${source.id}-$tab'),
+                source: source,
+                kind: const ['channel', 'movie', 'series'][tab - 1],
+                home: home.asData?.value,
+              ),
+            ),
           SliverToBoxAdapter(child: SizedBox(height: _bottomSpace)),
         ],
       ),
@@ -330,7 +282,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   icon: AppIcons.search,
                   action: AppButton(
                     label: l.exploreCatalog,
-                    onPressed: searchFocus.requestFocus,
+                    onPressed: () => context.go('/search'),
                   ),
                 ),
               ),
@@ -372,97 +324,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
   ];
 
-  List<Widget> _searchSlivers(
-    BuildContext context,
-    Entry? source,
-    HomeData? home,
-  ) {
-    final l = context.l;
-    if (searchError != null) {
-      return [
-        SliverToBoxAdapter(
-          child: _Padded(
-            child: ErrorState(
-              onRetry: () {
-                if (source != null) runSearch(source);
-              },
-            ),
-          ),
-        ),
-      ];
-    }
-    if (searching && results.isEmpty) {
-      return [
-        const SliverToBoxAdapter(
-          child: _Padded(child: AppLoadingSkeleton(rows: 3)),
-        ),
-      ];
-    }
-    if (results.isEmpty) {
-      return [
-        SliverToBoxAdapter(
-          child: _Padded(
-            child: EmptyState(
-              title: l.noResults,
-              body: l.noResultsBody,
-              icon: AppIcons.search,
-              action: AppButton(label: l.clearSearch, onPressed: clearSearch),
-            ),
-          ),
-        ),
-      ];
-    }
-    return [
-      SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: HomeCardSize.posterWidth + AppSpacing.md,
-            mainAxisSpacing: AppSpacing.md,
-            crossAxisSpacing: AppSpacing.md,
-            childAspectRatio:
-                HomeCardSize.posterWidth /
-                (HomeCardSize.posterHeight +
-                    HomeCardSize.caption +
-                    AppSpacing.sm),
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => _SearchCard(
-              item: results[index],
-              onLongPress: switch (libraryActions(home)) {
-                final actions? => () => actions(results[index]),
-                null => null,
-              },
-              onTap: () {
-                final item = results[index];
-                if (home?.profile?.type != 'guest') {
-                  unawaited(
-                    ref.read(recentSearchProvider.notifier).record(item.id),
-                  );
-                }
-                open(item, home);
-              },
-            ),
-            childCount: results.length,
-          ),
-        ),
-      ),
-      if (searching)
-        const SliverToBoxAdapter(
-          child: _Padded(child: AppLoadingSkeleton(rows: 1)),
-        )
-      else if (more && source != null)
-        SliverToBoxAdapter(
-          child: _Padded(
-            child: AppButton(
-              label: l.more,
-              onPressed: () => runSearch(source, reset: false),
-            ),
-          ),
-        ),
-    ];
-  }
-
   Widget _noReadySource(BuildContext context, List<Entry> sources) {
     final l = context.l;
     if (sources.isEmpty) return const HomeWelcomeState();
@@ -484,57 +345,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-/// Search results mix channels and titles: same poster footprint for a tidy grid.
-class _SearchCard extends StatelessWidget {
-  const _SearchCard({
-    required this.item,
-    required this.onTap,
-    this.onLongPress,
-  });
-  final Entry item;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: item.name,
-    excludeSemantics: true,
-    child: GestureDetector(
-      key: ValueKey('search-card-${item.id}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: HomeCardSize.posterWidth / HomeCardSize.posterHeight,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadii.md),
-              child: Artwork(
-                item: item,
-                fit: item.isChannel ? BoxFit.contain : BoxFit.cover,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            item.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodyMedium.copyWith(
-              fontSize: 13,
-              height: 1.25,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
 /// Bottom sheet: every registered source with its sync state; only sources
 /// with a published catalog can be selected. Names and states only — never
 /// URLs, hosts or credentials.
@@ -551,27 +361,31 @@ class _SourcePicker extends ConsumerWidget {
       ref.watch(unlockedSourcesProvider),
     ).map((s) => s.id).toSet();
     return AppModalSheet(
-      title: l.iptvSources,
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          SheetHeader(
+            icon: AppIcons.iptv,
+            title: l.iptvSources,
+            subtitle: l.selectIptvSource,
+          ),
           for (final source in sources)
-            EntryTile(
+            SelectionRow(
               key: ValueKey('source-option-${source.id}'),
               title: source.name,
               subtitle: [
-                if (_lastSync(context, source) case final String date) date,
-                if (source.id == current) l.selectedSource,
-              ].join('\n'),
-              icon: source.id == current ? AppIcons.check : AppIcons.iptv,
-              trailing: Semantics(
-                label: switch (_status(source)) {
+                switch (_status(source)) {
                   IndicatorStatus.online => l.online,
                   IndicatorStatus.offline => l.offline,
                   IndicatorStatus.error => l.sourceFailure,
                 },
-                child: NeumorphicStatusIndicator(status: _status(source)),
-              ),
+                ?_lastSync(context, source),
+                if (source.id == current) l.selectedSource,
+              ].join(' · '),
+              highlightSubtitle: _status(source) == IndicatorStatus.online,
+              icon: AppIcons.iptv,
+              selected: source.id == current,
               onTap: ready.contains(source.id)
                   ? () => Navigator.pop(context, source.id)
                   : null,
@@ -616,4 +430,151 @@ class _Padded extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
     child: child,
   );
+}
+
+/// Flat 48 dp action of the Home app bar.
+class _BarButton extends StatelessWidget {
+  const _BarButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    required this.child,
+  });
+  final String label;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    excludeSemantics: true,
+    child: InkResponse(
+      radius: AppDimensions.touch / 2,
+      onTap: onTap,
+      child: SizedBox.square(
+        dimension: AppDimensions.touch,
+        child: Center(child: child),
+      ),
+    ),
+  );
+}
+
+/// Canais / Filmes / Séries tab: the selected source's catalog of one kind
+/// (readSourceCatalog `kind`), 30 at a time, same cards as the Home rows.
+class CatalogTab extends ConsumerStatefulWidget {
+  const CatalogTab({
+    super.key,
+    required this.source,
+    required this.kind,
+    required this.home,
+  });
+  final Entry source;
+  final String kind;
+  final HomeData? home;
+
+  @override
+  ConsumerState<CatalogTab> createState() => _CatalogTabState();
+}
+
+class _CatalogTabState extends ConsumerState<CatalogTab> {
+  final items = <Entry>[];
+  Object? cursor = 0, error;
+  bool loading = false, more = true;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    if (loading || !more) return;
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    try {
+      final result = await ref.read(repositoryProvider).mutate(
+        'readSourceCatalog',
+        {
+          'id': widget.source.id,
+          'version': widget.source.text('version'),
+          'kind': widget.kind,
+          'cursor': cursor,
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        items.addAll([
+          for (final raw in (result['items'] as List? ?? const []))
+            if (raw is Map && raw['id'] is String)
+              Entry(raw['id'] as String, Map<String, dynamic>.from(raw)),
+        ]);
+        cursor = result['cursor'];
+        more = result['hasMore'] == true;
+      });
+    } catch (e) {
+      if (mounted) setState(() => error = e);
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    if (error != null && items.isEmpty) {
+      return _Padded(
+        child: ErrorState(
+          onRetry: () {
+            more = true;
+            load();
+          },
+        ),
+      );
+    }
+    if (loading && items.isEmpty) {
+      return const _Padded(child: AppLoadingSkeleton(rows: 3));
+    }
+    if (items.isEmpty) {
+      return _Padded(
+        child: EmptyState(
+          title: l.noResults,
+          body: l.noResultsBody,
+          icon: AppIcons.search,
+        ),
+      );
+    }
+    final home = widget.home;
+    return _Padded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            key: ValueKey('catalog-grid-${widget.kind}'),
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.md,
+            children: [
+              for (final item in items)
+                HomeCard(
+                  item: item,
+                  onTap: () => openTitle(context, item),
+                  onLongPress: home == null
+                      ? null
+                      : () =>
+                            showLibraryActions(context, item: item, home: home),
+                ),
+            ],
+          ),
+          if (more) ...[
+            const SizedBox(height: AppSpacing.lg),
+            loading
+                ? const AppLoadingSkeleton(rows: 1)
+                : AppButton(label: l.more, onPressed: load),
+          ],
+        ],
+      ),
+    );
+  }
 }

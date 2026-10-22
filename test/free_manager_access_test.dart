@@ -84,11 +84,13 @@ void main() {
         final container = await navigation.launch(tester, repo);
         // Home rows and catalog search are reachable without a subscription.
         expect(repo.homeReads, 1);
+        await go(tester, container, '/search');
         await tester.enterText(find.byType(TextFormField), 'avail');
         await tester.pump(const Duration(milliseconds: 351));
         await tester.pumpAndSettle();
         expect(find.text('Available title'), findsOneWidget);
         for (final location in [
+          '/search',
           '/users',
           '/devices',
           '/iptv',
@@ -231,6 +233,13 @@ void main() {
   testWidgets(
     'pending private billing shows skeleton while informational plans remain available',
     (tester) async {
+      // Skeletons pulse; with reduced motion they stay still and the test
+      // can settle.
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
       final pending = Completer<void>();
       final repo = AccessRepository()..pendingSubscription = pending;
       await navigation.launch(tester, repo, location: '/account/subscription');

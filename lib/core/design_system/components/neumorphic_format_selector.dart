@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../graphite_surface.dart';
 import '../icons.dart';
 import '../localized_context.dart';
 import '../tokens.dart';
-import 'app_icon.dart';
+import 'app_tabs.dart';
 
 class FormatOption {
   const FormatOption({
@@ -17,7 +16,7 @@ class FormatOption {
   final List<List<dynamic>> icon;
 }
 
-/// Tactile Horizontal Segmented Tab Selector for IPTV Formats
+/// IPTV format selector: the shared [AppTabs] (no parallel style).
 class NeumorphicFormatSelector extends StatelessWidget {
   const NeumorphicFormatSelector({
     super.key,
@@ -53,109 +52,16 @@ class NeumorphicFormatSelector extends StatelessWidget {
       ),
     ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
+    // Same tabs as everywhere else (reference: Busca).
+    return AppTabs<String>(
       padding: padding,
-      child: Row(
-        children: options.asMap().entries.map((entry) {
-          final i = entry.key;
-          final opt = entry.value;
-          // Support 'm3u' matching 'url'
-          final isSelected =
-              selectedFormat == opt.id ||
-              (opt.id == 'url' && selectedFormat == 'm3u');
-          final isLast = i == options.length - 1;
-          return Padding(
-            padding: EdgeInsets.only(right: isLast ? 0 : AppSpacing.sm),
-            child: _FormatTabPill(
-              option: opt,
-              isSelected: isSelected,
-              disabled: disabled,
-              onTap: () {
-                if (!disabled && !isSelected) {
-                  onFormatSelected(opt.id);
-                }
-              },
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _FormatTabPill extends StatelessWidget {
-  const _FormatTabPill({
-    required this.option,
-    required this.isSelected,
-    required this.disabled,
-    required this.onTap,
-  });
-
-  final FormatOption option;
-  final bool isSelected;
-  final bool disabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: option.label,
-      child: GraphiteSurface(
-        radius: AppRadii.pill,
-        recessed: isSelected,
-        finish: isSelected ? GraphiteFinish.button : GraphiteFinish.panel,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadii.pill),
-            onTap: disabled ? null : onTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm + 2,
-              ),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.borderLight
-                      : Colors.transparent,
-                  width: AppDimensions.borderWidth,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppIcon(
-                    option.icon,
-                    size: AppDimensions.iconSmall,
-                    color: isSelected
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    option.label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      enabled: !disabled,
+      options: [for (final o in options) (o.id, o.label)],
+      selected: selectedFormat == 'm3u' ? 'url' : selectedFormat,
+      onSelected: (id) {
+        final current = selectedFormat == 'm3u' ? 'url' : selectedFormat;
+        if (!disabled && id != current) onFormatSelected(id);
+      },
     );
   }
 }

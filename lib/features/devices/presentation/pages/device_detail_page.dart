@@ -110,11 +110,10 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                               width: 50,
                               height: 50,
                               decoration: BoxDecoration(
-                                color: AppColors.surfaceRecessed,
+                                color: AppColors.surfaceElevated,
                                 borderRadius: BorderRadius.circular(
                                   AppRadii.sm,
                                 ),
-                                border: Border.all(color: AppColors.borderDark),
                               ),
                               child: Center(
                                 child: AppIcon(

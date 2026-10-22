@@ -95,7 +95,7 @@ void main() {
       expect(find.widgetWithText(AppButton, 'Adicionar fonte'), findsOneWidget);
       expect(
         tester.widget<BottomNavigation>(find.byType(BottomNavigation)).selected,
-        3,
+        4,
       );
       await fixtures.screenshot(tester, 'iptv-unlinked');
     },
@@ -212,7 +212,7 @@ void main() {
   );
 
   testWidgets(
-    'personal catalog and search are available on Home without family',
+    'personal catalog on Home and search in Busca are available without family',
     (tester) async {
       final repo = UnlinkedIptvRepository(workspaceId: 'private-iptv')
         ..sources = [
@@ -222,8 +222,11 @@ void main() {
             'version': 'v',
           }),
         ];
-      await navigation.launch(tester, repo);
+      final container = await navigation.launch(tester, repo);
       expect(find.text('Sua Home ainda está vazia'), findsOneWidget);
+      // Search lives in the Busca tab of the main menu.
+      container.read(routerProvider).go('/search');
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField), 'avail');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();

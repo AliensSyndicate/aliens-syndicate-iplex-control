@@ -98,7 +98,11 @@ class _NameFormState extends ConsumerState<NameForm> {
               ),
             ],
             const SizedBox(height: AppTokens.lg),
-            AppButton(label: context.l.save, busy: busy, onPressed: save),
+            AppButton.primary(
+              label: context.l.save,
+              busy: busy,
+              onPressed: save,
+            ),
           ],
         ),
       ),

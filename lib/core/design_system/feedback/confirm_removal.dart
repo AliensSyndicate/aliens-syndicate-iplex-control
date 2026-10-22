@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../components/app_modal_sheet.dart';
 import '../components/neumorphic_action_button.dart';
+import '../components/sheet_rows.dart';
+import '../icons.dart';
 import '../localized_context.dart';
 import '../tokens.dart';
 import 'failure_feedback.dart';
 
-/// Physical Neumorphic Modal Sheet Confirmation
+/// Destructive confirmation sheet: red mark, title, body, red confirm and
+/// grey cancel.
 Future<bool> confirmRemoval(
   BuildContext context, {
   String? title,
@@ -15,6 +18,7 @@ Future<bool> confirmRemoval(
   final l = context.l;
   final result = await showAppModalSheet<bool>(
     context: context,
+    leading: const DangerMark(icon: AppIcons.delete),
     title: title ?? l.confirmRemoval,
     description: body ?? l.removalBody,
     actions: [
@@ -53,6 +57,7 @@ Future<bool> confirmAndRun(
       builder: (sheetContext, setState) => PopScope(
         canPop: !busy,
         child: AppModalSheet(
+          leading: const DangerMark(icon: AppIcons.delete),
           title: title,
           description: body,
           content: error == null

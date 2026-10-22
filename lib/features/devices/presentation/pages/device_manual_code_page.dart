@@ -105,7 +105,7 @@ class _DeviceManualCodePageState extends ConsumerState<DeviceManualCodePage> {
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          AppButton(label: l.save, busy: busy, onPressed: submit),
+          AppButton.primary(label: l.save, busy: busy, onPressed: submit),
         ],
       ),
     );

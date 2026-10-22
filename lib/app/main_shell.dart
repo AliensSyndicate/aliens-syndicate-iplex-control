@@ -12,11 +12,16 @@ class MainShell extends StatelessWidget {
 
   static const _rootRoutes = {
     '/home',
+    '/search',
     '/users',
     '/devices',
     '/iptv',
     '/account',
   };
+
+  /// Shell branch of each menu item (Home, Busca, Família, Dispositivos,
+  /// IPTV). The account branch (4) is reached from the Home avatar.
+  static const menuBranches = [0, 5, 1, 2, 3];
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +40,13 @@ class MainShell extends StatelessWidget {
               right: 0,
               bottom: 0,
               child: BottomNavigation(
-                selected: shell.currentIndex,
-                onSelected: (i) =>
-                    shell.goBranch(i, initialLocation: i == shell.currentIndex),
+                selected: menuBranches.indexOf(shell.currentIndex) < 0
+                    ? null
+                    : menuBranches.indexOf(shell.currentIndex),
+                onSelected: (i) => shell.goBranch(
+                  menuBranches[i],
+                  initialLocation: menuBranches[i] == shell.currentIndex,
+                ),
               ),
             ),
         ],

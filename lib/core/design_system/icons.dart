@@ -4,7 +4,7 @@ abstract final class AppIcons {
   static const home = HugeIcons.strokeRoundedHome01,
       users = HugeIcons.strokeRoundedUserGroup,
       devices = HugeIcons.strokeRoundedTv01,
-      iptv = HugeIcons.strokeRoundedPlaylist01,
+      iptv = HugeIcons.strokeRoundedAntenna,
       account = HugeIcons.strokeRoundedUserCircle;
   static const up = HugeIcons.strokeRoundedArrowUp01,
       down = HugeIcons.strokeRoundedArrowDown01,
@@ -20,6 +20,7 @@ abstract final class AppIcons {
       qr = HugeIcons.strokeRoundedQrCode,
       favorite = HugeIcons.strokeRoundedFavourite,
       person = HugeIcons.strokeRoundedUser,
+      series = HugeIcons.strokeRoundedTv02,
       instagram = HugeIcons.strokeRoundedInstagram,
       x = HugeIcons.strokeRoundedNewTwitter,
       facebook = HugeIcons.strokeRoundedFacebook01,

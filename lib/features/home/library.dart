@@ -5,7 +5,11 @@ import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import 'details_button.dart';
+import '../../core/data/app_sharing.dart';
+import '../watch_on_tv/watch_on_tv_sheet.dart';
+import 'content_details_page.dart';
 import 'home_data.dart';
+import 'home_widgets.dart';
 import 'home_providers.dart';
 import 'metadata_service.dart';
 
@@ -74,7 +78,7 @@ class LibraryButtons extends ConsumerStatefulWidget {
     this.pageStyle = false,
   });
 
-  /// Title details page: icon actions of the top bar.
+  /// Title details page: actions of the details action row.
   final bool pageStyle;
   final Entry item;
   final HomeProfile profile;
@@ -126,72 +130,187 @@ class _LibraryButtonsState extends ConsumerState<LibraryButtons> {
     final favorite = saved[LibraryList.favorites] ?? false;
     final wished = saved[LibraryList.wishlist] ?? false;
     if (widget.pageStyle) {
-      // Details page top bar: icons only, filled when saved.
+      // Details action row: Favorito / Lista de desejos, equal widths.
       return Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DetailsBarIcon(
-            key: const Key('details-favorite'),
-            busy: busy == LibraryList.favorites,
-            label: favorite ? l.unfavoriteAction : l.favoriteAction,
-            material: favorite
-                ? Icons.favorite_rounded
-                : Icons.favorite_border_rounded,
-            onPressed: () => toggle(LibraryList.favorites),
+          Expanded(
+            child: DetailsAction(
+              key: const Key('details-favorite'),
+              busy: busy == LibraryList.favorites,
+              label: l.favoriteLabel,
+              active: favorite,
+              material: favorite
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              onPressed: () => toggle(LibraryList.favorites),
+            ),
           ),
           if (!widget.item.isChannel)
-            DetailsBarIcon(
-              key: const Key('details-wishlist'),
-              busy: busy == LibraryList.wishlist,
-              label: wished ? l.unsaveAction : l.saveAction,
-              material: wished
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
-              onPressed: () => toggle(LibraryList.wishlist),
+            Expanded(
+              child: DetailsAction(
+                key: const Key('details-wishlist'),
+                busy: busy == LibraryList.wishlist,
+                label: l.wishlistLabel,
+                active: wished,
+                material: wished
+                    ? Icons.bookmark_rounded
+                    : Icons.bookmark_border_rounded,
+                onPressed: () => toggle(LibraryList.wishlist),
+              ),
             ),
         ],
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppButton(
-          key: const Key('details-favorite'),
-          busy: busy == LibraryList.favorites,
-          label: favorite ? l.unfavoriteAction : l.favoriteAction,
-          onPressed: () => toggle(LibraryList.favorites),
-        ),
-        if (!widget.item.isChannel) ...[
-          const SizedBox(height: AppSpacing.md),
-          AppButton(
-            key: const Key('details-wishlist'),
-            busy: busy == LibraryList.wishlist,
-            label: wished ? l.unsaveAction : l.saveAction,
-            onPressed: () => toggle(LibraryList.wishlist),
-          ),
-        ],
-      ],
-    );
+    return const SizedBox.shrink();
   }
 }
 
-/// Library actions from any card (long press): same toggles as the page.
+/// Content options (reference: "Modal Sheet – Opções de conteúdo"), from
+/// the "⋮" of a card or a long press: Assistir na TV (catalog items),
+/// Favoritos, Lista de desejos (titles), Compartilhar and Ver detalhes.
+/// Only existing actions; nothing here creates new lists.
 Future<void> showLibraryActions(
   BuildContext context, {
   required Entry item,
   required HomeData home,
-}) async {
-  final profile = home.profile;
-  if (profile == null || !profile.persistent) return;
-  await showAppModalSheet<void>(
-    context: context,
-    title: item.name,
-    content: LibraryButtons(
-      item: item,
-      profile: profile,
-      saved: {
-        for (final list in LibraryList.values) list: home.isSaved(list, item),
-      },
-    ),
-  );
+}) => showAppModalSheet<void>(
+  context: context,
+  builder: (_) => AppModalSheet(
+    content: _ContentOptions(item: item, home: home, host: context),
+  ),
+);
+
+class _ContentOptions extends ConsumerStatefulWidget {
+  const _ContentOptions({
+    required this.item,
+    required this.home,
+    required this.host,
+  });
+  final Entry item;
+  final HomeData home;
+
+  /// Page behind the sheet (navigation after the sheet closes).
+  final BuildContext host;
+
+  @override
+  ConsumerState<_ContentOptions> createState() => _ContentOptionsState();
+}
+
+class _ContentOptionsState extends ConsumerState<_ContentOptions> {
+  late final saved = {
+    for (final list in LibraryList.values)
+      list: widget.home.isSaved(list, widget.item),
+  };
+  LibraryList? busy;
+
+  Future<void> toggle(LibraryList list) async {
+    final profile = widget.home.profile;
+    if (busy != null || profile == null) return;
+    final was = saved[list]!;
+    setState(() => busy = list);
+    try {
+      await saveToLibrary(
+        ref,
+        list: list,
+        item: widget.item,
+        profile: profile,
+        remove: was,
+      );
+      if (mounted) setState(() => saved[list] = !was);
+    } catch (e) {
+      if (mounted) showFailure(context, e);
+    } finally {
+      if (mounted) setState(() => busy = null);
+    }
+  }
+
+  void closeThen(void Function(BuildContext host) action) {
+    Navigator.of(context).pop();
+    if (widget.host.mounted) action(widget.host);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    final item = widget.item;
+    final persistent = widget.home.profile?.persistent ?? false;
+    final favorite = saved[LibraryList.favorites]!;
+    final wished = saved[LibraryList.wishlist]!;
+    final kind = switch (item.kind) {
+      'channel' => l.channelKind,
+      'series' => l.seriesKind,
+      _ => l.movieKind,
+    };
+    return Column(
+      key: const Key('content-options'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SheetHeader(
+          title: item.name,
+          subtitle: [kind, if (item.year case final y?) '$y'].join(' • '),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.xs),
+            child: SizedBox(
+              width: 48,
+              height: 72,
+              child: Artwork(
+                item: item,
+                fit: item.isChannel ? BoxFit.contain : BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+        if (!item.isEditorial)
+          SheetActionRow(
+            key: const Key('option-watch'),
+            icon: AppIcons.play,
+            label: l.watchOnTv,
+            onTap: () => closeThen((host) => showWatchOnTv(host, item)),
+          ),
+        if (persistent) ...[
+          SheetActionRow(
+            key: const Key('option-favorite'),
+            material: favorite
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            active: favorite,
+            label: favorite ? l.removeFromFavorites : l.addToFavorites,
+            onTap: busy == null ? () => toggle(LibraryList.favorites) : null,
+          ),
+          if (!item.isChannel)
+            SheetActionRow(
+              key: const Key('option-wishlist'),
+              material: wished
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
+              active: wished,
+              label: wished ? l.removeFromWishlist : l.addToWishlist,
+              onTap: busy == null ? () => toggle(LibraryList.wishlist) : null,
+            ),
+        ],
+        SheetActionRow(
+          key: const Key('option-share'),
+          material: Icons.ios_share_rounded,
+          label: l.share,
+          onTap: () async {
+            final title = item.year == null
+                ? item.name
+                : '${item.name} (${item.year})';
+            try {
+              await AppSharing.share(AppSharing.message(title, title));
+            } catch (e) {
+              if (context.mounted) showFailure(context, e);
+            }
+          },
+        ),
+        SheetActionRow(
+          key: const Key('option-details'),
+          material: Icons.info_outline_rounded,
+          label: l.seeDetails,
+          onTap: () => closeThen((host) => openTitle(host, item)),
+        ),
+      ],
+    );
+  }
 }

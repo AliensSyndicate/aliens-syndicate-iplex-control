@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/components.dart';
 
-/// Loading indicator adhering to Dark Industrial Neumorphism.
+/// Loading indicator following the Design System.
 class LegalDocumentLoadingIndicator extends StatelessWidget {
   const LegalDocumentLoadingIndicator({
     super.key,

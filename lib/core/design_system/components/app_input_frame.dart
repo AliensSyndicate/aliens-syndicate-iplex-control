@@ -62,19 +62,20 @@ class AppInputFrame extends StatelessWidget {
                 height: height,
                 child: GraphiteSurface(
                   recessed: true,
-                  radius: AppRadii.pill,
+                  radius: AppRadii.sm,
                   child: AnimatedContainer(
                     duration: AppMotion.duration(context, AppMotion.selection),
                     padding: padding,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                      // Flat input: outline only on focus or error.
                       border: Border.all(
                         color: focused
-                            ? Colors.white
+                            ? AppColors.textPrimary
                             : errorText != null
                             ? AppColors.error
-                            : AppColors.borderLight,
+                            : Colors.transparent,
                         width: focused ? 1.5 : AppDimensions.borderWidth,
                       ),
                     ),

@@ -1,5 +1,4 @@
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
-import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_widgets.dart';
@@ -228,7 +227,9 @@ void main() {
 
   testWidgets('search failure is explicit and can be retried', (tester) async {
     final repo = repoWith({})..catalogFailure = true;
-    await navigation.launch(tester, repo);
+    final c = await navigation.launch(tester, repo);
+    c.read(routerProvider).go('/search');
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), 'avail');
     await tester.pump(const Duration(milliseconds: 351));
     await tester.pumpAndSettle();
@@ -357,7 +358,7 @@ void main() {
   });
 
   testWidgets(
-    'now playing bar: floating above the menu, Home only, opens the title',
+    'now playing item: top of the Home, card background, opens the title',
     (tester) async {
       final repo = repoWith({
         'profile': profile,
@@ -378,14 +379,30 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('now-playing-progress')), findsOneWidget);
-      expect(find.byKey(const Key('now-playing-subtitle')), findsNothing);
-      // Floating: side margins and above the main menu.
+      // Kind and runtime of what is playing (100 s ≈ 2 min).
+      expect(find.text('Movie · 2 min'), findsOneWidget);
+      // Top of the Home: between the tabs and "Continue watching", on the
+      // screen background.
       final rect = tester.getRect(bar);
-      expect(rect.left, 16);
-      expect(rect.right, 390 - 16);
+      expect(
+        rect.top,
+        greaterThan(tester.getRect(find.byKey(const Key('home-tabs'))).bottom),
+      );
       expect(
         rect.bottom,
-        lessThanOrEqualTo(tester.getTopLeft(find.byType(BottomNavigation)).dy),
+        lessThan(tester.getTopLeft(find.text('Continue watching')).dy),
+      );
+      expect(
+        (tester.widget<Container>(bar).decoration as BoxDecoration).color,
+        AppColors.surfaceDefault,
+      );
+      // Progress in the colors of the Continue watching cards.
+      final track = tester.widget<LinearProgressIndicator>(
+        find.byKey(const Key('now-playing-progress')),
+      );
+      expect(
+        [track.color, track.backgroundColor],
+        [AppColors.primary, AppColors.surfaceElevated],
       );
       // Only on the Home.
       c.read(routerProvider).go('/devices');
@@ -405,26 +422,32 @@ void main() {
     },
   );
 
-  testWidgets('now playing bar: channel shows the name only, no progress', (
-    tester,
-  ) async {
-    await navigation.launch(
-      tester,
-      repoWith({
-        'profile': profile,
-        'library': {
-          'favorites': [item('ch1', 'Canal Notícias', 'channel')],
-        },
-      }),
-    );
-    final bar = find.byKey(const Key('now-playing-bar'));
-    expect(
-      find.descendant(of: bar, matching: find.text('Canal Notícias')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('now-playing-progress')), findsNothing);
-    expect(find.byKey(const Key('now-playing-subtitle')), findsNothing);
-  });
+  testWidgets(
+    'now playing item: channel shows its name and "Live", no progress',
+    (tester) async {
+      await navigation.launch(
+        tester,
+        repoWith({
+          'profile': profile,
+          'library': {
+            'favorites': [item('ch1', 'Canal Notícias', 'channel')],
+          },
+        }),
+      );
+      final bar = find.byKey(const Key('now-playing-bar'));
+      expect(
+        find.descendant(of: bar, matching: find.text('Canal Notícias')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('now-playing-progress')), findsNothing);
+      // Channels: kind only (no runtime, no progress).
+      expect(find.text('Live'), findsWidgets);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('now-playing-subtitle'))).data,
+        'Live',
+      );
+    },
+  );
 
   testWidgets(
     'now playing bar: progress under the name, 2:3 poster, track without progress',

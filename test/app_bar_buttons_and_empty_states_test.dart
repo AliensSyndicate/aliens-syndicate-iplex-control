@@ -1,4 +1,3 @@
-import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
@@ -18,91 +17,86 @@ void main() {
   setUpAll(fixtures.loadTestFont);
 
   group('App bar button sizes and empty states tests', () {
-    testWidgets(
-      'Add buttons in app bar and back buttons have the exact same size as main menu buttons',
-      (tester) async {
-        final container = await navigation.launch(
-          tester,
-          navigation.SessionRepository(
-            uid: 'u',
-            linked: true,
-            administrator: true,
-          ),
-          location: '/home',
-        );
-        final router = container.read(routerProvider);
+    testWidgets('Add buttons in app bar and back buttons keep the 48 dp size', (
+      tester,
+    ) async {
+      final container = await navigation.launch(
+        tester,
+        navigation.SessionRepository(
+          uid: 'u',
+          linked: true,
+          administrator: true,
+        ),
+        location: '/home',
+      );
+      final router = container.read(routerProvider);
 
-        // Find a bottom menu button size
-        final bottomButtons = find.descendant(
-          of: find.byType(BottomNavigation),
-          matching: find.byType(CircularButton),
-        );
-        expect(bottomButtons, findsNWidgets(5));
-        final menuBtnSize = tester.getSize(bottomButtons.first);
-        expect(menuBtnSize.width, equals(AppDimensions.touch));
-        expect(menuBtnSize.height, equals(AppDimensions.touch));
+      // Main menu: five items with at least the 48 dp touch target.
+      for (var i = 0; i < 5; i++) {
+        final size = tester.getSize(find.byKey(ValueKey('main-menu-$i')));
+        expect(size.height, greaterThanOrEqualTo(AppDimensions.touch));
+      }
 
-        // 1. Users page add button size
-        router.go('/users');
-        await tester.pumpAndSettle();
-        final usersAdd = find.descendant(
-          of: find.byType(UsersPage),
-          matching: find.byWidgetPredicate(
-            (w) => w is CircularButton && w.icon == AppIcons.add,
-          ),
-        );
-        expect(usersAdd, findsOneWidget);
-        final usersAddBtn = tester.widget<CircularButton>(usersAdd);
-        expect(usersAddBtn.size, equals(AppDimensions.touch));
-        final usersAddSize = tester.getSize(usersAdd);
-        expect(usersAddSize, equals(menuBtnSize));
+      // 1. Users page add button size
+      router.go('/users');
+      await tester.pumpAndSettle();
+      final usersAdd = find.descendant(
+        of: find.byType(UsersPage),
+        matching: find.byWidgetPredicate(
+          (w) => w is CircularButton && w.icon == AppIcons.add,
+        ),
+      );
+      expect(usersAdd, findsOneWidget);
+      final usersAddBtn = tester.widget<CircularButton>(usersAdd);
+      expect(usersAddBtn.size, equals(AppDimensions.touch));
+      final usersAddSize = tester.getSize(usersAdd);
+      expect(usersAddSize, equals(const Size.square(AppDimensions.touch)));
 
-        // 2. Devices page add button size
-        router.go('/devices');
-        await tester.pumpAndSettle();
-        final devicesAdd = find.descendant(
-          of: find.byType(DevicesPage),
-          matching: find.byWidgetPredicate(
-            (w) => w is CircularButton && w.icon == AppIcons.add,
-          ),
-        );
-        expect(devicesAdd, findsOneWidget);
-        final devicesAddBtn = tester.widget<CircularButton>(devicesAdd);
-        expect(devicesAddBtn.size, equals(AppDimensions.touch));
-        final devicesAddSize = tester.getSize(devicesAdd);
-        expect(devicesAddSize, equals(menuBtnSize));
+      // 2. Devices page add button size
+      router.go('/devices');
+      await tester.pumpAndSettle();
+      final devicesAdd = find.descendant(
+        of: find.byType(DevicesPage),
+        matching: find.byWidgetPredicate(
+          (w) => w is CircularButton && w.icon == AppIcons.add,
+        ),
+      );
+      expect(devicesAdd, findsOneWidget);
+      final devicesAddBtn = tester.widget<CircularButton>(devicesAdd);
+      expect(devicesAddBtn.size, equals(AppDimensions.touch));
+      final devicesAddSize = tester.getSize(devicesAdd);
+      expect(devicesAddSize, equals(const Size.square(AppDimensions.touch)));
 
-        // 3. IPTV page add button size
-        router.go('/iptv');
-        await tester.pumpAndSettle();
-        final iptvAdd = find.descendant(
-          of: find.byType(ListIptvPage),
-          matching: find.byWidgetPredicate(
-            (w) => w is CircularButton && w.icon == AppIcons.add,
-          ),
-        );
-        expect(iptvAdd, findsOneWidget);
-        final iptvAddBtn = tester.widget<CircularButton>(iptvAdd);
-        expect(iptvAddBtn.size, equals(AppDimensions.touch));
-        final iptvAddSize = tester.getSize(iptvAdd);
-        expect(iptvAddSize, equals(menuBtnSize));
+      // 3. IPTV page add button size
+      router.go('/iptv');
+      await tester.pumpAndSettle();
+      final iptvAdd = find.descendant(
+        of: find.byType(ListIptvPage),
+        matching: find.byWidgetPredicate(
+          (w) => w is CircularButton && w.icon == AppIcons.add,
+        ),
+      );
+      expect(iptvAdd, findsOneWidget);
+      final iptvAddBtn = tester.widget<CircularButton>(iptvAdd);
+      expect(iptvAddBtn.size, equals(AppDimensions.touch));
+      final iptvAddSize = tester.getSize(iptvAdd);
+      expect(iptvAddSize, equals(const Size.square(AppDimensions.touch)));
 
-        // 4. Back button in PageTemplate (navigate to child screen /account/settings)
-        router.go('/account/settings');
-        await tester.pumpAndSettle();
-        final backButton = find.descendant(
-          of: find.byType(PageTemplate),
-          matching: find.byWidgetPredicate(
-            (w) => w is CircularButton && w.icon == AppIcons.left,
-          ),
-        );
-        expect(backButton, findsOneWidget);
-        final backBtnWidget = tester.widget<CircularButton>(backButton);
-        expect(backBtnWidget.size, equals(AppDimensions.touch));
-        final backBtnSize = tester.getSize(backButton);
-        expect(backBtnSize, equals(menuBtnSize));
-      },
-    );
+      // 4. Back button in PageTemplate (navigate to child screen /account/settings)
+      router.go('/account/settings');
+      await tester.pumpAndSettle();
+      final backButton = find.descendant(
+        of: find.byType(PageTemplate),
+        matching: find.byWidgetPredicate(
+          (w) => w is CircularButton && w.icon == AppIcons.left,
+        ),
+      );
+      expect(backButton, findsOneWidget);
+      final backBtnWidget = tester.widget<CircularButton>(backButton);
+      expect(backBtnWidget.size, equals(AppDimensions.touch));
+      final backBtnSize = tester.getSize(backButton);
+      expect(backBtnSize, equals(const Size.square(AppDimensions.touch)));
+    });
 
     testWidgets('Main screens do not display subtitles below titles', (
       tester,
@@ -118,7 +112,7 @@ void main() {
       );
       final router = container.read(routerProvider);
       final l10n = AppLocalizations.of(
-        tester.element(find.byKey(const Key('home-search'))),
+        tester.element(find.byKey(const Key('home-title'))),
       );
 
       // Home has no subtitle
@@ -214,7 +208,7 @@ void main() {
         final surfaceSize = tester.getSize(surfaceFinder);
         expect(surfaceSize.height, equals(56.0));
 
-        // Unfocused border
+        // Unfocused: flat, no outline
         final containerFinder = find.descendant(
           of: surfaceFinder,
           matching: find.byType(AnimatedContainer),
@@ -225,7 +219,7 @@ void main() {
         );
         BoxDecoration dec = container.decoration as BoxDecoration;
         Border border = dec.border as Border;
-        expect(border.top.color, equals(AppColors.borderLight));
+        expect(border.top.color, equals(Colors.transparent));
 
         // 3. Focus the field
         focusNode.requestFocus();

@@ -2,8 +2,73 @@ import 'package:flutter/material.dart';
 
 import 'components.dart';
 
-/// Loading layout only. No invented titles, images or live content.
-/// Static bones respect reduced motion and expose one loading announcement.
+/// Gentle pulse shared by every skeleton of the app (still when the system
+/// asks for reduced motion).
+class AppSkeletonPulse extends StatefulWidget {
+  const AppSkeletonPulse({super.key, required this.child});
+  final Widget child;
+  @override
+  State<AppSkeletonPulse> createState() => _AppSkeletonPulseState();
+}
+
+class _AppSkeletonPulseState extends State<AppSkeletonPulse>
+    with SingleTickerProviderStateMixin {
+  late final controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      controller
+        ..stop()
+        ..value = 1;
+    } else if (!controller.isAnimating) {
+      controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: Tween<double>(begin: 0.45, end: 1).animate(controller),
+    child: widget.child,
+  );
+}
+
+/// One flat skeleton block (no card, no shadow).
+class AppSkeletonBlock extends StatelessWidget {
+  const AppSkeletonBlock({
+    super.key,
+    this.width,
+    required this.height,
+    this.radius = AppRadii.xs,
+    this.circle = false,
+  });
+  final double? width;
+  final double height, radius;
+  final bool circle;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    height: height,
+    decoration: BoxDecoration(
+      color: AppColors.surfaceElevated,
+      shape: circle ? BoxShape.circle : BoxShape.rectangle,
+      borderRadius: circle ? null : BorderRadius.circular(radius),
+    ),
+  );
+}
+
+/// Generic list skeleton (rows of avatar + two lines). Loading layout only:
+/// no invented titles, images or live content; one loading announcement.
 class AppLoadingSkeleton extends StatelessWidget {
   const AppLoadingSkeleton({super.key, this.rows = 3});
   final int rows;
@@ -12,33 +77,32 @@ class AppLoadingSkeleton extends StatelessWidget {
     label: context.l.loading,
     liveRegion: true,
     child: ExcludeSemantics(
-      child: Column(
-        children: List.generate(
-          rows,
-          (index) => Padding(
-            padding: const EdgeInsets.only(bottom: AppTokens.md),
-            child: AppSurface(
-              padding: const EdgeInsets.all(AppTokens.md),
+      child: AppSkeletonPulse(
+        child: Column(
+          children: List.generate(
+            rows,
+            (index) => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Row(
                 children: [
-                  const _SkeletonBone(
-                    width: AppTokens.touch,
-                    height: AppTokens.touch,
+                  AppSkeletonBlock(
+                    width: AppDimensions.touch,
+                    height: AppDimensions.touch,
                     circle: true,
                   ),
-                  const SizedBox(width: AppTokens.md),
-                  const Expanded(
+                  SizedBox(width: AppSpacing.md),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         FractionallySizedBox(
                           widthFactor: 0.7,
-                          child: _SkeletonBone(height: AppTokens.md),
+                          child: AppSkeletonBlock(height: 14),
                         ),
-                        SizedBox(height: AppTokens.sm),
+                        SizedBox(height: AppSpacing.sm),
                         FractionallySizedBox(
                           widthFactor: 0.45,
-                          child: _SkeletonBone(height: AppTokens.sm),
+                          child: AppSkeletonBlock(height: 12),
                         ),
                       ],
                     ),
@@ -49,23 +113,6 @@ class AppLoadingSkeleton extends StatelessWidget {
           ),
         ),
       ),
-    ),
-  );
-}
-
-class _SkeletonBone extends StatelessWidget {
-  const _SkeletonBone({this.width, required this.height, this.circle = false});
-  final double? width;
-  final double height;
-  final bool circle;
-  @override
-  Widget build(BuildContext context) => Container(
-    width: width,
-    height: height,
-    decoration: BoxDecoration(
-      color: AppColors.borderLight,
-      shape: circle ? BoxShape.circle : BoxShape.rectangle,
-      borderRadius: circle ? null : BorderRadius.circular(AppRadii.sm),
     ),
   );
 }

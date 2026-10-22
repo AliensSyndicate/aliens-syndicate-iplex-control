@@ -60,17 +60,16 @@ final _episodeLabelProvider = FutureProvider.autoDispose
           : '${episode.season}|${int.tryParse(episode.number) ?? episode.number}';
     }, retry: (retryCount, error) => null);
 
-/// Floating "now playing" bar of the Home (Spotify style): artwork, name,
-/// episode for series and progress for movies/series. Sits above the main
-/// menu with margins; a tap opens the title.
+/// "Now playing" item of the Home (Meu iPlex, between the tabs and the
+/// rows): artwork, name, kind with runtime (and episode for series) and the
+/// progress for movies/series; a tap opens the title.
 class NowPlayingBar extends ConsumerWidget {
   const NowPlayingBar({super.key, required this.playing});
   final NowPlaying playing;
 
-  /// Poster in 2:3 (channel logos keep a square), the card around it, and
-  /// the gap above the menu.
+  /// Poster in 2:3 (channel logos keep a square) and the item around it.
   static const posterHeight = 72.0, posterWidth = posterHeight * 2 / 3;
-  static const height = posterHeight + 2 * AppSpacing.sm, gap = AppSpacing.sm;
+  static const height = posterHeight + 2 * AppSpacing.sm;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -79,7 +78,9 @@ class NowPlayingBar extends ConsumerWidget {
     final channel = item.isChannel;
     // Movies and series always show the track (empty without progress).
     final progress = channel ? null : (item.progress?.fraction ?? 0);
-    String? subtitle;
+    // "Filme · 1h 58min", "Série · T1E2 · 45min", "Ao vivo". The runtime is
+    // the duration of what is being watched (saved with the progress).
+    String? episode;
     final episodeId = item.episodeId;
     if (item.kind == 'series' && episodeId != null) {
       final raw = ref
@@ -95,27 +96,35 @@ class NowPlayingBar extends ConsumerWidget {
       if (raw != null) {
         final [season, number] = raw.split('|');
         final n = int.tryParse(number);
-        subtitle = n == null
+        episode = n == null
             ? l.seasonNumber(int.parse(season))
-            : l.seasonEpisodeLabel(int.parse(season), n);
+            : l.seasonEpisodeShort(int.parse(season), '$n');
       }
     }
+    final seconds = item.progress?.duration;
+    final minutes = seconds == null || seconds <= 0
+        ? null
+        : (seconds / 60).round();
+    final subtitle = [
+      switch (item.kind) {
+        'channel' => l.channelKind,
+        'series' => l.seriesKind,
+        _ => l.movieKind,
+      },
+      if (item.kind == 'series') ?episode,
+      if (!channel && minutes != null && minutes > 0)
+        formatRuntime(context, minutes),
+    ].join(' · ');
     return Semantics(
       container: true,
-      label: [item.name, ?subtitle].join(', '),
+      label: [item.name, subtitle].join(', '),
       child: Container(
         key: const Key('now-playing-bar'),
         height: height,
+        // Card surface: slightly lighter than the screen to stand out.
         decoration: BoxDecoration(
-          color: AppColors.surfaceElevated,
+          color: AppColors.surfaceDefault,
           borderRadius: BorderRadius.circular(AppRadii.md),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.castShadow,
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -168,7 +177,7 @@ class NowPlayingBar extends ConsumerWidget {
                                                 color: AppColors.textPrimary,
                                               ),
                                         ),
-                                        if (subtitle != null)
+                                        if (subtitle.isNotEmpty)
                                           Text(
                                             subtitle,
                                             key: const Key(
@@ -197,8 +206,11 @@ class NowPlayingBar extends ConsumerWidget {
                                         key: const Key('now-playing-progress'),
                                         value: progress,
                                         minHeight: 3,
-                                        color: AppColors.textPrimary,
-                                        backgroundColor: AppColors.textDisabled,
+                                        // Same colors as the Continue
+                                        // watching cards.
+                                        color: AppColors.primary,
+                                        backgroundColor:
+                                            AppColors.surfaceElevated,
                                       ),
                                     ),
                                 ],

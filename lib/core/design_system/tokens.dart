@@ -3,59 +3,98 @@ import 'package:flutter/services.dart';
 
 import 'components/horizontal_page_transition.dart';
 
-/// CODEX — iPlex | DARK INDUSTRIAL NEUMORPHISM DESIGN SYSTEM
-/// Centralized Design Tokens based on physical matte graphite hardware.
+/// iPlex Design System — dark minimalist, green as the main color
+/// (Spotify-inspired, 22/10/2026). Every color, size and radius of the app
+/// comes from these tokens.
 
 abstract final class AppColors {
-  // Calibrated Physical Graphite Palette from Reference Image
-  static const backgroundPrimary = Color(0xFF39373A);
-  static const backgroundDeep = Color(0xFF29292B);
-  static const surfaceDefault = Color(0xFF353537);
-  static const surfaceElevated = Color(0xFF414143);
-  static const surfaceRecessed = Color(0xFF28282A);
-  static const borderSubtle = Color(0xFF414143);
-  static const borderLight = Color(0x17FFFFFF); // ~9% white highlight
-  static const borderDark = Color(0x66000000); // ~40% black groove
-  static const textPrimary = Color(0xFFE5E3E5);
-  static const textSecondary = Color(0xFFB5B4B6);
-  static const textDisabled = Color(0xFF6B696B);
+  // Dark minimalist palette (Spotify-inspired redesign, 22/10/2026): near
+  // black screens and menu, neutral grey surfaces, green as the main color.
+  static const backgroundPrimary = Color(0xFF121212);
+  static const backgroundDeep = Color(0xFF121212);
+
+  /// Cards, list tiles, panels.
+  static const surfaceDefault = Color(0xFF1F1F1F);
+
+  /// Buttons, inputs, unselected tabs/chips, skeleton blocks.
+  static const surfaceElevated = Color(0xFF2A2A2A);
+
+  /// Pressed / highlighted surfaces.
+  static const surfacePressed = Color(0xFF333333);
+
+  /// Bottom sheets and recessed areas.
+  static const surfaceRecessed = Color(0xFF181818);
+
+  /// Main menu (and the system navigation bar under it): translucent page
+  /// background, so the content shows through.
+  static const navigationBar = Color(0xD9121212);
+
+  /// Dark veil over images (play marks, camera overlays).
+  static const scrim = Color(0x8C000000);
+
+  /// Fade of a full-bleed cover into the black page (top to bottom).
+  static const coverFade = [
+    Color(0x59000000),
+    Color(0x00000000),
+    Color(0x00000000),
+    Color(0x99000000),
+    Color(0xE6000000),
+    Color(0xFF000000),
+  ];
+  static const borderSubtle = Color(0xFF2A2A2A);
+
+  /// Hairline divider / outline on dark surfaces.
+  static const borderLight = Color(0x1AFFFFFF);
+  static const borderDark = Color(0x14FFFFFF);
+  static const textPrimary = Color(0xFFFFFFFF);
+  static const textSecondary = Color(0xFFB3B3B3);
+  static const textDisabled = Color(0xFF6A6A6A);
   static const shadowDark = Color(0xFF000000);
   static const shadowLight = Color(0xFFFFFFFF);
 
   // Semantic & Brand Colors
-  static const accent = Color(0xFFE5E3E5);
-  static const brandBlue = Color(0xFF007AFF);
-  static const success = Color(0xFF34C759);
-  static const warning = Color(0xFFCCBA96);
-  static const error = Color.fromARGB(255, 186, 71, 63);
-  static const disabled = Color(0xFF636163);
+  /// Main color of the app (prototype green): selection, active state,
+  /// primary action, online status.
+  static const primary = Color(0xFFFFFFFF);
+  static const onPrimary = Color(0xFF000000);
 
-  // Material values sampled and calibrated against the graphite reference.
+  /// Active / highlighted state (same as [primary]).
+  static const accent = primary;
+
+  /// Legacy name of the focus/selection color: the main green.
+  static const brandBlue = primary;
+  static const success = primary;
+  static const warning = Color(0xFFCCBA96);
+  static const error = Color(0xFFE5534B);
+  static const disabled = Color(0xFF535353);
+
+  // Flat surfaces only: the former bevel/shadow tokens resolve to the flat
+  // palette so no screen paints the old graphite material.
   static const backgroundGradient = [
-    Color(0xFF403E41),
-    Color(0xFF39373C),
-    Color(0xFF2C2C2C),
+    backgroundDeep,
+    backgroundDeep,
+    backgroundDeep,
   ];
-  static const grainLight = Color(0x08FFFFFF);
-  static const grainDark = Color(0x09000000);
-  static const groove = Color(0xFF101012);
-  static const edgeShadow = Color(0xFF1A1A1C);
-  static const edgeLight = Color(0xFF636365);
-  static const faceLight = Color(0xFF4C4C4E);
-  static const castShadow = Color(0x99000000);
-  static const ambientHighlight = Color(0x16FFFFFF);
-  static const insetShadow = Color(0xCC000000);
-  static const insetHighlight = Color(0x29FFFFFF);
-  static const panelGradient = [Color(0xFF403E41), Color(0xFF353336)];
-  static const buttonGradient = [Color(0xFF28272A), Color(0xFF3F3D40)];
-  static const elevatedGradient = [Color(0xFF3C3C3E), Color(0xFF2B2B2D)];
-  static const pressedGradient = [Color(0xFF252527), Color(0xFF303032)];
+  static const grainLight = Color(0x00FFFFFF);
+  static const grainDark = Color(0x00000000);
+  static const groove = surfaceRecessed;
+  static const edgeShadow = surfaceRecessed;
+  static const edgeLight = surfacePressed;
+  static const faceLight = surfacePressed;
+  static const castShadow = Color(0x00000000);
+  static const ambientHighlight = Color(0x00FFFFFF);
+  static const insetShadow = Color(0x00000000);
+  static const insetHighlight = Color(0x00FFFFFF);
+  static const panelGradient = [surfaceDefault, surfaceDefault];
+  static const buttonGradient = [surfaceElevated, surfaceElevated];
+  static const elevatedGradient = [surfaceElevated, surfaceElevated];
+  static const pressedGradient = [surfacePressed, surfacePressed];
   static const padOuterGradient = [
-    Color(0xFF5F5D60),
-    Color(0xFF3F3D40),
-    Color(0xFF1E1E1E),
+    surfaceElevated,
+    surfaceElevated,
+    surfaceElevated,
   ];
-  static const padCenterGradient = [Color(0xFF484649), Color(0xFF3A383B)];
+  static const padCenterGradient = [surfaceElevated, surfaceElevated];
 }
 
 abstract final class AppSpacing {
@@ -231,8 +270,8 @@ abstract final class AppTheme {
     useMaterial3: true,
     scaffoldBackgroundColor: Colors.transparent,
     colorScheme: const ColorScheme.dark(
-      primary: AppColors.accent,
-      onPrimary: AppColors.backgroundPrimary,
+      primary: AppColors.primary,
+      onPrimary: AppColors.onPrimary,
       surface: AppColors.surfaceDefault,
       onSurface: AppColors.textPrimary,
       error: AppColors.error,
@@ -271,38 +310,39 @@ abstract final class AppTheme {
         ),
       ),
       filled: true,
-      fillColor: AppColors.surfaceRecessed,
+      fillColor: AppColors.surfaceElevated,
+      hintStyle: const TextStyle(color: AppColors.textSecondary),
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
+        horizontal: AppSpacing.md,
         vertical: AppSpacing.md,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        borderSide: const BorderSide(color: AppColors.borderSubtle),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        borderSide: const BorderSide(color: AppColors.borderSubtle),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        borderSide: const BorderSide(color: Colors.white, width: 1.5),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        borderSide: const BorderSide(color: AppColors.textPrimary, width: 1.5),
       ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: AppColors.backgroundPrimary,
+      backgroundColor: AppColors.surfaceRecessed,
       surfaceTintColor: Colors.transparent,
       showDragHandle: false,
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: AppColors.backgroundPrimary,
+      backgroundColor: AppColors.surfaceRecessed,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.card),
       ),
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: AppColors.surfaceRecessed,
+      backgroundColor: AppColors.surfaceElevated,
       contentTextStyle: TextStyle(color: AppColors.textPrimary),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -311,6 +351,26 @@ abstract final class AppTheme {
       ),
     ),
     dividerColor: AppColors.borderSubtle,
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: AppColors.primary,
+      linearTrackColor: AppColors.surfaceElevated,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? AppColors.onPrimary
+            : AppColors.textSecondary,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? AppColors.primary
+            : AppColors.surfaceElevated,
+      ),
+    ),
+    textSelectionTheme: const TextSelectionThemeData(
+      cursorColor: AppColors.primary,
+      selectionHandleColor: AppColors.primary,
+    ),
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
         TargetPlatform.android: _IplexPageTransitionsBuilder(),

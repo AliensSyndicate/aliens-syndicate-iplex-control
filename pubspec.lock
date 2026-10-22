@@ -443,14 +443,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.8"
-  flutter_neumorphism_ui:
-    dependency: "direct main"
-    description:
-      name: flutter_neumorphism_ui
-      sha256: "075ae16c41eb032bfe32d24d5285a6b2e137c5533f9b5490bb3f19d594396556"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.2"
   flutter_riverpod:
     dependency: "direct main"
     description:

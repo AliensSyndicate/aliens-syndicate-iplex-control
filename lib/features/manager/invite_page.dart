@@ -104,7 +104,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
                 subtitle: person!['code'] as String,
                 icon: AppIcons.account,
               ),
-              AppButton(
+              AppButton.primary(
                 label: context.l.sendMembershipRequest,
                 busy: busy,
                 onPressed: invite,

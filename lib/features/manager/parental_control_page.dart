@@ -178,7 +178,7 @@ class _ParentalPinFormState extends ConsumerState<_ParentalPinForm> {
         ),
       ),
       actions: [
-        AppButton(
+        AppButton.primary(
           key: const Key('parental-save'),
           label: l.save,
           busy: busy,

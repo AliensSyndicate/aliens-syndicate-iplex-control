@@ -169,7 +169,6 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
     final devices = ref.watch(entriesProvider('devices'));
     final now = ref.watch(clockProvider).value ?? DateTime.now();
     return AppModalSheet(
-      title: widget.item.name,
       content: devices.when(
         loading: () => const AppLoadingSkeleton(rows: 2),
         error: (e, s) => ErrorState(
@@ -201,15 +200,22 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SectionHeader(l.chooseTv),
+              // Reference: "Modal Sheet – Seleção" (device selection).
+              SheetHeader(
+                icon: AppIcons.devices,
+                title: l.watchOnTv,
+                subtitle: [widget.item.name, l.selectDevice].join(' · '),
+              ),
               for (final tv in tvs)
-                EntryTile(
+                SelectionRow(
                   key: Key('tv-${tv.id}'),
                   title: tv.name,
-                  subtitle: tv.onlineAt(now) ? l.online : l.offline,
-                  icon: tv.id == selected?.id
-                      ? AppIcons.check
-                      : AppIcons.devices,
+                  subtitle: tv.onlineAt(now)
+                      ? l.connectedStatus
+                      : l.availableStatus,
+                  highlightSubtitle: tv.onlineAt(now),
+                  icon: AppIcons.devices,
+                  selected: tv.id == selected?.id,
                   onTap: () => setState(() => deviceId = tv.id),
                 ),
               // Episode already chosen (season sheet, continue, start over).
@@ -232,12 +238,11 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
                     return Column(
                       children: [
                         for (final e in list)
-                          EntryTile(
+                          SelectionRow(
                             key: Key('episode-${e.id}'),
                             title: e.label(context),
-                            icon: e.id == episode?.id
-                                ? AppIcons.check
-                                : AppIcons.play,
+                            icon: AppIcons.play,
+                            selected: e.id == episode?.id,
                             onTap: () => setState(() => episode = e),
                           ),
                       ],
@@ -261,7 +266,7 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
         },
       ),
       actions: [
-        AppButton(
+        AppButton.primary(
           key: const Key('send-to-tv'),
           label: l.watchOnTv,
           icon: AppIcons.play,

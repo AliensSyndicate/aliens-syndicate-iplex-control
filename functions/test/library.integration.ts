@@ -141,6 +141,11 @@ test('library: editorial titles saved without IPTV, no duplicates across sources
   assert.equal(whole.library.wishlist.length <= 10, true, 'other sections keep the Home size');
   await assert.rejects(execute('readHome', {...ctx, section: 'everything'}, admin), /invalid|enum/i);
 
+  // Catalog tabs: one kind only.
+  const onlyMovies = await execute('readSourceCatalog', {...ctx, id: a.id, kind: 'movie'}, admin) as any;
+  assert.ok(onlyMovies.items.length > 0 && onlyMovies.items.every((i: any) => i.kind === 'movie'));
+  await assert.rejects(execute('readSourceCatalog', {...ctx, id: a.id, kind: 'radio'}, admin), /invalid|enum/i);
+
   // 10) Discovery grant: person account yes; TVs never.
   assert.deepEqual(await execute('authorizeDiscovery', ctx, admin), {ok: true});
   await assert.rejects(tvCall('authorizeDiscovery', {}, tv), /permission|unknown|not-allowed|invalid/i);

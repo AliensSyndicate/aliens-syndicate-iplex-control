@@ -61,3 +61,5 @@ config/*.json
 
 # Third-party binaries kept locally only (never commit store APKs)
 /*.apk
+
+/docs/screenshots/

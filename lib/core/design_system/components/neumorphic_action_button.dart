@@ -5,7 +5,7 @@ import '../graphite_surface.dart';
 import '../tokens.dart';
 import 'app_icon.dart';
 
-/// Tactile Graphite Action Button
+/// Pill action button: secondary (default), [primary] or destructive.
 class NeumorphicActionButton extends StatefulWidget {
   const NeumorphicActionButton({
     super.key,
@@ -17,7 +17,20 @@ class NeumorphicActionButton extends StatefulWidget {
     this.destructive = false,
     this.radius = AppRadii.full,
     this.textColor,
-  });
+  }) : primary = false;
+
+  /// Main action of a screen or sheet: green fill, black text.
+  const NeumorphicActionButton.primary({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.leading,
+    this.busy = false,
+    this.radius = AppRadii.full,
+    this.textColor,
+  }) : destructive = false,
+       primary = true;
 
   const NeumorphicActionButton.destructive({
     super.key,
@@ -28,7 +41,8 @@ class NeumorphicActionButton extends StatefulWidget {
     this.busy = false,
     this.radius = AppRadii.full,
     this.textColor,
-  }) : destructive = true;
+  }) : destructive = true,
+       primary = false;
 
   const NeumorphicActionButton.red({
     super.key,
@@ -39,9 +53,11 @@ class NeumorphicActionButton extends StatefulWidget {
     this.busy = false,
     this.radius = AppRadii.full,
     this.textColor,
-  }) : destructive = true;
+  }) : destructive = true,
+       primary = false;
 
   final String label;
+  final bool primary;
   final VoidCallback? onPressed;
   final List<List<dynamic>>? icon;
   final Widget? leading;
@@ -66,9 +82,13 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
     );
     final motionCurve = pressed ? AppMotion.pressCurve : AppMotion.releaseCurve;
 
-    final defaultColor = widget.destructive
-        ? (widget.textColor ?? AppColors.error)
-        : (widget.textColor ?? AppColors.textPrimary);
+    // Destructive: red fill, white text. Primary: green fill, black text.
+    // Default (secondary): grey fill, white text.
+    final filled = widget.destructive || widget.primary;
+    final defaultColor =
+        widget.textColor ??
+        (widget.primary ? AppColors.onPrimary : AppColors.textPrimary);
+    final fill = widget.destructive ? AppColors.error : AppColors.primary;
     final effectiveTextColor = enabled || widget.busy
         ? defaultColor
         : AppColors.textDisabled;
@@ -90,10 +110,11 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
         scale: pressed ? 0.985 : 1,
         duration: motionDuration,
         curve: motionCurve,
-        child: GraphiteSurface(
+        child: _Fill(
+          filled: filled,
+          color: enabled || widget.busy ? fill : AppColors.disabled,
           radius: widget.radius,
-          recessed: pressed,
-          finish: GraphiteFinish.button,
+          pressed: pressed,
           child: Material(
             type: MaterialType.transparency,
             child: Listener(
@@ -155,9 +176,12 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (widget.busy)
-                          const SizedBox.square(
+                          SizedBox.square(
                             dimension: AppDimensions.icon,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: defaultColor,
+                            ),
                           )
                         else
                           ?leading,
@@ -170,7 +194,9 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
                             style: TextStyle(
                               color: effectiveTextColor,
                               fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: filled
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -189,3 +215,38 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
 
 /// Backward compatibility alias for NeumorphicActionButton
 typedef AppButton = NeumorphicActionButton;
+
+/// Background of an [AppButton]: the flat control surface, or a solid fill
+/// (primary / destructive), slightly darker while pressed.
+class _Fill extends StatelessWidget {
+  const _Fill({
+    required this.filled,
+    required this.color,
+    required this.radius,
+    required this.pressed,
+    required this.child,
+  });
+  final bool filled, pressed;
+  final Color color;
+  final double radius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!filled) {
+      return GraphiteSurface(
+        radius: radius,
+        recessed: pressed,
+        finish: GraphiteFinish.button,
+        child: child,
+      );
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: pressed ? Color.lerp(color, Colors.black, 0.15) : color,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: child,
+    );
+  }
+}

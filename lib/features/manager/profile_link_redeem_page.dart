@@ -79,7 +79,7 @@ class _ProfileLinkRedeemPageState extends ConsumerState<ProfileLinkRedeemPage> {
                     : null,
               ),
               const SizedBox(height: AppTokens.lg),
-              AppButton(label: l.save, busy: busy, onPressed: redeem),
+              AppButton.primary(label: l.save, busy: busy, onPressed: redeem),
               const SizedBox(height: AppTokens.md),
               AppButton(
                 label: l.scanQrCode,

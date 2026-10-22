@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
 
 import '../core/design_system/components.dart';
-import '../features/manager/widgets/account_avatar.dart';
 
+/// Main menu (fixed, five items): Home, Busca, Família, Dispositivos, IPTV.
+/// [selected] is the item index (null on screens outside the menu, such as
+/// the account); flat icons, the selected one in the main green, over a
+/// slightly translucent background that also covers the system navigation bar.
 class BottomNavigation extends StatelessWidget {
   const BottomNavigation({
     super.key,
     required this.selected,
     required this.onSelected,
   });
-  final int selected;
+  final int? selected;
   final ValueChanged<int> onSelected;
   @override
   Widget build(BuildContext context) {
     final l = context.l,
-        labels = [l.home, l.familyTitle, l.devices, l.iptv, l.account],
+        labels = [l.home, l.searchTab, l.familyTitle, l.devices, l.iptv],
         icons = [
           AppIcons.home,
+          AppIcons.search,
           AppIcons.users,
           AppIcons.devices,
           AppIcons.iptv,
-          AppIcons.account,
         ];
     return Stack(
       children: [
@@ -32,33 +35,34 @@ class BottomNavigation extends StatelessWidget {
               left: AppSpacing.sm,
               right: AppSpacing.sm,
               top: AppSpacing.sm,
-              bottom: AppSpacing.md,
+              bottom: AppSpacing.sm,
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(
-                5,
-                (i) => Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularButton(
-                        label: labels[i],
-                        // The Account button carries the account's avatar instead of an icon.
-                        icon: i == 4 ? null : icons[i],
-                        size: AppDimensions.touch,
-                        selected: selected == i,
-                        onPressed: () => onSelected(i),
-                        child: i == 4
-                            ? const AccountAvatarFace(
-                                size: AppDimensions.touch - 2 * AppSpacing.xs,
-                              )
-                            : null,
+              children: List.generate(5, (i) {
+                final active = selected == i;
+                final color = active
+                    ? AppColors.primary
+                    : AppColors.textSecondary;
+                return Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: active,
+                    label: labels[i],
+                    excludeSemantics: true,
+                    child: InkResponse(
+                      key: ValueKey('main-menu-$i'),
+                      onTap: () => onSelected(i),
+                      // Icon only; the label stays for accessibility.
+                      child: SizedBox(
+                        height: AppDimensions.touch,
+                        child: Center(
+                          child: AppIcon(icons[i], color: color, size: 26),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              }),
             ),
           ),
         ),
@@ -67,30 +71,12 @@ class BottomNavigation extends StatelessWidget {
   }
 }
 
-/// Opaque menu background: the very same [GraphiteBackdrop] that sits under every
-/// screen, painted at full-screen size and cropped to the bar, so the color at each
-/// point of the menu equals the color of the screen at that point (no seam).
+/// Slightly translucent menu background: the screen content stays visible
+/// behind the menu. It also covers the (transparent, edge-to-edge) system
+/// navigation bar, so both look the same.
 class _MenuBackground extends StatelessWidget {
   const _MenuBackground();
   @override
-  Widget build(BuildContext context) {
-    final screen = MediaQuery.sizeOf(context);
-    // The menu rides up with the keyboard; the backdrop stays where the screen is.
-    final lift = MediaQuery.viewInsetsOf(context).bottom;
-    return ExcludeSemantics(
-      child: ClipRect(
-        child: OverflowBox(
-          alignment: Alignment.bottomCenter,
-          minWidth: screen.width,
-          maxWidth: screen.width,
-          minHeight: screen.height,
-          maxHeight: screen.height,
-          child: Transform.translate(
-            offset: Offset(0, lift),
-            child: const GraphiteBackdrop(child: SizedBox.shrink()),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      const ExcludeSemantics(child: ColoredBox(color: AppColors.navigationBar));
 }

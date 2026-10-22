@@ -221,7 +221,7 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
                       ),
                       if (busy)
                         Container(
-                          color: Colors.black54,
+                          color: AppColors.scrim,
                           child: const Center(
                             child: CircularProgressIndicator(),
                           ),

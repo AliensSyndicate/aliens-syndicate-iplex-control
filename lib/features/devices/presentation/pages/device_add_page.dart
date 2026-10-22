@@ -65,9 +65,8 @@ class _StepRow extends StatelessWidget {
           width: 24,
           height: 24,
           decoration: BoxDecoration(
-            color: AppColors.surfaceRecessed,
+            color: AppColors.surfaceElevated,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.borderLight, width: 1),
           ),
           child: Center(
             child: Text(

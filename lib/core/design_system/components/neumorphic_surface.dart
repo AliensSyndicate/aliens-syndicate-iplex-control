@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../graphite_surface.dart';
 import '../tokens.dart';
 
-/// Reusable Dark Industrial Neumorphic Surface powered by flutter_neumorphism_ui
+/// Flat card surface of the Design System ([GraphiteSurface]).
 class NeumorphicSurface extends StatelessWidget {
   const NeumorphicSurface({
     super.key,

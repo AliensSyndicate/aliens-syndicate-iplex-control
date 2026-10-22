@@ -20,9 +20,8 @@ Future<bool> showDeviceUnlinkModal(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceRecessed,
+                  color: AppColors.surfaceElevated,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.borderDark),
                 ),
                 child: const Center(
                   child: AppIcon(

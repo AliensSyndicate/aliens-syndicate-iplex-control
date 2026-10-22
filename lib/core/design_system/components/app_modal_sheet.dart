@@ -40,7 +40,7 @@ class AppModalSheet extends StatelessWidget {
                   padding ??
                   const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
-                    AppSpacing.xl,
+                    AppSpacing.sm,
                     AppSpacing.lg,
                     AppSpacing.xl,
                   ),
@@ -50,6 +50,19 @@ class AppModalSheet extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Drag indicator of every sheet.
+                      Center(
+                        child: Container(
+                          key: const Key('sheet-handle'),
+                          width: 36,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfacePressed,
+                            borderRadius: BorderRadius.circular(AppRadii.full),
+                          ),
+                        ),
+                      ),
                       if (leading != null) ...[
                         Center(child: leading!),
                         const SizedBox(height: AppSpacing.md),
@@ -155,7 +168,7 @@ Future<T?> showAppModalSheet<T>({
   bool enableDrag = true,
   EdgeInsetsGeometry? padding,
   bool useRootNavigator = true,
-  Color backgroundColor = AppColors.surfaceDefault,
+  Color backgroundColor = AppColors.surfaceRecessed,
 }) {
   return showModalBottomSheet<T>(
     context: context,
@@ -171,10 +184,6 @@ Future<T?> showAppModalSheet<T>({
     backgroundColor: backgroundColor,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
-      side: BorderSide(
-        color: AppColors.borderLight,
-        width: AppDimensions.borderWidth,
-      ),
     ),
     builder:
         builder ??

@@ -152,7 +152,9 @@ void main() {
 
         expect(find.text('Family TV'), findsOneWidget);
         expect(find.text('Sony • Bravia'), findsOneWidget);
-        expect(find.text('Online'), findsOneWidget);
+        // Reference "Card de dispositivo": connected status + status dot.
+        expect(find.text('Conectado'), findsOneWidget);
+        expect(find.byType(NeumorphicStatusIndicator), findsOneWidget);
       },
     );
 

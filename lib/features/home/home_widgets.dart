@@ -57,9 +57,56 @@ class HomeCard extends StatelessWidget {
                 child: SizedBox(
                   width: width,
                   height: height,
-                  child: Artwork(
-                    item: item,
-                    fit: channel ? BoxFit.contain : BoxFit.cover,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Artwork(
+                        item: item,
+                        fit: channel ? BoxFit.contain : BoxFit.cover,
+                      ),
+                      // Age rating seal (reference: compact poster cards).
+                      if (AgeRatingBadge.normalize(item.text('ageRating'))
+                          case final seal?)
+                        Positioned(
+                          right: AppSpacing.xs,
+                          bottom: AppSpacing.xs,
+                          child: AgeRatingBadge(seal, size: 18),
+                        ),
+                      // "⋮": the content options (same as a long press).
+                      if (onLongPress != null)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Semantics(
+                            button: true,
+                            label: context.l.more,
+                            child: InkResponse(
+                              key: ValueKey('home-card-more-${item.id}'),
+                              onTap: onLongPress,
+                              radius: 20,
+                              child: const SizedBox.square(
+                                dimension: 36,
+                                child: Center(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: AppColors.scrim,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(2),
+                                      child: Icon(
+                                        Icons.more_vert_rounded,
+                                        size: 18,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -70,22 +117,33 @@ class HomeCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress.fraction,
                     minHeight: 3,
-                    color: AppColors.textPrimary,
-                    backgroundColor: AppColors.surfaceRecessed,
+                    color: AppColors.primary,
+                    backgroundColor: AppColors.surfaceElevated,
                   ),
                 ),
               ],
               const SizedBox(height: AppSpacing.sm),
               Text(
                 item.name,
-                maxLines: 2,
+                maxLines: item.year == null ? 2 : 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.bodyMedium.copyWith(
                   fontSize: 13,
                   height: 1.25,
+                  fontWeight: FontWeight.w500,
                   color: AppColors.textPrimary,
                 ),
               ),
+              if (item.year case final year?)
+                Text(
+                  '$year',
+                  maxLines: 1,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontSize: 12,
+                    height: 1.25,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
             ],
           ),
         ),

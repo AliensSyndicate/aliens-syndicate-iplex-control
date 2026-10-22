@@ -11,6 +11,7 @@ import '../features/home/home_data.dart';
 import '../features/home/home_page.dart';
 import '../features/home/home_section_page.dart';
 import '../features/home/person_page.dart';
+import '../features/home/search_page.dart';
 import '../core/domain/models.dart';
 import '../features/manager/detail_page.dart';
 import '../features/manager/profile_link_redeem_page.dart';
@@ -542,6 +543,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                       ),
                     ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/search',
+                pageBuilder: (c, s) =>
+                    _rootPage(key: s.pageKey, child: const SearchPage()),
               ),
             ],
           ),

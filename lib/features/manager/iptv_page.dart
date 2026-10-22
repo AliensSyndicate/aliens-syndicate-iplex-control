@@ -291,13 +291,9 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                                     vertical: AppSpacing.xxs,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surfaceRecessed,
+                                    color: AppColors.surfaceElevated,
                                     borderRadius: BorderRadius.circular(
                                       AppRadii.xs,
-                                    ),
-                                    border: Border.all(
-                                      color: AppColors.borderLight,
-                                      width: AppDimensions.borderWidth,
                                     ),
                                   ),
                                   child: Text(

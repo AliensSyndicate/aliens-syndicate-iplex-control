@@ -36,24 +36,10 @@ class NeumorphicStatusIndicator extends StatelessWidget {
           IndicatorStatus.error => AppColors.error,
         };
 
-    final bool hasGlow = resolvedStatus != IndicatorStatus.offline;
-
     return Container(
       width: 10,
       height: 10,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: dotColor,
-        boxShadow: hasGlow
-            ? [
-                BoxShadow(
-                  color: dotColor.withValues(alpha: 0.5),
-                  blurRadius: 6,
-                  spreadRadius: 1,
-                ),
-              ]
-            : null,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
     );
   }
 }

@@ -282,9 +282,10 @@ void main() {
       c.read(routerProvider).pop();
       await tester.pumpAndSettle();
       expect(path(c), '/users');
+      // Menu: Home, Busca, Família…
       expect(
         tester.widget<BottomNavigation>(find.byType(BottomNavigation)).selected,
-        1,
+        2,
       );
     },
   );
@@ -345,6 +346,13 @@ void main() {
   testWidgets(
     '9: all main tabs stay accessible with no family, profiles, devices or sources',
     (tester) async {
+      // Skeletons pulse; with reduced motion they stay still and the test
+      // can settle.
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
       final repo = SessionRepository(uid: 'u');
       final c = await launch(tester, repo);
       for (final route in [
@@ -427,6 +435,13 @@ void main() {
   testWidgets(
     'account initialization keeps splash until ready and runs once across tabs',
     (tester) async {
+      // Skeletons pulse; with reduced motion they stay still and the test
+      // can settle.
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
       final ready = Completer<void>();
       final repo = SessionRepository(uid: 'u')..initialization = ready;
       final c = await launch(tester, repo, settle: false);
@@ -483,6 +498,13 @@ void main() {
   testWidgets(
     'loading sources shows skeleton, not an empty or failed catalog',
     (tester) async {
+      // Skeletons pulse; with reduced motion they stay still and the test
+      // can settle.
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
       final pending = Completer<List<Entry>>();
       final repo = SessionRepository(uid: 'u', linked: true)
         ..pendingSources = pending;
@@ -600,7 +622,11 @@ void main() {
         ..sources = [
           Entry('s', {'name': 'Source', 'version': 'v'}),
         ];
-      await launch(tester, repo);
+      final c = await launch(tester, repo);
+      // Busca is an item of the main menu.
+      await tester.tap(find.byKey(const ValueKey('main-menu-1')));
+      await tester.pumpAndSettle();
+      expect(path(c), '/search');
       await tester.enterText(find.byType(TextFormField), 'avail');
       await tester.pump(const Duration(milliseconds: 351));
       await tester.pumpAndSettle();
@@ -609,13 +635,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 351));
       await tester.pumpAndSettle();
       expect(find.text('No matching content'), findsOneWidget);
-      expect(find.text('Welcome to iPlex'), findsNothing);
-      await tester.ensureVisible(find.text('Clear search'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Clear search'));
+      await tester.enterText(find.byType(TextFormField), '');
+      await tester.pump(const Duration(milliseconds: 351));
       await tester.pumpAndSettle();
       expect(find.text('No matching content'), findsNothing);
-      expect(find.text('Your Home is still empty'), findsOneWidget);
     },
   );
   testWidgets(
@@ -794,7 +817,13 @@ void main() {
         'sourceId': 's',
         'title': 'Available title',
       });
-      expect(find.bySemanticsLabel('Unfavorite'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-favorite')),
+          matching: find.byIcon(Icons.favorite_rounded),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.byKey(const Key('details-favorite')));
       await tester.pumpAndSettle();
       expect(

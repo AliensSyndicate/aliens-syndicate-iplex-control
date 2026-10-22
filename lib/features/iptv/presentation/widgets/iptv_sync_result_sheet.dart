@@ -7,7 +7,7 @@ import '../controllers/iptv_sync_controller.dart';
 /// Modal bottom sheet presented upon terminal completion or failure of an IPTV sync job.
 ///
 /// Requirement: Shown once per job completion, never opens duplicates simultaneously,
-/// styled with Dark Industrial Neumorphism, protects credentials.
+/// styled with the Design System, protects credentials.
 class IptvSyncResultSheet extends StatelessWidget {
   const IptvSyncResultSheet({
     super.key,

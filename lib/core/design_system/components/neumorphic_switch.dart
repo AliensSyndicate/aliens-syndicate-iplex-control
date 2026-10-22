@@ -89,20 +89,18 @@ class _NeumorphicSwitch extends StatelessWidget {
     const thumbSize = 24.0;
     const padding = 3.0;
 
+    // Flat switch: green track when on, white thumb.
     return Semantics(
       toggled: value,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         width: trackWidth,
         height: trackHeight,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadii.pill),
+          borderRadius: BorderRadius.circular(AppRadii.full),
           color: value
-              ? (enabled ? AppColors.surfaceRecessed : AppColors.groove)
-              : AppColors.surfaceRecessed,
-          border: Border.all(
-            color: value ? AppColors.borderLight : AppColors.borderDark,
-            width: AppDimensions.borderWidth,
-          ),
+              ? (enabled ? AppColors.primary : AppColors.disabled)
+              : AppColors.surfacePressed,
         ),
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 200),
@@ -110,23 +108,12 @@ class _NeumorphicSwitch extends StatelessWidget {
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           child: Padding(
             padding: const EdgeInsets.all(padding),
-            child: GraphiteSurface(
-              circle: true,
-              finish: GraphiteFinish.button,
-              child: Container(
-                width: thumbSize,
-                height: thumbSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: value ? AppColors.brandBlue : AppColors.textSecondary,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
+            child: Container(
+              width: thumbSize,
+              height: thumbSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: enabled ? AppColors.textPrimary : AppColors.textDisabled,
               ),
             ),
           ),

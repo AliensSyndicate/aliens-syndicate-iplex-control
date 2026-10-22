@@ -15,7 +15,11 @@ class DetailsLayout extends StatefulWidget {
     required this.children,
     this.actions,
     this.coverFraction = 0.75,
+    this.contentStart = 0.55,
   });
+
+  /// Where the scrolling content starts, as a fraction of [height].
+  final double contentStart;
 
   /// Page height (the cover and the content start are fractions of it).
   final double height;
@@ -72,14 +76,7 @@ class _DetailsLayoutState extends State<DetailsLayout> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x59000000),
-                  Color(0x00000000),
-                  Color(0x00000000),
-                  Color(0x99000000),
-                  Color(0xE6000000),
-                  Colors.black,
-                ],
+                colors: AppColors.coverFade,
                 stops: [0, 0.18, 0.5, 0.7, 0.86, 1],
               ),
             ),
@@ -108,7 +105,7 @@ class _DetailsLayoutState extends State<DetailsLayout> {
           controller: scroll,
           padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            widget.height * 0.55,
+            widget.height * widget.contentStart,
             AppSpacing.lg,
             AppSpacing.xl + padding.bottom,
           ),
@@ -227,19 +224,7 @@ class DetailsSkeleton extends StatefulWidget {
   State<DetailsSkeleton> createState() => _DetailsSkeletonState();
 }
 
-class _DetailsSkeletonState extends State<DetailsSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
+class _DetailsSkeletonState extends State<DetailsSkeleton> {
   /// Visible on the graphite and black backgrounds of this page.
   static const _block = AppColors.surfaceElevated;
 
@@ -266,14 +251,13 @@ class _DetailsSkeletonState extends State<DetailsSkeleton>
   );
 
   List<Widget> _personBlocks() => [
-    _bar(0.6, 26, center: true),
+    _bar(0.6, 26),
     const SizedBox(height: AppSpacing.md),
-    _bar(0.35, 14, center: true),
+    _bar(0.35, 14),
     const SizedBox(height: AppSpacing.xs),
-    _bar(0.3, 14, center: true),
+    _bar(0.3, 14),
     const SizedBox(height: AppSpacing.md),
     Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < 3; i++) ...[
           if (i > 0) const SizedBox(width: AppSpacing.md),
@@ -317,8 +301,7 @@ class _DetailsSkeletonState extends State<DetailsSkeleton>
       key: const Key('details-skeleton'),
       fit: StackFit.expand,
       children: [
-        FadeTransition(
-          opacity: Tween<double>(begin: 0.45, end: 1).animate(controller),
+        AppSkeletonPulse(
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -340,7 +323,7 @@ class _DetailsSkeletonState extends State<DetailsSkeleton>
                 ),
               ),
               Positioned(
-                top: widget.height * 0.55,
+                top: widget.height * 0.42,
                 left: AppSpacing.lg,
                 right: AppSpacing.lg,
                 child: Column(
@@ -348,20 +331,19 @@ class _DetailsSkeletonState extends State<DetailsSkeleton>
                   children: widget.person
                       ? _personBlocks()
                       : [
-                          _bar(0.6, 26, center: true),
+                          _bar(0.6, 26),
                           const SizedBox(height: AppSpacing.md),
-                          _bar(0.45, 14, center: true),
+                          _bar(0.45, 14),
                           const SizedBox(height: AppSpacing.sm),
-                          _bar(0.3, 14, center: true),
+                          _bar(0.3, 14),
                           const SizedBox(height: AppSpacing.lg),
-                          Container(
-                            height: AppDimensions.touch,
-                            decoration: BoxDecoration(
-                              color: _block,
-                              borderRadius: BorderRadius.circular(
-                                AppRadii.full,
-                              ),
-                            ),
+                          // Action row: four round actions.
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              for (var i = 0; i < 4; i++)
+                                _block2(56, 56, AppRadii.full),
+                            ],
                           ),
                           const SizedBox(height: AppSpacing.lg),
                           _bar(0.35, 12),

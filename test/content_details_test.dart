@@ -7,9 +7,10 @@ import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/details_button.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/details_layout.dart';
+import 'package:aliens_syndicate_iplex_control/core/data/app_sharing.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/search_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_data.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_providers.dart';
-import 'package:aliens_syndicate_iplex_control/features/home/home_widgets.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/metadata_service.dart';
 import 'package:aliens_syndicate_iplex_control/features/watch_on_tv/watch_on_tv_sheet.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +35,7 @@ class LibraryRepo extends navigation.SessionRepository {
   Map<String, dynamic> profileJson = profile;
   List<Map<String, dynamic>> recentMovies = [],
       recentSeries = [],
+      channels = [],
       continueWatching = [];
 
   /// tmdb key → catalog item the backend would resolve (confident match).
@@ -115,6 +117,17 @@ class LibraryRepo extends navigation.SessionRepository {
       if (payload['remove'] != true) rows.insert(0, {...payload, 'key': key});
       return {'ok': true};
     }
+    if (action == 'readSourceCatalog') {
+      mutationPayloads.add((action, Map.of(payload)));
+      final all = [...recentMovies, ...recentSeries, ...channels];
+      return {
+        'items': [
+          for (final i in all)
+            if (payload['kind'] == null || i['kind'] == payload['kind']) i,
+        ],
+        'hasMore': false,
+      };
+    }
     if (action == 'resolveTitle') {
       mutationPayloads.add((action, Map.of(payload)));
       if (resolveFailure) throw const AppFailure('unavailable');
@@ -163,6 +176,13 @@ class FakeMetadata implements MetadataService {
     return people[tmdbId];
   }
 
+  final actors = <PersonResult>[];
+  @override
+  Future<List<PersonResult>> searchPeople(String query) async => [
+    for (final a in actors)
+      if (a.name.toLowerCase().contains(query.toLowerCase())) a,
+  ];
+
   final seasons = <String, List<EpisodeInfo>>{};
   @override
   Future<List<EpisodeInfo>> season(
@@ -177,6 +197,7 @@ final keanu = PersonDetails(
   name: 'Keanu Reeves',
   biography: 'Ator canadense.',
   placeOfBirth: 'Beirute',
+  knownFor: 'Acting',
   photo: 'https://image.tmdb.org/t/p/h632/keanu.jpg',
   social: [
     SocialLink('instagram', Uri.parse('https://www.instagram.com/keanu/')),
@@ -300,33 +321,10 @@ void main() {
       expect(location(c), '/home/title');
       expect(find.byType(BottomSheet), findsNothing);
       expect(find.byKey(const Key('details-title')), findsOneWidget);
-      expect(find.text('Original title: Fictional Mission'), findsOneWidget);
-      expect(
-        find.textContaining('2021 | Ação | 1h 58min', findRichText: true),
-        findsOneWidget,
-      );
-      expect(find.textContaining('Released'), findsOneWidget);
-      expect(find.text('Rating 7.4/10 (TMDB)'), findsOneWidget);
-      // ClassInd seal + reasons, right before the stars; no "Rated" text row.
-      expect(find.byType(AgeRatingBadge), findsOneWidget);
-      expect(find.text('Violência and conteúdo sexual'), findsOneWidget);
-      expect(find.text('Rated 14'), findsNothing);
-      // Seal first in the year line; reasons right below it, before the stars.
-      final spans =
-          (tester
-                      .widget<RichText>(
-                        find
-                            .descendant(
-                              of: find.byKey(const Key('details-facts')),
-                              matching: find.byType(RichText),
-                            )
-                            .first,
-                      )
-                      .text
-                  as TextSpan)
-              .children!;
-      // Text.rich wraps the span given to it in the default style span.
-      expect((spans.first as TextSpan).children!.first, isA<WidgetSpan>());
+      // Prototype screens 3 + 4: left-aligned title over the poster,
+      // original title, facts line with the ClassInd seal and the reasons.
+      expect(find.text('Fictional Mission'), findsWidgets);
+      expect(tester.getTopLeft(find.byKey(const Key('details-title'))).dx, 24);
       expect(
         find.descendant(
           of: find.byKey(const Key('details-facts')),
@@ -334,9 +332,45 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(find.textContaining('2021', findRichText: true), findsWidgets);
+      expect(find.text('Violência and conteúdo sexual'), findsOneWidget);
+      // Action row: Assistir na TV (green, TV name below), Favorito, Lista
+      // de desejos, Compartilhar — same row.
+      final actions = [
+        for (final k in [
+          'details-watch-on-tv',
+          'details-favorite',
+          'details-wishlist',
+          'details-share',
+        ])
+          tester.getRect(find.byKey(Key(k))),
+      ];
+      expect(actions.map((r) => r.top).toSet().length, 1);
       expect(
-        tester.getTopLeft(find.byKey(const Key('details-age-rating'))).dy,
-        lessThan(tester.getTopLeft(find.byKey(const Key('details-stars'))).dy),
+        tester
+            .widget<DetailsAction>(find.byKey(const Key('details-watch-on-tv')))
+            .primary,
+        isTrue,
+      );
+      expect(find.text('No TV'), findsOneWidget, reason: 'no TV linked here');
+      // Synopsis, round cast (actors only), then Informações.
+      expect(find.text('Uma missão.'), findsOneWidget);
+      expect(find.text('Cast'), findsOneWidget);
+      final photo = tester.getSize(
+        find.descendant(
+          of: find.byKey(const ValueKey('person-6384')),
+          matching: find.byType(ClipOval),
+        ),
+      );
+      expect(photo.width, photo.height);
+      expect(find.text('Information'), findsOneWidget);
+      expect(find.text('Diretora'), findsOneWidget, reason: 'Direção row');
+      expect(find.text('Ação, Drama'), findsOneWidget);
+      expect(find.text('1h 58min'), findsOneWidget);
+      expect(find.text('7.4 (TMDB)'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Cast')).dy,
+        lessThan(tester.getTopLeft(find.text('Information')).dy),
       );
       // Scrolling up darkens the cover until black.
       tester.view.physicalSize = const Size(390, 844);
@@ -344,12 +378,6 @@ void main() {
       ColoredBox dim() =>
           tester.widget<ColoredBox>(find.byKey(const Key('details-cover-dim')));
       expect(dim().color.a, 0);
-      await tester.drag(
-        find.byKey(const Key('details-scroll')),
-        const Offset(0, -300),
-      );
-      await tester.pumpAndSettle();
-      expect(dim().color.a, greaterThan(0.4));
       await tester.drag(
         find.byKey(const Key('details-scroll')),
         const Offset(0, -3000),
@@ -363,42 +391,13 @@ void main() {
       await tester.pumpAndSettle();
       tester.view.physicalSize = const Size(390, 2400);
       await tester.pumpAndSettle();
-      // Original TMDB poster as the cover, faded into the page.
+      // Original TMDB poster as the cover; white back icon without a box.
       expect(
         (tester.widget<Image>(find.byKey(const Key('details-cover'))).image
                 as NetworkImage)
             .url,
         'https://image.tmdb.org/t/p/original/m1.jpg',
       );
-      expect(find.byKey(const Key('details-cover-fade')), findsOneWidget);
-      // Director before the synopsis.
-      expect(
-        tester.getTopLeft(find.text('Directed by Diretora')).dy,
-        lessThan(tester.getTopLeft(find.text('Uma missão.')).dy),
-      );
-      // Favoritar | Salvar: icons only, right side of the top bar.
-      final fav = tester.getRect(find.byKey(const Key('details-favorite')));
-      final save = tester.getRect(find.byKey(const Key('details-wishlist')));
-      final back = tester.getRect(find.byKey(const Key('details-back')));
-      expect([fav.top, save.top], [back.top, back.top]);
-      expect(fav.right, lessThanOrEqualTo(save.left));
-      expect(save.right, greaterThan(300));
-      expect(find.bySemanticsLabel('Favorite'), findsOneWidget);
-      expect(find.bySemanticsLabel('Save'), findsOneWidget);
-      expect(find.byIcon(Icons.favorite_border_rounded), findsOneWidget);
-      expect(
-        tester
-            .widget<DetailsButton>(find.byKey(const Key('details-watch-on-tv')))
-            .primary,
-        isTrue,
-      );
-      expect(
-        find.byWidgetPredicate(
-          (w) => w is DetailsBarIcon && w.key == const Key('details-favorite'),
-        ),
-        findsOneWidget,
-      );
-      // Back: icon only, white, no box.
       expect(
         find.descendant(
           of: find.byKey(const Key('details-back')),
@@ -406,43 +405,6 @@ void main() {
         ),
         findsNothing,
       );
-      expect(
-        tester
-            .widget<AppIcon>(
-              find.descendant(
-                of: find.byKey(const Key('details-back')),
-                matching: find.byType(AppIcon),
-              ),
-            )
-            .color,
-        Colors.white,
-      );
-      for (final key in [
-        'details-watch-on-tv',
-        'details-favorite',
-        'details-wishlist',
-      ]) {
-        expect(
-          find.descendant(
-            of: find.byKey(Key(key)),
-            matching: find.byType(AppIcon),
-          ),
-          findsNothing,
-        );
-      }
-      expect(find.text('Uma missão.'), findsOneWidget);
-      expect(find.text('Cast'), findsOneWidget);
-      // Cast: actors only, 3:4 portraits; the crew is not a cast section.
-      expect(find.text('Crew'), findsNothing);
-      expect(find.text('Diretora'), findsNothing);
-      final photo = tester.getSize(
-        find.descendant(
-          of: find.byKey(const ValueKey('person-6384')),
-          matching: find.byType(ClipRRect),
-        ),
-      );
-      expect(photo.height / photo.width, closeTo(4 / 3, 0.01));
-      expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
       expect(find.byKey(const Key('details-unavailable')), findsNothing);
       await fixtures.screenshot(tester, 'details/movie-iptv');
       await tapKey(tester, const Key('details-back'));
@@ -489,34 +451,16 @@ void main() {
       );
       expect(find.byKey(const Key('details-cover-fade')), findsOneWidget);
       expect(find.byKey(const Key('details-back')), findsOneWidget);
-      final name = tester.getRect(find.byKey(const Key('person-name')));
-      expect(name.center.dx, closeTo(195, 1));
-      final facts = tester.getRect(find.byKey(const Key('person-facts')));
-      expect(facts.top, greaterThanOrEqualTo(name.bottom));
-      expect(tester.getCenter(find.text('Beirute')).dx, closeTo(195, 1));
-      expect(find.textContaining('Born'), findsNothing);
-      expect(
-        tester.getCenter(find.byKey(const Key('person-social'))).dx,
-        closeTo(195, 1),
-      );
-      // No separate Movies / Series rows: the timeline is the filmography.
-      for (final removed in ['Movies', 'Series']) {
-        expect(find.text(removed), findsNothing);
-      }
-      expect(find.byType(HomeCard), findsNothing);
-      // Filmography: vertical list; each card horizontal — the 3:4 cover of
-      // the cast card on the left, the text on the right, centered.
-      final row = find.byKey(const ValueKey('timeline-movie-777'));
-      final cover = tester.getRect(
-        find.descendant(of: row, matching: find.byType(Artwork)),
-      );
-      expect(cover.height / cover.width, closeTo(4 / 3, 0.01));
-      final title = tester.getRect(find.text('Filme Externo'));
-      expect(title.left, greaterThan(cover.right));
-      final text = tester.getRect(
-        find.descendant(of: row, matching: find.byType(Column)).first,
-      );
-      expect(text.center.dy, closeTo(cover.center.dy, 1));
+      // Prototype screens 6 and 7: name over the photo (left), department,
+      // Sobre / Filmografia tabs.
+      expect(tester.getTopLeft(find.byKey(const Key('person-name'))).dx, 24);
+      expect(find.text('Acting'), findsOneWidget);
+      expect(find.text('About'), findsOneWidget);
+      expect(find.text('Filmography (3)'), findsOneWidget);
+      expect(find.byKey(const ValueKey('timeline-movie-777')), findsNothing);
+      await tapKey(tester, const ValueKey('tab-1'));
+      expect(find.text('Ator canadense.'), findsNothing);
+      // Filmography: rows newest first, "year · character", heart + bookmark.
       final ys = [
         for (final k in [
           'timeline-movie-777',
@@ -525,23 +469,18 @@ void main() {
         ])
           tester.getTopLeft(find.byKey(ValueKey(k))).dy,
       ];
-      expect(ys, [...ys]..sort(), reason: 'vertical, newest first');
-      expect(find.text('Career timeline'), findsNothing);
-      // No "Biography"/"Social media" labels; the filmography keeps its title.
-      for (final absent in ['Biography', 'Social media']) {
-        expect(find.text(absent), findsNothing);
-      }
-      for (final title in ['Filmography (3)']) {
-        expect(
-          find.ancestor(
-            of: find.text(title),
-            matching: find.byType(SectionHeader),
-          ),
-          findsOneWidget,
-        );
-      }
-      expect(find.text('Movie · as Herói'), findsOneWidget);
-      expect(find.text('Series · as Ele mesmo · 3 episodes'), findsOneWidget);
+      expect(ys, [...ys]..sort(), reason: 'newest first');
+      expect(find.text('2024 · Herói'), findsOneWidget);
+      expect(find.text('2019 · Ele mesmo'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('row-favorites-tmdb-movie-777')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('row-wishlist-tmdb-movie-777')),
+      );
+      await tester.pumpAndSettle();
+      expect(repo.library['wishlist']!.single['tmdbId'], 777);
       await fixtures.screenshot(tester, 'details/person');
 
       await tapKey(tester, const ValueKey('timeline-movie-777'));
@@ -553,7 +492,13 @@ void main() {
         reason: 'not offered as playable',
       );
       await fixtures.screenshot(tester, 'details/movie-external-unavailable');
-      expect(find.byKey(const Key('details-watch-on-tv')), findsNothing);
+      expect(
+        tester
+            .widget<DetailsAction>(find.byKey(const Key('details-watch-on-tv')))
+            .onPressed,
+        isNull,
+        reason: 'not playable',
+      );
       expect(
         repo.mutationPayloads.lastWhere((m) => m.$1 == 'resolveTitle').$2,
         containsPair('tmdbId', 777),
@@ -592,9 +537,18 @@ void main() {
           'year': 2021,
         },
       );
-      expect(find.bySemanticsLabel('Unfavorite'), findsOneWidget);
       expect(
-        find.bySemanticsLabel('Save'),
+        find.descendant(
+          of: find.byKey(const Key('details-favorite')),
+          matching: find.byIcon(Icons.favorite_rounded),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-wishlist')),
+          matching: find.byIcon(Icons.bookmark_border_rounded),
+        ),
         findsOneWidget,
         reason: 'independent lists',
       );
@@ -609,19 +563,31 @@ void main() {
           .$2;
       expect(external['tmdbId'], 777);
       expect(external.containsKey('contentId'), isFalse);
-      expect(find.bySemanticsLabel('Unfavorite'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-favorite')),
+          matching: find.byIcon(Icons.favorite_rounded),
+        ),
+        findsOneWidget,
+      );
 
       // External series → wishlist, then remove and add again.
       c.read(routerProvider).push('/home/title/series/55');
       await tester.pumpAndSettle();
       expect(find.text('Seasons'), findsOneWidget);
-      // Not playable: TMDB seasons as buttons, episodes for information only.
-      expect(find.byKey(const ValueKey('details-season-1')), findsOneWidget);
-      expect(find.byKey(const ValueKey('details-season-2')), findsOneWidget);
-      expect(find.text('Available on your IPTV'), findsNothing);
+      // Not playable: TMDB seasons in the picker, episodes for information.
+      expect(find.byKey(const Key('series-tabs')), findsOneWidget);
+      expect(find.byKey(const Key('season-picker')), findsOneWidget);
+      expect(find.text('Season 1'), findsOneWidget);
       await fixtures.screenshot(tester, 'details/series-external-seasons');
       await tapKey(tester, const Key('details-wishlist'));
-      expect(find.bySemanticsLabel('Remove'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-wishlist')),
+          matching: find.byIcon(Icons.bookmark_rounded),
+        ),
+        findsOneWidget,
+      );
       await tapKey(tester, const Key('details-wishlist'));
       expect(
         repo.mutationPayloads
@@ -629,7 +595,13 @@ void main() {
             .$2['remove'],
         true,
       );
-      expect(find.bySemanticsLabel('Save'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-wishlist')),
+          matching: find.byIcon(Icons.bookmark_border_rounded),
+        ),
+        findsOneWidget,
+      );
       await tapKey(tester, const Key('details-wishlist'));
       expect(repo.library['wishlist']!.map((r) => r['tmdbId']), [55]);
 
@@ -650,7 +622,13 @@ void main() {
       );
       await tapKey(tester, const ValueKey('home-card-tmdb-movie-777'));
       expect(location(c), '/home/title/movie/777');
-      expect(find.bySemanticsLabel('Unfavorite'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-favorite')),
+          matching: find.byIcon(Icons.favorite_rounded),
+        ),
+        findsOneWidget,
+      );
     },
   );
 
@@ -679,7 +657,10 @@ void main() {
       await tapKey(tester, const ValueKey('home-card-x7'));
       expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
       expect(
-        find.bySemanticsLabel('Unfavorite'),
+        find.descendant(
+          of: find.byKey(const Key('details-favorite')),
+          matching: find.byIcon(Icons.favorite_rounded),
+        ),
         findsOneWidget,
         reason: 'recognized as the same saved title',
       );
@@ -707,8 +688,6 @@ void main() {
             SeasonInfo(3, 'Temporada 3', 6),
           ],
         );
-      await launchWith(tester, repo, metadata);
-      await tapKey(tester, const ValueKey('home-card-se1'));
       metadata.seasons['55/1'] = const [
         EpisodeInfo(
           number: 1,
@@ -720,53 +699,31 @@ void main() {
         EpisodeInfo(number: 2, name: 'No meio'),
         EpisodeInfo(number: 3, name: 'Só no TMDB'),
       ];
+      await launchWith(tester, repo, metadata);
+      await tapKey(tester, const ValueKey('home-card-se1'));
       expect(find.text('Seasons'), findsOneWidget);
-      // Playable series: only the seasons the source offers, Web buttons.
-      expect(find.byKey(const ValueKey('details-season-1')), findsOneWidget);
-      expect(find.byKey(const ValueKey('details-season-3')), findsNothing);
-      expect(
-        tester
-            .widget<DetailsButton>(
-              find.byKey(const ValueKey('details-season-1')),
-            )
-            .icon,
-        isNull,
-      );
-      expect(
-        tester.getSize(find.byKey(const ValueKey('details-season-1'))).width,
-        lessThan(200),
-        reason: 'season buttons fit their label',
-      );
-      await fixtures.screenshot(tester, 'details/series-iptv-episodes');
-      // While TMDB loads: card-shaped flat skeleton (no neumorphic surface).
-      await tester.tap(find.byKey(const ValueKey('details-season-1')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.byType(AppLoadingSkeleton), findsNothing);
-      await tester.pumpAndSettle();
-      // Full-height season sheet: frame, number, name, synopsis, runtime;
-      // no TV choice, no "watch" nor "cancel" buttons.
-      expect(find.text('Season 1 - Episode 1'), findsOneWidget);
-      expect(find.text('O começo'), findsOneWidget);
-      expect(find.text('Tudo começa.'), findsOneWidget);
+      // Playable series (screen 10): Temporadas tab with the season picker
+      // (only the seasons the source offers) and the episodes inline:
+      // frame, "N. name", runtime. Only source episodes can be played.
+      expect(find.byKey(const Key('season-picker')), findsOneWidget);
+      expect(find.text('Season 1'), findsOneWidget);
+      expect(find.text('Season 3'), findsNothing, reason: 'TMDB-only season');
+      expect(find.text('1. O começo'), findsOneWidget);
       expect(find.text('52 min'), findsOneWidget);
-      expect(find.text('Season 1 - Episode 2'), findsOneWidget);
+      expect(find.text('2. No meio'), findsOneWidget);
       expect(
-        find.text('Só no TMDB'),
+        find.textContaining('Só no TMDB'),
         findsNothing,
         reason: 'not in the source',
       );
-      expect(find.text('Choose a TV'), findsNothing);
-      expect(find.text('Cancel'), findsNothing);
-      expect(find.byKey(const Key('send-to-tv')), findsNothing);
       final frame = tester
           .widgetList<Image>(find.byType(Image))
           .map((i) => i.image)
           .whereType<NetworkImage>()
           .map((i) => i.url);
-      expect(frame, contains('https://image.tmdb.org/t/p/w780/e1.jpg'));
-      await fixtures.screenshot(tester, 'details/season-sheet');
-      await tester.tap(find.text('No meio'));
+      expect(frame, contains('https://image.tmdb.org/t/p/w300/e1.jpg'));
+      await fixtures.screenshot(tester, 'details/series-iptv-episodes');
+      await tester.tap(find.text('2. No meio'));
       await tester.pumpAndSettle();
       final sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
       expect([sheet.item.id, sheet.episodeId], ['se1', '3012']);
@@ -774,28 +731,41 @@ void main() {
     },
   );
 
-  testWidgets(
-    'long press on a card offers both lists without opening the page',
-    (tester) async {
-      final repo = LibraryRepo()
-        ..recentMovies = [item('m1', 'Missão Fictícia', 'movie')];
-      await launchWith(tester, repo, metadataFixture());
-      await tester.longPress(find.byKey(const ValueKey('home-card-m1')));
-      await tester.pumpAndSettle();
-      await fixtures.screenshot(tester, 'details/library-actions');
-      expect(find.text('Favorite'), findsOneWidget);
-      expect(find.text('Save'), findsOneWidget);
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-      expect(
-        repo.mutationPayloads
-            .lastWhere((m) => m.$1 == 'saveLibraryItem')
-            .$2['list'],
-        'wishlist',
-      );
-      expect(find.text('Remove'), findsOneWidget);
-    },
-  );
+  testWidgets('card options (⋮ / long press): watch, lists, share, details', (
+    tester,
+  ) async {
+    final repo = LibraryRepo()
+      ..recentMovies = [item('m1', 'Missão Fictícia', 'movie')];
+    await launchWith(tester, repo, metadataFixture());
+    await tester.longPress(find.byKey(const ValueKey('home-card-m1')));
+    await tester.pumpAndSettle();
+    await fixtures.screenshot(tester, 'details/library-actions');
+    // Reference "Opções de conteúdo": header + action rows.
+    expect(find.byKey(const Key('content-options')), findsOneWidget);
+    for (final k in [
+      'option-watch',
+      'option-favorite',
+      'option-wishlist',
+      'option-share',
+      'option-details',
+    ]) {
+      expect(find.byKey(Key(k)), findsOneWidget);
+    }
+    expect(find.text('Add to favorites'), findsOneWidget);
+    await tester.tap(find.text('Add to wishlist'));
+    await tester.pumpAndSettle();
+    expect(
+      repo.mutationPayloads
+          .lastWhere((m) => m.$1 == 'saveLibraryItem')
+          .$2['list'],
+      'wishlist',
+    );
+    expect(find.text('Remove from wishlist'), findsOneWidget);
+    // Ver detalhes closes the sheet and opens the page.
+    await tester.tap(find.byKey(const Key('option-details')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('details-title')), findsOneWidget);
+  });
 
   testWidgets(
     'incomplete metadata: only what exists is shown; channel has no wishlist',
@@ -809,7 +779,8 @@ void main() {
         ];
       await launchWith(tester, repo, FakeMetadata());
       await tapKey(tester, const ValueKey('home-card-m2'));
-      expect(find.text('1999 | Filmes'), findsOneWidget);
+      expect(find.textContaining('1999', findRichText: true), findsWidgets);
+      expect(find.textContaining('Filmes', findRichText: true), findsWidgets);
       expect(find.text('Sinopse da fonte.'), findsOneWidget);
       for (final absent in ['Cast', 'Crew', 'Seasons']) {
         expect(find.text(absent), findsNothing);
@@ -955,34 +926,17 @@ void main() {
       expect([sheet.resume, sheet.episodeId], [true, '3012']);
       Navigator.of(tester.element(find.byType(WatchOnTvSheet))).pop();
       await tester.pumpAndSettle();
+      // Continuar (green) and Recomeçar in the action row.
       final cont = tester.getRect(find.byKey(const Key('details-continue')));
       final restart = tester.getRect(find.byKey(const Key('details-restart')));
       expect(cont.top, restart.top, reason: 'same row');
-      // Text, fit width; Continue fills the rest of the row.
+      expect(cont.left, lessThan(restart.left));
       expect(find.text('Start over'), findsOneWidget);
       expect(
-        find.descendant(
-          of: find.byKey(const Key('details-restart')),
-          matching: find.byType(AppIcon),
-        ),
-        findsNothing,
-      );
-      final label = tester.getSize(find.text('Start over'));
-      expect(restart.width, closeTo(label.width + 2 * 24, 1));
-      expect(cont.left, 24);
-      expect(restart.right, 390 - 24);
-      expect(restart.left - cont.right, closeTo(16, 0.5));
-      expect(
         tester
-            .widget<DetailsButton>(find.byKey(const Key('details-continue')))
+            .widget<DetailsAction>(find.byKey(const Key('details-continue')))
             .primary,
         isTrue,
-      );
-      expect(
-        tester
-            .widget<DetailsButton>(find.byKey(const Key('details-restart')))
-            .primary,
-        isFalse,
       );
     },
   );
@@ -1156,13 +1110,122 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Season 1 - Episode 2'), findsOneWidget);
+    expect(find.text('Series · S1E2 · 2 min'), findsOneWidget);
     expect(find.byKey(const Key('now-playing-progress')), findsOneWidget);
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
     await fixtures.screenshot(tester, 'details/now-playing');
     tester.view.physicalSize = const Size(390, 2400);
   });
+
+  testWidgets('Home: iPlex app bar and Meu iPlex / Ao vivo / Filmes / Séries', (
+    tester,
+  ) async {
+    final repo = LibraryRepo()
+      ..recentMovies = [item('m1', 'Missão Fictícia', 'movie')]
+      ..recentSeries = [item('se1', 'Série Exemplo', 'series')]
+      ..channels = [item('ch1', 'Canal Notícias', 'channel')];
+    await launchWith(tester, repo, metadataFixture());
+    expect(find.text('iPlex'), findsOneWidget);
+    expect(find.byKey(const Key('home-source-picker')), findsOneWidget);
+    expect(find.byKey(const Key('home-account')), findsOneWidget);
+    for (final t in ['My iPlex', 'Live', 'Movies', 'Series']) {
+      expect(find.text(t), findsWidgets);
+    }
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    await fixtures.screenshot(tester, 'redesign/home');
+    await tester.tap(find.byKey(const ValueKey('tab-1')));
+    await tester.pumpAndSettle();
+    expect(
+      repo.mutationPayloads.lastWhere((m) => m.$1 == 'readSourceCatalog').$2,
+      containsPair('kind', 'channel'),
+    );
+    expect(find.byKey(const ValueKey('home-card-ch1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-card-m1')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('tab-2')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home-card-m1')), findsOneWidget);
+    await fixtures.screenshot(tester, 'redesign/home-movies');
+    tester.view.physicalSize = const Size(390, 2400);
+  });
+
+  testWidgets(
+    'Busca: filters Todos/Ao vivo/Filmes/Séries/Atores; actors from TMDB',
+    (tester) async {
+      final metadata = metadataFixture()
+        ..actors.add(
+          const PersonResult(
+            tmdbId: 6384,
+            name: 'Keanu Reeves',
+            knownFor: 'Acting',
+          ),
+        );
+      final repo = LibraryRepo();
+      final c = await launchWith(tester, repo, metadata);
+      await tester.tap(find.byKey(const ValueKey('main-menu-1')));
+      await tester.pumpAndSettle();
+      expect(location(c), '/search');
+      for (final f in SearchFilter.values) {
+        expect(find.byKey(ValueKey('tab-$f')), findsOneWidget);
+      }
+      await tester.tap(find.byKey(ValueKey('tab-${SearchFilter.actor}')));
+      await tester.enterText(find.byType(TextFormField), 'keanu');
+      await tester.pump(const Duration(milliseconds: 351));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('search-person-6384')), findsOneWidget);
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+      await fixtures.screenshot(tester, 'redesign/search');
+      tester.view.physicalSize = const Size(390, 2400);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('search-person-6384')));
+      await tester.pumpAndSettle();
+      expect(location(c), '/home/person/6384');
+    },
+  );
+
+  testWidgets(
+    'details: recommendations open their own page; share uses the native sheet',
+    (tester) async {
+      final shared = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        AppSharing.channel,
+        (call) async {
+          shared.add('${(call.arguments as Map)['text']}');
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          AppSharing.channel,
+          null,
+        ),
+      );
+      final metadata = metadataFixture();
+      metadata.titles['movie:777'] = ContentMetadata(
+        tmdbId: 777,
+        title: 'Filme Externo',
+        year: 2024,
+        recommendations: [
+          editorialEntry(
+            kind: 'movie',
+            tmdbId: 1001,
+            title: 'Missão Fictícia',
+            year: 2021,
+          ),
+        ],
+      );
+      final c = await launchWith(tester, LibraryRepo(), metadata);
+      c.read(routerProvider).push('/home/title/movie/777');
+      await tester.pumpAndSettle();
+      expect(find.text('You may also like'), findsOneWidget);
+      await tapKey(tester, const Key('details-share'));
+      expect(shared, ['Filme Externo (2024)']);
+      await tapKey(tester, const ValueKey('home-card-tmdb-movie-1001'));
+      expect(location(c), '/home/title/movie/1001');
+    },
+  );
 }
 
 class _GatedPerson extends FakeMetadata {

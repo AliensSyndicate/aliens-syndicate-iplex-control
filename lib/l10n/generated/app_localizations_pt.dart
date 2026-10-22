@@ -1116,7 +1116,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get allSpacesHint => 'Inclui fontes adicionadas no futuro.';
 
   @override
-  String get spaceLive => 'Canais ao vivo';
+  String get spaceLive => 'Ao vivo';
 
   @override
   String get spaceMovies => 'Filmes';
@@ -1440,7 +1440,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String catalogKinds(int channels, int movies, int series) {
-    return '$channels canais · $movies filmes · $series séries';
+    return '$channels ao vivo · $movies filmes · $series séries';
   }
 
   @override
@@ -1478,7 +1478,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get homeEmptyBody =>
-      'Pesquise canais, filmes e séries. O que você favoritar, salvar na sua lista ou começar a assistir aparece aqui.';
+      'Pesquise conteúdos ao vivo, filmes e séries. O que você favoritar, salvar na sua lista ou começar a assistir aparece aqui.';
 
   @override
   String get exploreCatalog => 'Explorar o catálogo';
@@ -1499,7 +1499,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get continueWatchingOnTv => 'Continuar assistindo na TV';
 
   @override
-  String get liveChannel => 'Canal ao vivo';
+  String get liveChannel => 'Ao vivo';
 
   @override
   String get onAirNow => 'Agora';
@@ -1735,4 +1735,118 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get seeAll => 'Ver tudo';
+
+  @override
+  String get searchTab => 'Busca';
+
+  @override
+  String get searchTitle => 'Buscar';
+
+  @override
+  String get searchPageHint => 'Filmes, séries, ao vivo, atores...';
+
+  @override
+  String get filterAll => 'Todos';
+
+  @override
+  String get filterChannels => 'Ao vivo';
+
+  @override
+  String get filterMovies => 'Filmes';
+
+  @override
+  String get filterSeries => 'Séries';
+
+  @override
+  String get filterActors => 'Atores';
+
+  @override
+  String get myIplex => 'Meu iPlex';
+
+  @override
+  String get recentSearchesTitle => 'Buscas recentes';
+
+  @override
+  String get actorKind => 'Ator';
+
+  @override
+  String get channelKind => 'Ao vivo';
+
+  @override
+  String get share => 'Compartilhar';
+
+  @override
+  String get favoriteLabel => 'Favorito';
+
+  @override
+  String get wishlistLabel => 'Lista de desejos';
+
+  @override
+  String get infoTitle => 'Informações';
+
+  @override
+  String get genresLabel => 'Gêneros';
+
+  @override
+  String get directionLabel => 'Direção';
+
+  @override
+  String get ratingRowLabel => 'Avaliação';
+
+  @override
+  String get runtimeLabel => 'Duração';
+
+  @override
+  String get releaseYearLabel => 'Ano de lançamento';
+
+  @override
+  String get ageRatingRowLabel => 'Classificação';
+
+  @override
+  String get originalTitleRow => 'Título original';
+
+  @override
+  String get youMayLike => 'Você também pode gostar';
+
+  @override
+  String get seeMore => 'Ver mais';
+
+  @override
+  String get aboutTab => 'Sobre';
+
+  @override
+  String get castTab => 'Elenco';
+
+  @override
+  String get seasonsTab => 'Temporadas';
+
+  @override
+  String get filmographyTab => 'Filmografia';
+
+  @override
+  String get noTvConnected => 'Sem TV';
+
+  @override
+  String get deptActing => 'Atuação';
+
+  @override
+  String get deptDirecting => 'Direção';
+
+  @override
+  String get deptWriting => 'Roteiro';
+
+  @override
+  String get deptProduction => 'Produção';
+
+  @override
+  String get seeDetails => 'Ver detalhes';
+
+  @override
+  String get selectDevice => 'Selecione um dispositivo';
+
+  @override
+  String get connectedStatus => 'Conectado';
+
+  @override
+  String get availableStatus => 'Disponível';
 }

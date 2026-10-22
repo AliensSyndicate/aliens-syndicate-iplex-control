@@ -2083,7 +2083,7 @@ abstract class AppLocalizations {
   /// No description provided for @spaceLive.
   ///
   /// In en, this message translates to:
-  /// **'Live channels'**
+  /// **'Live'**
   String get spaceLive;
 
   /// No description provided for @spaceMovies.
@@ -2629,7 +2629,7 @@ abstract class AppLocalizations {
   /// No description provided for @catalogKinds.
   ///
   /// In en, this message translates to:
-  /// **'{channels} channels · {movies} movies · {series} series'**
+  /// **'{channels} live · {movies} movies · {series} series'**
   String catalogKinds(int channels, int movies, int series);
 
   /// No description provided for @homeRecentSearches.
@@ -2701,7 +2701,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeEmptyBody.
   ///
   /// In en, this message translates to:
-  /// **'Search channels, movies and series. What you favorite, save to your list or start watching shows up here.'**
+  /// **'Search live content, movies and series. What you favorite, save to your list or start watching shows up here.'**
   String get homeEmptyBody;
 
   /// No description provided for @exploreCatalog.
@@ -2743,7 +2743,7 @@ abstract class AppLocalizations {
   /// No description provided for @liveChannel.
   ///
   /// In en, this message translates to:
-  /// **'Live channel'**
+  /// **'Live'**
   String get liveChannel;
 
   /// No description provided for @onAirNow.
@@ -3111,6 +3111,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'See all'**
   String get seeAll;
+
+  /// No description provided for @searchTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTab;
+
+  /// No description provided for @searchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchTitle;
+
+  /// No description provided for @searchPageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies, series, live, actors…'**
+  String get searchPageHint;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// No description provided for @filterChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get filterChannels;
+
+  /// No description provided for @filterMovies.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies'**
+  String get filterMovies;
+
+  /// No description provided for @filterSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get filterSeries;
+
+  /// No description provided for @filterActors.
+  ///
+  /// In en, this message translates to:
+  /// **'Actors'**
+  String get filterActors;
+
+  /// No description provided for @myIplex.
+  ///
+  /// In en, this message translates to:
+  /// **'My iPlex'**
+  String get myIplex;
+
+  /// No description provided for @recentSearchesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get recentSearchesTitle;
+
+  /// No description provided for @actorKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Actor'**
+  String get actorKind;
+
+  /// No description provided for @channelKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get channelKind;
+
+  /// No description provided for @share.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get share;
+
+  /// No description provided for @favoriteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite'**
+  String get favoriteLabel;
+
+  /// No description provided for @wishlistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wishlist'**
+  String get wishlistLabel;
+
+  /// No description provided for @infoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Information'**
+  String get infoTitle;
+
+  /// No description provided for @genresLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Genres'**
+  String get genresLabel;
+
+  /// No description provided for @directionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get directionLabel;
+
+  /// No description provided for @ratingRowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating'**
+  String get ratingRowLabel;
+
+  /// No description provided for @runtimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Runtime'**
+  String get runtimeLabel;
+
+  /// No description provided for @releaseYearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Release year'**
+  String get releaseYearLabel;
+
+  /// No description provided for @ageRatingRowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Age rating'**
+  String get ageRatingRowLabel;
+
+  /// No description provided for @originalTitleRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Original title'**
+  String get originalTitleRow;
+
+  /// No description provided for @youMayLike.
+  ///
+  /// In en, this message translates to:
+  /// **'You may also like'**
+  String get youMayLike;
+
+  /// No description provided for @seeMore.
+  ///
+  /// In en, this message translates to:
+  /// **'See more'**
+  String get seeMore;
+
+  /// No description provided for @aboutTab.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutTab;
+
+  /// No description provided for @castTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast'**
+  String get castTab;
+
+  /// No description provided for @seasonsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Seasons'**
+  String get seasonsTab;
+
+  /// No description provided for @filmographyTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Filmography'**
+  String get filmographyTab;
+
+  /// No description provided for @noTvConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'No TV'**
+  String get noTvConnected;
+
+  /// No description provided for @deptActing.
+  ///
+  /// In en, this message translates to:
+  /// **'Acting'**
+  String get deptActing;
+
+  /// No description provided for @deptDirecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Directing'**
+  String get deptDirecting;
+
+  /// No description provided for @deptWriting.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing'**
+  String get deptWriting;
+
+  /// No description provided for @deptProduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Production'**
+  String get deptProduction;
+
+  /// No description provided for @seeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'See details'**
+  String get seeDetails;
+
+  /// No description provided for @selectDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a device'**
+  String get selectDevice;
+
+  /// No description provided for @connectedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get connectedStatus;
+
+  /// No description provided for @availableStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get availableStatus;
 }
 
 class _AppLocalizationsDelegate

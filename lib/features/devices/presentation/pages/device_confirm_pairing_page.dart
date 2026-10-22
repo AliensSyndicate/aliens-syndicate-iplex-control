@@ -143,9 +143,8 @@ class _DeviceConfirmPairingPageState
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceRecessed,
+                          color: AppColors.surfaceElevated,
                           borderRadius: BorderRadius.circular(AppRadii.sm),
-                          border: Border.all(color: AppColors.borderDark),
                         ),
                         child: const Center(
                           child: AppIcon(
@@ -209,7 +208,7 @@ class _DeviceConfirmPairingPageState
           ),
           const SizedBox(height: AppSpacing.xl),
           if (!isOtherFamily) ...[
-            AppButton(
+            AppButton.primary(
               label: l.confirmLinkButton,
               busy: busy,
               onPressed: confirm,

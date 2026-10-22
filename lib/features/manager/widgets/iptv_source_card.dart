@@ -46,123 +46,54 @@ class IptvSourceCard extends ConsumerWidget {
       syncInfo = l.neverSynced;
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: GraphiteSurface(
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadii.card),
-            onTap: () async {
-              if (isProtected &&
-                  !ref.read(unlockedSourcesProvider).contains(entry.id)) {
-                final unlocked = await showPinUnlockDialog(
-                  context,
-                  ref,
-                  entry.id,
-                );
-                if (!unlocked || !context.mounted) return;
-              }
-              if (context.mounted) {
-                context.push('/iptv/${entry.id}');
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const GraphiteSurface(
-                    circle: true,
-                    recessed: true,
-                    padding: EdgeInsets.all(AppSpacing.sm + AppSpacing.xs),
-                    child: AppIcon(
-                      AppIcons.iptv,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            if (isProtected) ...[
-                              const AppIcon(
-                                AppIcons.lock,
-                                size: 14,
-                                color: AppColors.brandBlue,
-                              ),
-                              const SizedBox(width: 4),
-                            ],
-                            Expanded(
-                              child: Text(
-                                entry.name,
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          isSyncing
-                              ? l.sourceSyncing
-                              : (isError
-                                    ? l.sourceFailure
-                                    : (isOnline ? l.online : l.offline)),
-                          style: TextStyle(
-                            color: isError
-                                ? AppColors.error
-                                : (isSyncing
-                                      ? AppColors.brandBlue
-                                      : AppColors.textSecondary),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          syncInfo,
-                          style: const TextStyle(
-                            color: AppColors.textDisabled,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  if (isSyncing)
-                    const SizedBox.square(
-                      dimension: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        color: AppColors.brandBlue,
-                      ),
-                    )
-                  else if (isError)
-                    const NeumorphicStatusIndicator(
-                      status: IndicatorStatus.error,
-                    )
-                  else if (isOnline)
-                    const NeumorphicStatusIndicator(
-                      status: IndicatorStatus.online,
-                    )
-                  else
-                    const NeumorphicStatusIndicator(
-                      status: IndicatorStatus.offline,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    final counts = isReady && !isSyncing && !isError
+        ? l.catalogKinds(
+            entry.number('channelCount'),
+            entry.number('movieCount'),
+            entry.number('seriesCount'),
+          )
+        : null;
+    // Reference: "Card de IPTV".
+    return InfoCard(
+      icon: AppIcons.iptv,
+      title: entry.name,
+      titlePrefix: isProtected
+          ? const AppIcon(AppIcons.lock, size: 14, color: AppColors.primary)
+          : null,
+      status: isSyncing
+          ? l.sourceSyncing
+          : isError
+          ? l.sourceFailure
+          : (isOnline ? l.online : l.offline),
+      statusColor: isError
+          ? AppColors.error
+          : isSyncing
+          ? AppColors.primary
+          : null,
+      extra: counts,
+      footnote: syncInfo,
+      // Reference "Card de IPTV": neutral icon box; state on the dot.
+      dot: NeumorphicStatusIndicator(
+        status: isError
+            ? IndicatorStatus.error
+            : isOnline
+            ? IndicatorStatus.online
+            : IndicatorStatus.offline,
       ),
+      trailing: isSyncing
+          ? const SizedBox.square(
+              dimension: 14,
+              child: CircularProgressIndicator(strokeWidth: 1.5),
+            )
+          : null,
+      onTap: () async {
+        if (isProtected &&
+            !ref.read(unlockedSourcesProvider).contains(entry.id)) {
+          final unlocked = await showPinUnlockDialog(context, ref, entry.id);
+          if (!unlocked || !context.mounted) return;
+        }
+        if (context.mounted) context.push('/iptv/${entry.id}');
+      },
     );
   }
 }

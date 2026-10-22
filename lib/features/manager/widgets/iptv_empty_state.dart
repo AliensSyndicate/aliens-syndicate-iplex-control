@@ -12,7 +12,7 @@ class IptvEmptyState extends StatelessWidget {
     body: context.l.emptySourcesDescription,
     action: onAdd == null
         ? null
-        : AppButton(
+        : AppButton.primary(
             label: context.l.addSource,
             icon: AppIcons.add,
             onPressed: onAdd,

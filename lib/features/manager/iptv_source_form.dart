@@ -390,13 +390,9 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                                       vertical: AppSpacing.sm,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.surfaceRecessed,
+                                      color: AppColors.surfaceElevated,
                                       borderRadius: BorderRadius.circular(
                                         AppRadii.sm,
-                                      ),
-                                      border: Border.all(
-                                        color: AppColors.borderLight,
-                                        width: AppDimensions.borderWidth,
                                       ),
                                     ),
                                     child: Row(
@@ -658,7 +654,11 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                     ],
 
                     const SizedBox(height: AppTokens.lg),
-                    AppButton(label: l.save, busy: busy, onPressed: save),
+                    AppButton.primary(
+                      label: l.save,
+                      busy: busy,
+                      onPressed: save,
+                    ),
                   ],
                 ),
               ),

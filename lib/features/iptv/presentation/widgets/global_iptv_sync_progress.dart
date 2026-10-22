@@ -9,7 +9,7 @@ import '../controllers/iptv_sync_controller.dart';
 /// Requirement: Appears across all authenticated screens whenever an active sync job
 /// exists for the current user/family.
 /// Positioned immediately below the Status Bar area and above the AppBar.
-/// Thin 2.5 dp height, Dark Industrial Neumorphism styling, non-blocking touches,
+/// Thin 2.5 dp height, Design System styling, non-blocking touches,
 /// smooth animations without layout jumps.
 class GlobalIptvSyncProgress extends ConsumerStatefulWidget {
   const GlobalIptvSyncProgress({super.key});
@@ -102,13 +102,6 @@ class _GlobalIptvSyncProgressState extends ConsumerState<GlobalIptvSyncProgress>
                                             ),
                                           ],
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.brandBlue
-                                                .withValues(alpha: 0.35),
-                                            blurRadius: 4,
-                                          ),
-                                        ],
                                       ),
                                     ),
                                   ),
@@ -132,14 +125,6 @@ class _GlobalIptvSyncProgressState extends ConsumerState<GlobalIptvSyncProgress>
                             child: Container(
                               decoration: BoxDecoration(
                                 color: AppColors.brandBlue,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.brandBlue.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                    blurRadius: 3,
-                                  ),
-                                ],
                               ),
                             ),
                           );

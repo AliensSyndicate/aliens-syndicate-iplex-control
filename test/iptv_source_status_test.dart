@@ -102,7 +102,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('2 canais · 2 filmes · 1 séries'), findsOneWidget);
+    expect(find.text('2 ao vivo · 2 filmes · 1 séries'), findsOneWidget);
     expect(find.byKey(const Key('source-error-message')), findsNothing);
   });
 }

@@ -66,13 +66,8 @@ class HomeSectionPage extends ConsumerWidget {
                   HomeCard(
                     item: item,
                     onTap: () => openTitle(context, item),
-                    onLongPress: home.profile?.persistent == true
-                        ? () => showLibraryActions(
-                            context,
-                            item: item,
-                            home: home,
-                          )
-                        : null,
+                    onLongPress: () =>
+                        showLibraryActions(context, item: item, home: home),
                   ),
               ],
             );

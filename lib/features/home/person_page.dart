@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/design_system/components.dart';
+import '../../core/domain/models.dart';
 import 'content_details_page.dart';
+import 'browse_widgets.dart';
 import 'details_layout.dart';
+import 'library.dart';
 import 'home_data.dart';
 import 'home_widgets.dart';
-import 'library.dart';
 import 'metadata_service.dart';
 
 final _personProvider = FutureProvider.autoDispose.family<PersonDetails?, int>(
@@ -81,51 +83,79 @@ class PersonPage extends ConsumerWidget {
 
 /// Centered like the title page: name, birthplace, dates and social icons;
 /// then the biography (like the synopsis) and the filmography.
-class _PersonBody {
-  const _PersonBody({required this.person, required this.home});
-  final PersonDetails person;
-  final HomeData? home;
-
-  List<Widget> children(BuildContext context) {
-    final p = person;
-    String date(DateTime d) => formatDate(context, d);
-    final dates = [
-      if (p.birthday case final b?) date(b),
-      if (p.deathday case final d?) date(d),
-    ].join(' – ');
-    final secondary = AppTypography.bodyMedium.copyWith(
-      color: AppColors.textSecondary,
-    );
-    return [
-      Text(
-        p.name,
-        key: const Key('person-name'),
-        textAlign: TextAlign.center,
-        style: AppTypography.headlineMedium.copyWith(
-          color: AppColors.textPrimary,
-        ),
+/// Actor page body (prototype screens 6 and 7): name and department over the
+/// photo, then Sobre (birth, social profiles, whole biography) and
+/// Filmografia (newest first; each work opens its details page and can be
+/// saved to Favoritos / Lista de desejos without opening it).
+List<Widget> _personChildren(
+  BuildContext context, {
+  required PersonDetails person,
+  required HomeData? home,
+  required int tab,
+  required ValueChanged<int> onTab,
+}) {
+  final l = context.l;
+  final p = person;
+  final dates = [
+    if (p.birthday case final b?) formatDate(context, b),
+    if (p.deathday case final d?) formatDate(context, d),
+  ].join(' – ');
+  final secondary = AppTypography.bodyMedium.copyWith(
+    color: AppColors.textSecondary,
+  );
+  final department = switch (p.knownFor) {
+    'Acting' => l.deptActing,
+    'Directing' => l.deptDirecting,
+    'Writing' => l.deptWriting,
+    'Production' => l.deptProduction,
+    _ => '',
+  };
+  return [
+    Text(
+      p.name,
+      key: const Key('person-name'),
+      style: AppTypography.headlineMedium.copyWith(
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
       ),
-      // No labels: birthplace, then the dates.
+    ),
+    if (department.isNotEmpty) ...[
+      const SizedBox(height: AppSpacing.xs),
+      Text(department, style: secondary),
+    ],
+    const SizedBox(height: AppSpacing.md),
+    AppTabs<int>(
+      key: const Key('person-tabs'),
+      options: [
+        (0, l.aboutTab),
+        // Number of acting credits (works only as crew are not counted).
+        (
+          1,
+          '${l.filmographyTab} (${p.credits.where((c) => c.character.isNotEmpty || c.job.isEmpty).length})',
+        ),
+      ],
+      selected: tab,
+      onSelected: onTab,
+    ),
+    const SizedBox(height: AppSpacing.md),
+    if (tab == 0) ...[
       Column(
         key: const Key('person-facts'),
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (p.placeOfBirth case final place?) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(place, textAlign: TextAlign.center, style: secondary),
-          ],
+          if (p.placeOfBirth case final place?) Text(place, style: secondary),
           if (dates.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
-            Text(dates, textAlign: TextAlign.center, style: secondary),
+            Text(dates, style: secondary),
           ],
         ],
       ),
-      // Only the icons, centered.
       if (p.social.isNotEmpty) ...[
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.sm),
         _SocialBar(links: p.social),
       ],
       if (p.biography.isNotEmpty) ...[
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
         // Always the whole biography.
         Text(
           p.biography,
@@ -136,108 +166,108 @@ class _PersonBody {
           ),
         ),
       ],
-      if (p.credits.isNotEmpty) ..._timeline(context, p.credits),
-    ];
-  }
-
-  /// Filmography: vertical, newest first, grouped by year (undated works
-  /// last). Each work is the cast card of the title page laid out
-  /// horizontally: the 3:4 cover on the left, the text on the right.
-  List<Widget> _timeline(BuildContext context, List<PersonCredit> credits) {
-    final l = context.l;
-    final byYear = <int?, List<PersonCredit>>{};
-    for (final c in credits) {
-      (byYear[c.year ?? c.date?.year] ??= []).add(c);
-    }
-    final years = byYear.keys.toList()
-      ..sort((a, b) => (b ?? -1).compareTo(a ?? -1));
-    return [
-      const SizedBox(height: AppSpacing.md),
-      // Number of acting credits (works only as crew are not counted).
-      Semantics(
-        header: true,
-        child: SectionHeader(
-          '${l.filmography} (${credits.where((c) => c.character.isNotEmpty || c.job.isEmpty).length})',
+    ] else
+      for (final c in p.credits)
+        MediaListRow(
+          key: ValueKey('timeline-${c.kind}-${c.tmdbId}'),
+          image: Artwork(item: c.entry),
+          title: c.title,
+          subtitle: [
+            if (c.year ?? c.date?.year case final y?) '$y',
+            if (c.character.isNotEmpty)
+              c.character
+            else if (c.job.isNotEmpty)
+              c.job,
+          ].join(' · '),
+          onTap: () => openTitle(context, c.entry),
+          trailing: home?.profile?.persistent == true
+              ? _RowLibrary(item: c.entry, home: home!)
+              : null,
         ),
-      ),
-      for (final (i, year) in years.indexed) ...[
-        // Years are labels inside the section, not section titles.
-        Padding(
-          padding: EdgeInsets.only(
-            top: i == 0 ? 0 : AppSpacing.sm,
-            bottom: AppSpacing.sm,
-          ),
-          child: Text(
-            year == null ? l.undatedLabel : '$year',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        for (final c in byYear[year]!)
-          _CreditCard(
-            key: ValueKey('timeline-${c.kind}-${c.tmdbId}'),
-            credit: c,
-            subtitle: [
-              c.kind == 'movie' ? l.movieKind : l.seriesKind,
-              if (c.character.isNotEmpty) l.asCharacter(c.character),
-              if (c.character.isEmpty && c.job.isNotEmpty) c.job,
-              if (c.episodeCount case final n? when n > 0) l.episodesCount(n),
-            ].join(' · '),
-            onTap: () => openTitle(context, c.entry),
-          ),
-      ],
-    ];
-  }
+  ];
 }
 
-/// Social profiles below the birth information: one icon each, opened in the
-/// browser (in-app browser view, never a deep link into another app).
-class _SocialBar extends StatelessWidget {
-  const _SocialBar({required this.links});
-  final List<SocialLink> links;
+/// Heart and bookmark of a filmography row (same rule as the details page:
+/// TMDB titles can be saved even when no IPTV source offers them).
+class _RowLibrary extends ConsumerStatefulWidget {
+  const _RowLibrary({required this.item, required this.home});
+  final Entry item;
+  final HomeData home;
+  @override
+  ConsumerState<_RowLibrary> createState() => _RowLibraryState();
+}
 
-  static const _icons = {
-    'instagram': AppIcons.instagram,
-    'x': AppIcons.x,
-    'facebook': AppIcons.facebook,
-    'tiktok': AppIcons.tiktok,
-    'youtube': AppIcons.youtube,
-    'imdb': AppIcons.web,
+class _RowLibraryState extends ConsumerState<_RowLibrary> {
+  late final saved = {
+    for (final list in LibraryList.values)
+      list: widget.home.isSaved(list, widget.item),
   };
+  LibraryList? busy;
+
+  Future<void> toggle(LibraryList list) async {
+    if (busy != null) return;
+    final was = saved[list]!;
+    setState(() => busy = list);
+    try {
+      await saveToLibrary(
+        ref,
+        list: list,
+        item: widget.item,
+        profile: widget.home.profile!,
+        remove: was,
+      );
+      if (mounted) setState(() => saved[list] = !was);
+    } catch (e) {
+      if (mounted) showFailure(context, e);
+    } finally {
+      if (mounted) setState(() => busy = null);
+    }
+  }
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Wrap(
-      key: const Key('person-social'),
-      alignment: WrapAlignment.center,
-      children: [
-        for (final link in links)
-          Semantics(
-            button: true,
-            link: true,
-            label: link.label,
-            excludeSemantics: true,
-            child: InkResponse(
-              key: ValueKey('social-${link.network}'),
-              radius: AppDimensions.touch / 2,
-              onTap: () =>
-                  launchUrl(link.url, mode: LaunchMode.inAppBrowserView),
-              child: SizedBox.square(
-                dimension: AppDimensions.touch,
-                child: Center(
-                  child: AppIcon(_icons[link.network]!, color: Colors.white),
-                ),
+  Widget build(BuildContext context) {
+    final l = context.l;
+    Widget icon(LibraryList list, IconData on, IconData off, String label) =>
+        Semantics(
+          button: true,
+          label: label,
+          excludeSemantics: true,
+          child: InkResponse(
+            key: ValueKey('row-${list.name}-${widget.item.id}'),
+            radius: 22,
+            onTap: busy == null ? () => toggle(list) : null,
+            child: SizedBox.square(
+              dimension: 40,
+              child: Icon(
+                saved[list]! ? on : off,
+                size: 22,
+                color: saved[list]!
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
               ),
             ),
           ),
+        );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        icon(
+          LibraryList.favorites,
+          Icons.favorite_rounded,
+          Icons.favorite_border_rounded,
+          l.favoriteLabel,
+        ),
+        icon(
+          LibraryList.wishlist,
+          Icons.bookmark_rounded,
+          Icons.bookmark_border_rounded,
+          l.wishlistLabel,
+        ),
       ],
-    ),
-  );
+    );
+  }
 }
 
-/// Keeps the skeleton until the actor's photo is decoded too, then shows the
-/// page at once (no cover popping in afterwards).
 class _PersonLoaded extends StatefulWidget {
   const _PersonLoaded({
     super.key,
@@ -255,6 +285,7 @@ class _PersonLoaded extends StatefulWidget {
 
 class _PersonLoadedState extends State<_PersonLoaded> {
   bool ready = false;
+  int tab = 0;
   String? get photo => tmdbSized(widget.person.photo);
 
   @override
@@ -283,8 +314,16 @@ class _PersonLoadedState extends State<_PersonLoaded> {
     final p = widget.person;
     return DetailsLayout(
       height: widget.height,
+      coverFraction: 0.6,
+      contentStart: 0.42,
       cover: _PersonCover(name: p.name, url: photo),
-      children: _PersonBody(person: p, home: widget.home).children(context),
+      children: _personChildren(
+        context,
+        person: p,
+        home: widget.home,
+        tab: tab,
+        onTab: (i) => setState(() => tab = i),
+      ),
     );
   }
 }
@@ -331,74 +370,48 @@ class _PersonCover extends StatelessWidget {
   }
 }
 
-/// One work of the filmography: the cast card of the title page laid out
-/// horizontally (same 3:4 rounded cover and text styles, no surface), the
-/// text vertically centered next to the cover.
-class _CreditCard extends StatelessWidget {
-  const _CreditCard({
-    super.key,
-    required this.credit,
-    required this.subtitle,
-    required this.onTap,
-  });
-  final PersonCredit credit;
-  final String subtitle;
-  final VoidCallback onTap;
+/// Social profiles: one white icon each, opened in the browser (in-app
+/// browser view, never a deep link into another app).
+class _SocialBar extends StatelessWidget {
+  const _SocialBar({required this.links});
+  final List<SocialLink> links;
+
+  static const _icons = {
+    'instagram': AppIcons.instagram,
+    'x': AppIcons.x,
+    'facebook': AppIcons.facebook,
+    'tiktok': AppIcons.tiktok,
+    'youtube': AppIcons.youtube,
+    'imdb': AppIcons.web,
+  };
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-    child: Semantics(
-      button: true,
-      label: '${credit.title}, $subtitle',
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadii.md),
-              child: SizedBox(
-                width: PortraitCard.width,
-                height: PortraitCard.height,
-                child: Artwork(item: credit.entry),
+  Widget build(BuildContext context) => Transform.translate(
+    // 48 dp targets around 24 dp icons: the first glyph lines up with the text.
+    offset: const Offset(-(AppDimensions.touch - AppDimensions.icon) / 2, 0),
+    child: Wrap(
+      key: const Key('person-social'),
+      children: [
+        for (final link in links)
+          Semantics(
+            button: true,
+            link: true,
+            label: link.label,
+            excludeSemantics: true,
+            child: InkResponse(
+              key: ValueKey('social-${link.network}'),
+              radius: AppDimensions.touch / 2,
+              onTap: () =>
+                  launchUrl(link.url, mode: LaunchMode.inAppBrowserView),
+              child: SizedBox.square(
+                dimension: AppDimensions.touch,
+                child: Center(
+                  child: AppIcon(_icons[link.network]!, color: Colors.white),
+                ),
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    credit.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontSize: 15,
-                      height: 1.25,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  if (subtitle.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      subtitle,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+      ],
     ),
   );
 }

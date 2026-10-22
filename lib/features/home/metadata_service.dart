@@ -25,6 +25,29 @@ String? tmdbSized(String? url, [String size = 'original']) {
   return url.replaceFirst(RegExp(r'/t/p/[^/]+/'), '/t/p/$size/');
 }
 
+/// Actor found by the Busca "Atores" filter (TMDB).
+@immutable
+class PersonResult {
+  const PersonResult({
+    required this.tmdbId,
+    required this.name,
+    this.knownFor = '',
+    this.photo,
+  });
+  final int tmdbId;
+  final String name, knownFor;
+  final String? photo;
+}
+
+/// TMDB recommendation shown under the details ("Você também pode gostar").
+Entry _recommendation(Map raw) => editorialEntry(
+  kind: '${raw['kind']}',
+  tmdbId: (raw['tmdbId'] as num).toInt(),
+  title: '${raw['title']}',
+  year: (raw['year'] as num?)?.toInt(),
+  poster: _tmdbImage(raw['poster']),
+);
+
 /// One episode of a TMDB season (editorial information only).
 @immutable
 class EpisodeInfo {
@@ -90,6 +113,7 @@ class ContentMetadata {
     this.cast = const [],
     this.crew = const [],
     this.seasons = const [],
+    this.recommendations = const [],
   });
 
   factory ContentMetadata.fromJson(Map<String, dynamic> json) {
@@ -132,6 +156,14 @@ class ContentMetadata {
               (s['episodeCount'] as num?)?.toInt() ?? 0,
             ),
       ],
+      recommendations: [
+        for (final r in (json['recommendations'] as List? ?? const []))
+          if (r is Map &&
+              r['tmdbId'] is num &&
+              (r['kind'] == 'movie' || r['kind'] == 'series') &&
+              _text(r['title']) != null)
+            _recommendation(r),
+      ],
     );
   }
 
@@ -148,6 +180,9 @@ class ContentMetadata {
   final List<String> genres;
   final List<Credit> cast, crew;
   final List<SeasonInfo> seasons;
+
+  /// Editorial entries (open their own details page).
+  final List<Entry> recommendations;
   final int? year, runtimeMinutes, seasonCount, episodeCount;
   final double? rating;
 }
@@ -235,6 +270,7 @@ class PersonDetails {
     this.deathday,
     this.placeOfBirth,
     this.photo,
+    this.knownFor = '',
     this.social = const [],
     this.credits = const [],
   });
@@ -247,6 +283,7 @@ class PersonDetails {
     deathday: DateTime.tryParse('${json['deathday'] ?? ''}'),
     placeOfBirth: _text(json['placeOfBirth']),
     photo: _tmdbImage(json['photo']),
+    knownFor: _text(json['knownFor']) ?? '',
     social: [
       for (final raw in (json['social'] as List? ?? const []))
         ?SocialLink.fromJson(raw),
@@ -276,6 +313,9 @@ class PersonDetails {
   final String name, biography;
   final DateTime? birthday, deathday;
   final String? placeOfBirth, photo;
+
+  /// TMDB department the person is known for (Acting, Directing…).
+  final String knownFor;
   final List<SocialLink> social;
   final List<PersonCredit> credits;
 }
@@ -293,6 +333,10 @@ abstract class MetadataService {
 
   /// Person with filmography. null when unknown; throws when unreachable.
   Future<PersonDetails?> person(int tmdbId);
+
+  /// Actors matching [query] (TMDB). Throws [MetadataUnavailable] when
+  /// discovery is not allowed (kids profile) or unreachable.
+  Future<List<PersonResult>> searchPeople(String query);
 
   /// Episodes of one TMDB season of [series] (catalog or editorial entry).
   /// Empty when TMDB has nothing; never a claim of availability.
@@ -389,6 +433,24 @@ class TmdbMetadataService implements MetadataService {
         return _episodes(json);
       }) ??
       const [];
+
+  @override
+  Future<List<PersonResult>> searchPeople(String query) async {
+    final json = await _get(
+      '/api/tmdb/discover/search/person',
+      params: {'q': query},
+    );
+    return [
+      for (final p in (json?['results'] as List? ?? const []))
+        if (p is Map && p['tmdbId'] is num && _text(p['name']) != null)
+          PersonResult(
+            tmdbId: (p['tmdbId'] as num).toInt(),
+            name: _text(p['name'])!,
+            knownFor: _text(p['knownFor']) ?? '',
+            photo: _tmdbImage(p['photo']),
+          ),
+    ];
+  }
 
   Future<_Match?> _match(Entry item) {
     if (!item.isPlayableTitle || item.isEditorial) return Future.value();
@@ -535,6 +597,9 @@ class NoMetadataService implements MetadataService {
     int tmdbId,
     int number,
   ) async => const [];
+  @override
+  Future<List<PersonResult>> searchPeople(String query) async =>
+      throw const MetadataUnavailable(503);
 }
 
 final metadataServiceProvider = Provider<MetadataService>((ref) {

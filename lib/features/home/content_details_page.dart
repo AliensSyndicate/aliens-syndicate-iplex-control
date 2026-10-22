@@ -14,7 +14,9 @@ import 'home_providers.dart';
 import 'home_widgets.dart';
 import 'library.dart';
 import 'metadata_service.dart';
-import 'season_sheet.dart';
+import 'browse_widgets.dart';
+import 'season_episodes.dart';
+import '../../core/data/app_sharing.dart';
 
 /// Opens the full details page of [item] on top of the current page (Home →
 /// title → person → title …); Back returns through the same stack.
@@ -287,6 +289,12 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     ),
   );
 
+  /// Series tab (Temporadas / Sobre / Elenco).
+  int seriesTab = 0;
+
+  /// Season shown in the Temporadas tab.
+  int? season;
+
   Widget _layout(
     BuildContext context,
     BoxConstraints box,
@@ -296,9 +304,11 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     HomeData? home,
   ) {
     final channel = shown.isChannel;
+    final series = shown.kind == 'series';
     return DetailsLayout(
       height: box.maxHeight,
-      coverFraction: channel ? 0.6 : 0.75,
+      coverFraction: channel ? 0.45 : 0.6,
+      contentStart: channel ? 0.32 : 0.42,
       // Titles use the original TMDB poster as a full-bleed cover; channels
       // keep their logo.
       cover: channel
@@ -313,198 +323,235 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
               url: tmdbSized(meta?.posterOriginal ?? meta?.poster),
               loading: loading,
             ),
-      actions: _libraryBar(shown, meta, home),
       children: [
-        ..._summary(context, shown, meta, home),
-        ..._details(context, shown, meta),
-        ..._people(context, meta, home),
-        ..._seasons(context, shown, meta),
+        ..._summary(context, shown, meta),
+        const SizedBox(height: AppSpacing.lg),
+        _actions(context, shown, meta, home),
+        ..._availability(context, shown),
+        if (series) ...[
+          const SizedBox(height: AppSpacing.lg),
+          AppTabs<int>(
+            key: const Key('series-tabs'),
+            options: [
+              (0, context.l.seasonsTab),
+              (1, context.l.aboutTab),
+              (2, context.l.castTab),
+            ],
+            selected: seriesTab,
+            onSelected: (i) => setState(() => seriesTab = i),
+          ),
+          if (seriesTab == 0) ..._seasons(context, shown, meta),
+          if (seriesTab == 1) ...[
+            ..._synopsis(shown, meta),
+            ..._information(context, shown, meta),
+          ],
+          if (seriesTab == 2) ..._people(context, meta, home),
+        ] else ...[
+          ..._synopsis(shown, meta),
+          ..._people(context, meta, home),
+          ..._information(context, shown, meta),
+        ],
         ..._guide(context),
+        ..._recommendations(context, meta),
       ],
     );
   }
 
-  /// Title, original title, "2021 | Gênero | 1h 25min", stars, play and lists.
+  /// Title, original title and "2024  2h 46min  [14]  Gênero · Gênero".
   List<Widget> _summary(
     BuildContext context,
     Entry shown,
     ContentMetadata? meta,
-    HomeData? home,
   ) {
     final l = context.l;
     final channel = shown.isChannel;
-    final target = _withProgress(home);
-    final resume = target?.progress != null && !channel;
-    final episode = _episode(target);
     final year = meta?.year ?? shown.year;
     final genres = meta?.genres ?? const <String>[];
     final category = editorial ? '' : shown.text('category');
     final minutes = meta?.runtimeMinutes;
     final seasons = _seasonCount(meta);
-    final facts = <String>[
-      if (channel) l.liveChannel,
-      if (!channel && year != null) '$year',
-      if (genres.isNotEmpty)
-        genres.first
-      else if (category.isNotEmpty)
-        category,
-      if (minutes != null && shown.kind == 'movie')
-        formatRuntime(context, minutes),
-      if (episode case final e?)
-        e.number.isEmpty
-            ? l.seasonNumber(e.season)
-            : l.seasonEpisodeShort(e.season, e.number)
-      else if (shown.kind == 'series' && seasons > 0)
-        l.seasonsCount(seasons),
-    ];
-    final score = meta?.rating ?? double.tryParse(shown.text('rating'));
-    final stars = score == null || channel
-        ? null
-        : (score.clamp(0, 10) / 2).toDouble();
-    final original = meta?.originalTitle;
     final seal = AgeRatingBadge.normalize(_rawAgeRating(shown, meta));
+    final original = meta?.originalTitle;
+    final secondary = AppTypography.bodyMedium.copyWith(
+      color: AppColors.textSecondary,
+    );
+    final facts = <InlineSpan>[
+      if (channel) TextSpan(text: l.liveChannel),
+      if (!channel && year != null) TextSpan(text: '$year'),
+      if (minutes != null && shown.kind == 'movie')
+        TextSpan(text: formatRuntime(context, minutes)),
+      if (shown.kind == 'series' && seasons > 0)
+        TextSpan(text: l.seasonsCount(seasons)),
+      if (seal != null)
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Semantics(
+            label: l.ageRatingLabel(seal),
+            child: AgeRatingBadge(seal, size: 20),
+          ),
+        ),
+      if (genres.isNotEmpty)
+        TextSpan(text: genres.take(2).join(' · '))
+      else if (category.isNotEmpty)
+        TextSpan(text: category),
+    ];
     return [
       Text(
         shown.name,
         key: const Key('details-title'),
-        textAlign: TextAlign.center,
         style: AppTypography.headlineMedium.copyWith(
+          fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
         ),
       ),
       if (original != null &&
           original.toLowerCase() != shown.name.toLowerCase()) ...[
         const SizedBox(height: AppSpacing.xs),
-        Text(
-          l.originalTitleLabel(original),
-          textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
+        Text(original, style: secondary),
       ],
-      if (facts.isNotEmpty || seal != null) ...[
+      if (facts.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.sm),
         Text.rich(
           key: const Key('details-facts'),
           TextSpan(
             children: [
-              // ClassInd seal: first position of the year line.
-              if (seal != null) ...[
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.middle,
-                  child: Semantics(
-                    label: l.ageRatingLabel(seal),
-                    child: AgeRatingBadge(seal, size: 24),
-                  ),
-                ),
-                if (facts.isNotEmpty) const TextSpan(text: '  '),
+              for (final (i, span) in facts.indexed) ...[
+                if (i > 0) const TextSpan(text: '   '),
+                span,
               ],
-              TextSpan(text: facts.join(' | ')),
             ],
           ),
-          textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: secondary,
         ),
       ],
       ..._ageRating(context, shown, meta),
-      if (stars != null) ...[
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          key: const Key('details-stars'),
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < 5; i++)
-              Icon(
-                stars >= i + 1
-                    ? Icons.star_rounded
-                    : stars >= i + 0.5
-                    ? Icons.star_half_rounded
-                    : Icons.star_outline_rounded,
-                size: 22,
-                color: AppColors.warning,
-              ),
-          ],
+    ];
+  }
+
+  /// First linked TV (online first): shown under "Assistir na TV".
+  String? _tvName() {
+    final now = ref.watch(clockProvider).value ?? DateTime.now();
+    final tvs = [
+      for (final d
+          in ref.watch(entriesProvider('devices')).asData?.value ??
+              const <Entry>[])
+        if (d.text('status') != 'unlinked') d,
+    ]..sort((a, b) => (b.onlineAt(now) ? 1 : 0) - (a.onlineAt(now) ? 1 : 0));
+    return tvs.firstOrNull?.name;
+  }
+
+  /// Assistir na TV (with the TV name) · Favorito · Lista de desejos ·
+  /// Compartilhar. In progress: Continuar + Recomeçar.
+  Widget _actions(
+    BuildContext context,
+    Entry shown,
+    ContentMetadata? meta,
+    HomeData? home,
+  ) {
+    final l = context.l;
+    final target = _withProgress(home);
+    final resume = target?.progress != null && !shown.isChannel;
+    final episode = _episode(target);
+    final profile = home?.profile;
+    final tv = _tvName();
+    return Row(
+      key: const Key('details-actions'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: DetailsAction(
+            key: Key(resume ? 'details-continue' : 'details-watch-on-tv'),
+            primary: true,
+            material: Icons.play_arrow_rounded,
+            label: resume ? l.continueLabel : l.watchOnTv,
+            caption: tv ?? l.noTvConnected,
+            onPressed: target == null
+                ? null
+                : () => watchOnTv(target, resume: resume),
+          ),
         ),
-      ],
-      const SizedBox(height: AppSpacing.lg),
-      if (target != null && resume) ...[
-        // In progress: continue where it stopped, or start over (same
-        // episode for a series).
-        Row(
-          children: [
-            Expanded(
-              child: DetailsButton.primary(
-                key: const Key('details-continue'),
-                label: l.continueLabel,
-                onPressed: () => watchOnTv(target, resume: true),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            // Text only, fit width (label + padding); Continue takes the rest.
-            DetailsButton(
+        if (resume && target != null)
+          Expanded(
+            child: DetailsAction(
               key: const Key('details-restart'),
+              icon: AppIcons.refresh,
               label: l.restartLabel,
               onPressed: () =>
                   watchOnTv(target, episodeId: target.episodeId ?? episode?.id),
             ),
-          ],
-        ),
-      ] else if (target != null)
-        DetailsButton.primary(
-          key: const Key('details-watch-on-tv'),
-          label: l.watchOnTv,
-          onPressed: () => watchOnTv(target),
-        )
-      else if (!resolving)
-        Text(
-          l.notAvailableToWatch,
-          key: const Key('details-unavailable'),
-          textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+          ),
+        if (profile != null && profile.persistent)
+          Expanded(
+            flex: shown.isChannel ? 1 : 2,
+            child: LibraryButtons(
+              key: ValueKey('library-${shown.id}'),
+              pageStyle: true,
+              item: shown,
+              profile: profile,
+              metadata: meta,
+              saved: {
+                for (final list in LibraryList.values)
+                  list:
+                      home!.isSaved(list, shown) ||
+                      (target != null && home.isSaved(list, target)) ||
+                      (meta?.tmdbId != null &&
+                          home.isSaved(
+                            list,
+                            editorialEntry(
+                              kind: shown.kind,
+                              tmdbId: meta!.tmdbId!,
+                              title: '',
+                            ),
+                          )),
+              },
+            ),
+          ),
+        Expanded(
+          child: DetailsAction(
+            key: const Key('details-share'),
+            material: Icons.ios_share_rounded,
+            label: l.share,
+            onPressed: () => _share(context, shown, meta),
           ),
         ),
-      const SizedBox(height: AppSpacing.lg),
-    ];
-  }
-
-  /// Favoritar / Salvar as icons on the right of the top bar.
-  Widget? _libraryBar(Entry shown, ContentMetadata? meta, HomeData? home) {
-    final profile = home?.profile;
-    if (profile == null || !profile.persistent) return null;
-    final target = playable;
-    return LibraryButtons(
-      key: ValueKey('library-${shown.id}'),
-      pageStyle: true,
-      item: shown,
-      profile: profile,
-      metadata: meta,
-      saved: {
-        for (final list in LibraryList.values)
-          list:
-              home!.isSaved(list, shown) ||
-              (target != null && home.isSaved(list, target)) ||
-              (meta?.tmdbId != null &&
-                  home.isSaved(
-                    list,
-                    editorialEntry(
-                      kind: shown.kind,
-                      tmdbId: meta!.tmdbId!,
-                      title: '',
-                    ),
-                  )),
-      },
+      ],
     );
   }
+
+  /// Native share sheet with the title (never a fabricated store link).
+  Future<void> _share(
+    BuildContext context,
+    Entry shown,
+    ContentMetadata? meta,
+  ) async {
+    final year = meta?.year ?? shown.year;
+    final title = year == null ? shown.name : '${shown.name} ($year)';
+    try {
+      await AppSharing.share(AppSharing.message(title, title));
+    } catch (e) {
+      if (context.mounted) showFailure(context, e);
+    }
+  }
+
+  /// Discreet note when the title cannot be sent to a TV.
+  List<Widget> _availability(BuildContext context, Entry shown) => [
+    if (playable == null && !resolving) ...[
+      const SizedBox(height: AppSpacing.md),
+      Text(
+        context.l.notAvailableToWatch,
+        key: const Key('details-unavailable'),
+        style: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textSecondary,
+        ),
+      ),
+    ],
+  ];
 
   String? _rawAgeRating(Entry shown, ContentMetadata? meta) =>
       meta?.certification ??
       (shown.text('ageRating').isEmpty ? null : shown.text('ageRating'));
 
-  /// Reasons of the age rating, under the year line that carries the seal.
+  /// Reasons of the age rating, under the facts line that carries the seal.
   List<Widget> _ageRating(
     BuildContext context,
     Entry shown,
@@ -518,7 +565,6 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
       Text(
         _sentence(reasons, context),
         key: const Key('details-age-rating'),
-        textAlign: TextAlign.center,
         style: AppTypography.bodyMedium.copyWith(
           color: AppColors.textSecondary,
         ),
@@ -539,86 +585,140 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
   int _seasonCount(ContentMetadata? meta) =>
       meta?.seasonCount ?? {for (final e in episodes) e.season}.length;
 
-  /// One item per line, in a single column; then the synopsis.
-  List<Widget> _details(
+  /// Whole synopsis (TMDB first, then the source's plot).
+  List<Widget> _synopsis(Entry shown, ContentMetadata? meta) {
+    final synopsis = (meta?.overview.isNotEmpty ?? false)
+        ? meta!.overview
+        : shown.text('plot');
+    if (synopsis.isEmpty) return const [];
+    return [
+      const SizedBox(height: AppSpacing.lg),
+      Text(
+        synopsis,
+        key: const Key('details-synopsis'),
+        style: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textPrimary,
+          height: 1.45,
+        ),
+      ),
+    ];
+  }
+
+  Widget _sectionTitle(String text) => Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.lg, bottom: AppSpacing.sm),
+    child: Semantics(
+      header: true,
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+      ),
+    ),
+  );
+
+  /// Informações: label / value rows (only what is known).
+  List<Widget> _information(
     BuildContext context,
     Entry shown,
     ContentMetadata? meta,
   ) {
     final l = context.l;
-    final raw = _rawAgeRating(shown, meta);
-    // Shown as the ClassInd seal; only an unknown scheme stays as text.
-    final age = AgeRatingBadge.normalize(raw) == null ? raw : null;
+    final seal = AgeRatingBadge.normalize(_rawAgeRating(shown, meta));
+    final rawAge = _rawAgeRating(shown, meta);
     final directors = [for (final p in meta?.crew ?? const <Credit>[]) p.name];
     final genres = meta?.genres ?? const <String>[];
-    final category = editorial ? '' : shown.text('category');
-    final rows = <(String, bool)>[
-      if (age != null) (l.ageRatingLabel(age), true),
-      if (meta?.releaseDate case final date?)
-        (l.releaseDateLabel(formatDate(context, date)), true),
-      if (meta?.runtimeMinutes != null && shown.kind != 'movie')
-        (formatRuntime(context, meta!.runtimeMinutes!), true),
-      if (shown.kind == 'series' && episodes.isNotEmpty)
-        (l.episodesCount(episodes.length), true),
-      if (meta?.rating case final rating?)
-        (l.ratingLabel(rating.toStringAsFixed(1)), false),
-      if (genres.isNotEmpty) (genres.take(6).join(', '), false),
-      if (category.isNotEmpty &&
-          !genres.any((g) => g.toLowerCase() == category.toLowerCase()))
-        (category, false),
-    ];
-    final synopsis = (meta?.overview.isNotEmpty ?? false)
-        ? meta!.overview
-        : shown.text('plot');
-    return [
-      for (final (text, primary) in rows) ...[
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          text,
-          style: AppTypography.bodyMedium.copyWith(
-            color: primary ? AppColors.textPrimary : AppColors.textSecondary,
-          ),
-        ),
-      ],
-      if (directors.isNotEmpty) ...[
-        const SizedBox(height: AppSpacing.lg),
-        Text(
+    final year = meta?.year ?? shown.year;
+    final rows = <(String, Widget)>[
+      if (meta?.originalTitle case final original?)
+        (l.originalTitleRow, _value(original)),
+      if (directors.isNotEmpty)
+        (
           shown.kind == 'series'
-              ? l.createdByLabel(directors.join(', '))
-              : l.directedByLabel(directors.join(', ')),
-          key: const Key('details-director'),
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textPrimary,
+              ? l.createdByLabel('').replaceAll(':', '').trim()
+              : l.directionLabel,
+          _value(directors.join(', ')),
+        ),
+      if (genres.isNotEmpty) (l.genresLabel, _value(genres.join(', '))),
+      if (seal != null)
+        (
+          l.ageRatingRowLabel,
+          Row(
+            children: [
+              AgeRatingBadge(seal, size: 18),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(child: _value(seal == 'L' ? 'Livre' : '$seal+')),
+            ],
+          ),
+        )
+      else if (rawAge != null)
+        (l.ageRatingRowLabel, _value(rawAge)),
+      if (meta?.runtimeMinutes case final minutes?)
+        (l.runtimeLabel, _value(formatRuntime(context, minutes))),
+      if (meta?.releaseDate case final date?)
+        (l.releaseYearLabel, _value(formatDate(context, date)))
+      else if (year != null)
+        (l.releaseYearLabel, _value('$year')),
+      if (meta?.rating case final rating?)
+        (
+          l.ratingRowLabel,
+          Row(
+            children: [
+              const Icon(
+                Icons.star_rounded,
+                size: 18,
+                color: AppColors.warning,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _value('${rating.toStringAsFixed(1)} (TMDB)'),
+            ],
           ),
         ),
-      ],
-      if (synopsis.isNotEmpty) ...[
-        SizedBox(height: directors.isEmpty ? AppSpacing.lg : AppSpacing.md),
-        Text(
-          synopsis,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textPrimary,
-            height: 1.45,
+    ];
+    if (rows.isEmpty) return const [];
+    return [
+      _sectionTitle(l.infoTitle),
+      for (final (label, value) in rows)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs + 2),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 132,
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              Expanded(child: value),
+            ],
           ),
         ),
-      ],
     ];
   }
 
-  /// Cast and crew with photo, name and role. A person opens their page,
+  Widget _value(String text) => Text(
+    text,
+    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+  );
+
+  /// Elenco: round photos with name and character. A person opens their page,
   /// except for kids profiles (no editorial discovery).
   List<Widget> _people(
     BuildContext context,
     ContentMetadata? meta,
     HomeData? home,
   ) {
-    if (meta == null) return const [];
+    if (meta == null || meta.cast.isEmpty) return const [];
     final discover = home?.profile?.canDiscover ?? true;
-    // Actors only; direction is shown before the synopsis.
-    if (meta.cast.isEmpty) return const [];
     return [
-      const SizedBox(height: AppSpacing.md),
-      Semantics(header: true, child: SectionHeader(context.l.castLabel)),
+      _sectionTitle(context.l.castLabel),
       PeopleRow(
         people: meta.cast,
         onTap: discover ? (id) => openPerson(context, id) : null,
@@ -626,17 +726,13 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     ];
   }
 
-  /// Series: TMDB seasons (editorial) apart from the episodes the IPTV source
-  /// really offers (the only ones sent to the TV).
-  /// Series: one Web-style button per season. Seasons come from the IPTV
-  /// source when it offers the series (only those episodes are playable);
-  /// otherwise from TMDB, for information.
+  /// Temporadas: season selector and its episodes (TMDB names, synopsis and
+  /// runtime). Only the episodes the IPTV source offers can be sent to a TV.
   List<Widget> _seasons(
     BuildContext context,
     Entry shown,
     ContentMetadata? meta,
   ) {
-    if (shown.kind != 'series') return const [];
     final target = playable;
     final numbers = target != null && episodes.isNotEmpty
         ? ({for (final e in episodes) e.season}.toList()..sort())
@@ -645,41 +741,50 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
               if (s.number > 0) s.number,
           ];
     if (numbers.isEmpty) return const [];
+    final current = numbers.contains(season) ? season! : numbers.first;
     return [
       const SizedBox(height: AppSpacing.md),
-      Semantics(header: true, child: SectionHeader(context.l.seasonsTitle)),
-      Wrap(
-        spacing: AppSpacing.md,
-        runSpacing: AppSpacing.md,
-        children: [
-          for (final n in numbers)
-            DetailsButton(
-              key: ValueKey('details-season-$n'),
-              label: context.l.seasonNumber(n),
-              onPressed: () => _openSeason(n, target, shown, meta),
-            ),
-        ],
+      _SeasonPicker(
+        seasons: numbers,
+        selected: current,
+        onSelected: (n) => setState(() => season = n),
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      SeasonEpisodes(
+        key: ValueKey('season-$current'),
+        series: target ?? shown,
+        season: current,
+        available: target == null ? const [] : episodes,
+        tmdbId: meta?.tmdbId ?? shown.tmdbId,
+        onPlay: target == null
+            ? null
+            : (e) => watchOnTv(target, episodeId: e.id),
       ),
     ];
   }
 
-  /// Season sheet; choosing an available episode opens "Assistir na TV".
-  Future<void> _openSeason(
-    int number,
-    Entry? target,
-    Entry shown,
-    ContentMetadata? meta,
-  ) async {
-    final picked = await showSeasonSheet(
-      context,
-      series: target ?? shown,
-      season: number,
-      available: target == null ? const [] : episodes,
-      tmdbId: meta?.tmdbId ?? shown.tmdbId,
-    );
-    if (picked != null && target != null && mounted) {
-      watchOnTv(target, episodeId: picked.id);
-    }
+  /// "Você também pode gostar": TMDB recommendations, each opens its page.
+  List<Widget> _recommendations(BuildContext context, ContentMetadata? meta) {
+    final items = meta?.recommendations ?? const <Entry>[];
+    if (items.isEmpty) return const [];
+    return [
+      _sectionTitle(context.l.youMayLike),
+      SizedBox(
+        height:
+            HomeCardSize.posterHeight + HomeCardSize.caption + AppSpacing.sm,
+        child: ListView.separated(
+          key: const Key('details-recommendations'),
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length,
+          separatorBuilder: (context, index) =>
+              const SizedBox(width: AppSpacing.md),
+          itemBuilder: (context, index) => HomeCard(
+            item: items[index],
+            onTap: () => openTitle(context, items[index]),
+          ),
+        ),
+      ),
+    ];
   }
 
   List<Widget> _guide(BuildContext context) => [
@@ -724,143 +829,144 @@ class PeopleRow extends StatelessWidget {
   final List<Credit> people;
   final ValueChanged<int>? onTap;
 
-  @override
-  Widget build(BuildContext context) => PortraitRow(
-    children: [
-      for (final person in people)
-        PortraitCard(
-          key: ValueKey('person-${person.id ?? person.name}'),
-          image: _PersonPhoto(person: person),
-          title: person.name,
-          subtitle: person.role,
-          onTap: person.id != null && onTap != null
-              ? () => onTap!(person.id!)
-              : null,
-        ),
-    ],
-  );
-}
-
-/// Horizontal list of [PortraitCard]s (cast on the title page, filmography on
-/// the person page).
-class PortraitRow extends StatelessWidget {
-  const PortraitRow({super.key, required this.children});
-  final List<Widget> children;
+  static const _size = 80.0;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    // Image + gap + two title lines and one subtitle line, following the
-    // system text size (no overflow with larger fonts).
-    height:
-        PortraitCard.height +
-        AppSpacing.sm +
-        MediaQuery.textScalerOf(context).scale(52),
+    height: _size + AppSpacing.sm + MediaQuery.textScalerOf(context).scale(52),
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      clipBehavior: Clip.none,
-      itemCount: children.length,
+      itemCount: people.length,
       separatorBuilder: (context, index) =>
           const SizedBox(width: AppSpacing.md),
-      itemBuilder: (context, index) => children[index],
+      itemBuilder: (context, index) {
+        final person = people[index];
+        final tap = person.id != null && onTap != null
+            ? () => onTap!(person.id!)
+            : null;
+        return Semantics(
+          button: tap != null,
+          label: [
+            person.name,
+            person.role,
+          ].where((s) => s.isNotEmpty).join(', '),
+          excludeSemantics: true,
+          child: GestureDetector(
+            key: ValueKey('person-${person.id ?? person.name}'),
+            behavior: HitTestBehavior.opaque,
+            onTap: tap,
+            child: SizedBox(
+              width: _size + AppSpacing.sm,
+              child: Column(
+                children: [
+                  ClipOval(
+                    child: SizedBox.square(
+                      dimension: _size,
+                      child: PhotoOrInitials(
+                        name: person.name,
+                        url: tmdbSized(person.photo, 'w185'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    person.name,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.25,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  if (person.role.isNotEmpty)
+                    Text(
+                      person.role,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     ),
   );
 }
 
-/// Portrait card: 3:4 image with rounded corners, name below and a secondary
-/// line (role, character).
-class PortraitCard extends StatelessWidget {
-  const PortraitCard({
-    super.key,
-    required this.image,
-    required this.title,
-    this.subtitle = '',
-    this.onTap,
+/// Season selector (pill): opens the list of seasons.
+class _SeasonPicker extends StatelessWidget {
+  const _SeasonPicker({
+    required this.seasons,
+    required this.selected,
+    required this.onSelected,
   });
-  final Widget image;
-  final String title, subtitle;
-  final VoidCallback? onTap;
-
-  static const width = 96.0, height = width * 4 / 3;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: onTap != null,
-    label: [title, subtitle].where((s) => s.isNotEmpty).join(', '),
-    excludeSemantics: true,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        width: width,
-        child: Column(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadii.md),
-              child: SizedBox(width: width, height: height, child: image),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              title,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodyMedium.copyWith(
-                fontSize: 13,
-                height: 1.25,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            if (subtitle.isNotEmpty)
-              Text(
-                subtitle,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.bodyMedium.copyWith(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-/// Actor photo (TMDB) or the person's initials on the recessed surface.
-class _PersonPhoto extends StatelessWidget {
-  const _PersonPhoto({required this.person});
-  final Credit person;
-
-  Widget _initials() => ColoredBox(
-    color: AppColors.surfaceRecessed,
-    child: Center(
-      child: Text(
-        person.name
-            .split(RegExp(r'\s+'))
-            .where((w) => w.isNotEmpty)
-            .take(2)
-            .map((w) => w.characters.first.toUpperCase())
-            .join(),
-        style: AppTypography.titleLarge.copyWith(
-          color: AppColors.textSecondary,
-        ),
-      ),
-    ),
-  );
+  final List<int> seasons;
+  final int selected;
+  final ValueChanged<int> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final url = tmdbSized(person.photo, 'h632');
-    if (url == null) return _initials();
-    return Image.network(
-      url,
-      fit: BoxFit.cover,
-      gaplessPlayback: true,
-      excludeFromSemantics: true,
-      errorBuilder: (context, error, stack) => _initials(),
+    final l = context.l;
+    return InkWell(
+      key: const Key('season-picker'),
+      borderRadius: BorderRadius.circular(AppRadii.sm),
+      onTap: seasons.length < 2
+          ? null
+          : () async {
+              final picked = await showAppModalSheet<int>(
+                context: context,
+                builder: (sheet) => AppModalSheet(
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SheetHeader(icon: AppIcons.series, title: l.seasonsTab),
+                      for (final n in seasons)
+                        SelectionRow(
+                          key: ValueKey('season-option-$n'),
+                          title: l.seasonNumber(n),
+                          selected: n == selected,
+                          onTap: () => Navigator.of(sheet).pop(n),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+              if (picked != null) onSelected(picked);
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm + 2,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l.seasonNumber(selected),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            if (seasons.length > 1) const AppIcon(AppIcons.down, size: 18),
+          ],
+        ),
+      ),
     );
   }
 }

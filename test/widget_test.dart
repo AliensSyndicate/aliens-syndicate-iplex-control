@@ -194,7 +194,7 @@ void main() {
     },
   );
   testWidgets(
-    'five circular navigation buttons and straight full-width surface',
+    'five navigation items (Home, Busca, Família, Dispositivos, IPTV)',
     (tester) async {
       int selected = -1;
       await tester.pumpWidget(
@@ -209,11 +209,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(CircularButton), findsNWidgets(5));
-      await tester.tap(find.byTooltip('IPTV'));
-      await tester.tap(find.byType(CircularButton).at(3));
+      // Home, Busca, Família, Dispositivos, IPTV.
+      for (var i = 0; i < 5; i++) {
+        expect(find.byKey(ValueKey('main-menu-$i')), findsOneWidget);
+      }
+      await tester.tap(find.byKey(const ValueKey('main-menu-4')));
       await tester.pumpAndSettle();
-      expect(selected, 3);
+      expect(selected, 4);
       expect(tester.takeException(), null);
     },
   );
@@ -384,29 +386,5 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(NeumorphicStatusIndicator), findsNWidgets(2));
-  });
-  testWidgets('flutter_neumorphism_ui FlutterNeumorphism renders correctly', (
-    tester,
-  ) async {
-    bool tapped = false;
-    await tester.pumpWidget(
-      host(
-        FlutterNeumorphism(
-          style: const NeumorphismStyle(
-            color: AppColors.surfaceDefault,
-            shape: BoxShape.circle,
-            type: NeumorphismType.flat,
-            depth: 8,
-          ),
-          onTap: () => tapped = true,
-          child: const Text('Neumorphic'),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Neumorphic'), findsOneWidget);
-    await tester.tap(find.text('Neumorphic'));
-    await tester.pumpAndSettle();
-    expect(tapped, true);
   });
 }

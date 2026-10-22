@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/design_system/tokens.dart';
+
 /// Keeps the launch splash (same image and colour as the native one) on screen
 /// for a minimum time after the first Flutter frame, then fades to the app.
 class SplashGate extends StatefulWidget {
@@ -16,7 +18,7 @@ class SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<SplashGate> {
-  static const _color = Color(0xFF39373A);
+  static const _color = AppColors.backgroundDeep;
   static const _logo = AssetImage('assets/images/launcher.png');
   bool _done = false;
 

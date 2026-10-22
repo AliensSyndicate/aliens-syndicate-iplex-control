@@ -1105,7 +1105,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allSpacesHint => 'Includes sources added later.';
 
   @override
-  String get spaceLive => 'Live channels';
+  String get spaceLive => 'Live';
 
   @override
   String get spaceMovies => 'Movies';
@@ -1427,7 +1427,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String catalogKinds(int channels, int movies, int series) {
-    return '$channels channels · $movies movies · $series series';
+    return '$channels live · $movies movies · $series series';
   }
 
   @override
@@ -1465,7 +1465,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeEmptyBody =>
-      'Search channels, movies and series. What you favorite, save to your list or start watching shows up here.';
+      'Search live content, movies and series. What you favorite, save to your list or start watching shows up here.';
 
   @override
   String get exploreCatalog => 'Explore the catalog';
@@ -1486,7 +1486,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueWatchingOnTv => 'Continue watching on TV';
 
   @override
-  String get liveChannel => 'Live channel';
+  String get liveChannel => 'Live';
 
   @override
   String get onAirNow => 'Now';
@@ -1723,4 +1723,118 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get seeAll => 'See all';
+
+  @override
+  String get searchTab => 'Search';
+
+  @override
+  String get searchTitle => 'Search';
+
+  @override
+  String get searchPageHint => 'Movies, series, live, actors…';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get filterChannels => 'Live';
+
+  @override
+  String get filterMovies => 'Movies';
+
+  @override
+  String get filterSeries => 'Series';
+
+  @override
+  String get filterActors => 'Actors';
+
+  @override
+  String get myIplex => 'My iPlex';
+
+  @override
+  String get recentSearchesTitle => 'Recent searches';
+
+  @override
+  String get actorKind => 'Actor';
+
+  @override
+  String get channelKind => 'Live';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get favoriteLabel => 'Favorite';
+
+  @override
+  String get wishlistLabel => 'Wishlist';
+
+  @override
+  String get infoTitle => 'Information';
+
+  @override
+  String get genresLabel => 'Genres';
+
+  @override
+  String get directionLabel => 'Direction';
+
+  @override
+  String get ratingRowLabel => 'Rating';
+
+  @override
+  String get runtimeLabel => 'Runtime';
+
+  @override
+  String get releaseYearLabel => 'Release year';
+
+  @override
+  String get ageRatingRowLabel => 'Age rating';
+
+  @override
+  String get originalTitleRow => 'Original title';
+
+  @override
+  String get youMayLike => 'You may also like';
+
+  @override
+  String get seeMore => 'See more';
+
+  @override
+  String get aboutTab => 'About';
+
+  @override
+  String get castTab => 'Cast';
+
+  @override
+  String get seasonsTab => 'Seasons';
+
+  @override
+  String get filmographyTab => 'Filmography';
+
+  @override
+  String get noTvConnected => 'No TV';
+
+  @override
+  String get deptActing => 'Acting';
+
+  @override
+  String get deptDirecting => 'Directing';
+
+  @override
+  String get deptWriting => 'Writing';
+
+  @override
+  String get deptProduction => 'Production';
+
+  @override
+  String get seeDetails => 'See details';
+
+  @override
+  String get selectDevice => 'Select a device';
+
+  @override
+  String get connectedStatus => 'Connected';
+
+  @override
+  String get availableStatus => 'Available';
 }

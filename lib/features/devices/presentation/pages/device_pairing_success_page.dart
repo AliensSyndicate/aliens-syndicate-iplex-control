@@ -30,13 +30,6 @@ class DevicePairingSuccessPage extends ConsumerWidget {
                 color: AppColors.surfaceRecessed,
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.success, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.success.withValues(alpha: 0.2),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  ),
-                ],
               ),
               child: const Center(
                 child: AppIcon(
