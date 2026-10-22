@@ -4,6 +4,7 @@ export 'components/age_rating_badge.dart';
 export 'components/app_avatar.dart';
 export 'components/app_tabs.dart';
 export 'components/app_modal_sheet.dart';
+export 'components/app_progress_bar.dart';
 export 'components/app_dropdown_field.dart';
 export 'components/app_icon.dart';
 export 'components/dual_lock_emblem.dart';

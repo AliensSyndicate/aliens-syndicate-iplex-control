@@ -184,15 +184,9 @@ class NowPlayingBar extends ConsumerWidget {
                 ),
                 if (!channel) ...[
                   const SizedBox(height: 14),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      key: const Key('now-playing-progress'),
-                      value: progress ?? 0,
-                      minHeight: 12,
-                      color: Colors.white,
-                      backgroundColor: const Color(0x33FFFFFF),
-                    ),
+                  AppProgressBar(
+                    key: const Key('now-playing-progress'),
+                    value: progress ?? 0,
                   ),
                 ],
                 if (remainingText != null) ...[

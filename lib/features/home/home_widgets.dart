@@ -121,22 +121,17 @@ class HomeCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                      // Progress bar placed at the bottom edge of the poster photo
+                      // Progress bar inside the bottom of the poster (8 px, 8 px margin)
                       if (progress != null)
                         Positioned(
                           left: 0,
                           right: 0,
                           bottom: 0,
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              bottom: Radius.circular(AppRadii.md),
-                            ),
-                            child: LinearProgressIndicator(
-                              value: progress.fraction,
-                              minHeight: 4,
-                              color: const Color(0xFF00E676),
-                              backgroundColor: const Color(0x66000000),
-                            ),
+                          child: AppProgressBar(
+                            value: progress.fraction,
+                            margin: const EdgeInsets.all(AppSpacing.sm),
+                            color: const Color(0xFF00E676),
+                            trackColor: const Color(0x66000000),
                           ),
                         ),
                       if (!showCaption)
@@ -406,24 +401,13 @@ class HomeRow extends StatelessWidget {
                       horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          context.l.seeAll,
-                          style: const TextStyle(
-                            color: Color(0xFF00E676),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: Color(0xFF00E676),
-                        ),
-                      ],
+                    child: Text(
+                      context.l.seeAll,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.normal,
+                      ),
                     ),
                   ),
                 ),

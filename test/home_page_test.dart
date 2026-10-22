@@ -100,13 +100,31 @@ void main() {
         19,
         reason: '10 cards + 9 separators',
       );
-      expect(
+      // Continue watching: the app progress bar, 8 px with an 8 px margin
+      // inside the poster.
+      final cardBar = find.descendant(
+        of: find.byKey(const ValueKey('home-card-m1')),
+        matching: find.byType(AppProgressBar),
+      );
+      expect(cardBar, findsOneWidget);
+      final bar = tester.widget<AppProgressBar>(cardBar);
+      expect([bar.height, bar.margin], [8, const EdgeInsets.all(8)]);
+      final poster = tester.getRect(
         find.descendant(
           of: find.byKey(const ValueKey('home-card-m1')),
+          matching: find.byType(Artwork),
+        ),
+      );
+      final line = tester.getRect(
+        find.descendant(
+          of: cardBar,
           matching: find.byType(LinearProgressIndicator),
         ),
-        findsOneWidget,
       );
+      expect(line.height, 8);
+      expect(line.left - poster.left, 8);
+      expect(poster.right - line.right, 8);
+      expect(poster.bottom - line.bottom, 8);
       expect(find.text('Your Home is still empty'), findsNothing);
       expect(
         repo.mutationPayloads
@@ -513,12 +531,13 @@ void main() {
         isNull,
       );
       // Progress in solid white with translucent track.
-      final track = tester.widget<LinearProgressIndicator>(
+      // The app progress bar: 8 px, no margin, white on translucent track.
+      final track = tester.widget<AppProgressBar>(
         find.byKey(const Key('now-playing-progress')),
       );
       expect(
-        [track.color, track.backgroundColor],
-        [Colors.white, const Color(0x33FFFFFF)],
+        [track.color, track.trackColor, track.height, track.margin],
+        [Colors.white, const Color(0x33FFFFFF), 8, EdgeInsets.zero],
       );
       // Only on the Home.
       c.read(routerProvider).go('/devices');
@@ -575,18 +594,18 @@ void main() {
           'recentMovies': [item('r1', 'Filme Novo', 'movie')],
         }),
       );
-      final track = tester.widget<LinearProgressIndicator>(
+      final track = tester.widget<AppProgressBar>(
         find.byKey(const Key('now-playing-progress')),
       );
       expect(track.value, 0);
-      // Under the name, track height 3, backdrop covers the header.
+      // Under the name, track height 8, backdrop covers the header.
       final art = tester.getRect(find.byKey(const Key('now-playing-art')));
       final line = tester.getRect(
         find.byKey(const Key('now-playing-progress')),
       );
       final name = tester.getRect(find.byKey(const Key('now-playing-title')));
       expect(line.top, greaterThan(name.bottom));
-      expect(line.height, 12);
+      expect(line.height, 8);
       expect(art.top, lessThanOrEqualTo(name.top));
       expect(art.bottom, greaterThanOrEqualTo(line.bottom));
     },
