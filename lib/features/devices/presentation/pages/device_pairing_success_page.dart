@@ -34,7 +34,7 @@ class DevicePairingSuccessPage extends ConsumerWidget {
               child: const Center(
                 child: AppIcon(
                   AppIcons.check,
-                  size: AppTokens.xxl,
+                  size: AppSpacing.xxl,
                   color: AppColors.success,
                 ),
               ),

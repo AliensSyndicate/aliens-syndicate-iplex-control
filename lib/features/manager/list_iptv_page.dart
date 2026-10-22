@@ -39,6 +39,3 @@ class ListIptvPage extends ConsumerWidget {
     );
   }
 }
-
-/// Backward compatibility alias
-typedef SourcesPage = ListIptvPage;

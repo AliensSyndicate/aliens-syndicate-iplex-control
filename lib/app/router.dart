@@ -16,7 +16,7 @@ import '../core/domain/models.dart';
 import '../features/manager/detail_page.dart';
 import '../features/manager/profile_link_redeem_page.dart';
 import '../features/manager/profile_manage_page.dart';
-import '../features/manager/devices_page.dart';
+import '../features/devices/presentation/pages/device_list_page.dart';
 import '../features/manager/information_page.dart';
 import '../features/manager/invite_page.dart';
 import '../features/manager/name_form.dart';
@@ -35,7 +35,6 @@ import '../features/iptv/presentation/controllers/iptv_notification_controller.d
 import '../features/devices/presentation/pages/device_add_page.dart';
 import '../features/devices/presentation/pages/device_confirm_pairing_page.dart';
 import '../features/devices/presentation/pages/device_detail_page.dart';
-import '../features/devices/presentation/pages/device_list_page.dart';
 import '../features/devices/presentation/pages/device_manual_code_page.dart';
 import '../features/devices/presentation/pages/device_pairing_success_page.dart';
 import '../features/devices/presentation/pages/device_qr_scanner_page.dart';
@@ -194,8 +193,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (family.isLoading || family.hasError) {
           return path == '/loading' ? null : gate;
         }
-        if (!ref.read(canManageResourcesProvider))
+        if (!ref.read(canManageResourcesProvider)) {
           return '/access?reason=permission';
+        }
       }
       if (path == '/login' || path == '/loading' || path == '/') {
         return target == '/' ? '/home' : target;

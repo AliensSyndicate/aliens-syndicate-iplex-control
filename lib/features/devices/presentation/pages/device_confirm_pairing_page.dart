@@ -85,7 +85,7 @@ class _DeviceConfirmPairingPageState
                   const AppIcon(
                     AppIcons.alert,
                     color: AppColors.error,
-                    size: AppTokens.xl,
+                    size: AppSpacing.xl,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -115,7 +115,7 @@ class _DeviceConfirmPairingPageState
                   const AppIcon(
                     AppIcons.alert,
                     color: AppColors.warning,
-                    size: AppTokens.xl,
+                    size: AppSpacing.xl,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -149,7 +149,7 @@ class _DeviceConfirmPairingPageState
                         child: const Center(
                           child: AppIcon(
                             AppIcons.devices,
-                            size: AppTokens.xl,
+                            size: AppSpacing.xl,
                             color: AppColors.accent,
                           ),
                         ),

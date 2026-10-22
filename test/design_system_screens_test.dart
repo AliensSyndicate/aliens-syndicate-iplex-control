@@ -48,8 +48,9 @@ class _Repo extends navigation.SessionRepository {
 
   @override
   Stream<List<Entry>> watchEntries(String familyId, String collection) {
-    if (collection != 'devices')
+    if (collection != 'devices') {
       return super.watchEntries(familyId, collection);
+    }
     final now = DateTime.now().millisecondsSinceEpoch;
     return Stream.value([
       Entry('tv1', {
@@ -59,6 +60,16 @@ class _Repo extends navigation.SessionRepository {
         'model': 'Samsung QN90',
         'lastSeenAt': now,
         'onlineUntil': now + 3600000,
+        'nowPlaying': {
+          'itemId': 'm1',
+          'sourceId': 's',
+          'title': 'Missão Fictícia',
+          'kind': 'movie',
+          'state': 'playing',
+          'updatedAt': now,
+          'positionSec': 30,
+          'durationSec': 100,
+        },
       }),
       Entry('tv2', {
         'name': 'Quarto',

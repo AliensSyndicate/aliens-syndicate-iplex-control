@@ -5,7 +5,7 @@ import 'package:aliens_syndicate_iplex_control/core/design_system/components.dar
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/name_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
@@ -201,7 +201,7 @@ void main() {
         // Switch to Devices (Tab 2)
         router.go('/devices');
         await tester.pumpAndSettle();
-        expect(find.byType(DevicesPage), findsOneWidget);
+        expect(find.byType(DeviceListPage), findsOneWidget);
 
         // Switch to IPTV (Tab 3)
         router.go('/iptv');
@@ -257,7 +257,7 @@ void main() {
 
   group('Rebuild isolation and raster efficiency', () {
     testWidgets(
-      'DevicesPage does not rebuild when clock ticks without online state change',
+      'DeviceListPage does not rebuild when clock ticks without online state change',
       (tester) async {
         int buildCount = 0;
         final testDevice = Entry('tv', {
@@ -282,13 +282,13 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: MaterialApp(
-              theme: AppTokens.theme,
+              theme: AppTheme.darkTheme,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Builder(
                 builder: (context) {
                   buildCount++;
-                  return const Scaffold(body: DevicesPage());
+                  return const Scaffold(body: DeviceListPage());
                 },
               ),
             ),
@@ -302,7 +302,7 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
         await tester.pump(const Duration(seconds: 1));
 
-        // Parent and DevicesPage must NOT have re-built repeatedly
+        // Parent and DeviceListPage must NOT have re-built repeatedly
         expect(buildCount, 1);
       },
     );

@@ -22,7 +22,7 @@ Widget _buildTestApp({
     overrides: overrides.cast(),
     child: MaterialApp(
       locale: const Locale('pt'),
-      theme: AppTokens.theme,
+      theme: AppTheme.darkTheme,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(body: child),

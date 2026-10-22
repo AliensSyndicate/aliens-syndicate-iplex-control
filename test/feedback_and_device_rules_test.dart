@@ -15,7 +15,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('pt', 'BR'),
-        theme: AppTokens.theme,
+        theme: AppTheme.darkTheme,
         home: Scaffold(body: child),
       ),
     );

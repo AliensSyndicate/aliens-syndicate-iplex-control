@@ -93,9 +93,9 @@ class _InvitePageState extends ConsumerState<InvitePage> {
                   : null,
               onChanged: (_) => setState(() => person = null),
             ),
-            const SizedBox(height: AppTokens.lg),
+            const SizedBox(height: AppSpacing.lg),
             AppButton(label: context.l.search, busy: busy, onPressed: lookup),
-            const SizedBox(height: AppTokens.lg),
+            const SizedBox(height: AppSpacing.lg),
             AppButton(
               label: context.l.scan,
               icon: AppIcons.qr,

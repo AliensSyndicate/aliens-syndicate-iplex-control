@@ -46,6 +46,9 @@ class SessionRepository extends fixtures.TestRepository {
   final familyEvents = StreamController<Family?>.broadcast(sync: true);
   final sourcesEvents = StreamController<List<Entry>>.broadcast(sync: true);
   List<Entry> sources = [];
+
+  /// TVs of the family (a TV that plays carries `nowPlaying`).
+  List<Entry> devices = [];
   final initialized = <String>[];
   int familyReads = 0, entryReads = 0, authReads = 0, catalogReads = 0;
   Account? get account => currentUid == null
@@ -97,7 +100,9 @@ class SessionRepository extends fixtures.TestRepository {
       yield pendingSources == null ? sources : await pendingSources!.future;
       yield* sourcesEvents.stream;
     } else {
-      yield collection == 'members'
+      yield collection == 'devices'
+          ? devices
+          : collection == 'members'
           ? [
               Entry('u', {
                 'name': 'Account',
@@ -571,7 +576,7 @@ void main() {
       for (var i = 0; i < 10 && repo.homeReads == 0; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
-      expect(find.byType(AppLoadingSkeleton), findsOneWidget);
+      expect(find.byType(PosterRowsSkeleton), findsOneWidget);
       expect(
         find.text('Your Home is still empty'),
         findsNothing,

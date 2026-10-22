@@ -120,9 +120,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                           children: [
                             const AppIcon(
                               AppIcons.devices,
-                              size: AppTokens.xxl,
+                              size: AppSpacing.xxl,
                             ),
-                            const SizedBox(width: AppTokens.lg),
+                            const SizedBox(width: AppSpacing.lg),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +133,7 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                                     Text(
                                       '${l.lastSeen}: ${DateFormat.yMd(Localizations.localeOf(context).toString()).add_Hm().format(DateTime.fromMillisecondsSinceEpoch(e.number('lastSeenAt')))}',
                                       style: const TextStyle(
-                                        color: AppTokens.secondary,
+                                        color: AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -153,9 +153,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                               children: [
                                 const AppIcon(
                                   AppIcons.iptv,
-                                  size: AppTokens.xxl,
+                                  size: AppSpacing.xxl,
                                 ),
-                                const SizedBox(width: AppTokens.lg),
+                                const SizedBox(width: AppSpacing.lg),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -190,7 +190,7 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: AppTokens.md),
+                            const SizedBox(height: AppSpacing.md),
                             Text(
                               l.itemCount(e.number('count')),
                               style: const TextStyle(
@@ -214,7 +214,7 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                       ),
                     ],
                     if (admin && widget.collection != 'members') ...[
-                      const SizedBox(height: AppTokens.xl),
+                      const SizedBox(height: AppSpacing.xl),
                       AppButton(
                         label: l.edit,
                         onPressed: () => context.push(
@@ -228,11 +228,11 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                       ),
                     ],
                     if (removable) ...[
-                      const SizedBox(height: AppTokens.xl),
+                      const SizedBox(height: AppSpacing.xl),
                       AppButton(label: l.remove, busy: busy, onPressed: remove),
                     ],
                     if (leavable) ...[
-                      const SizedBox(height: AppTokens.xl),
+                      const SizedBox(height: AppSpacing.xl),
                       AppButton(label: l.leaveFamily, onPressed: leave),
                     ],
                   ],

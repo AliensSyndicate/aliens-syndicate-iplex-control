@@ -171,7 +171,7 @@ class _DeviceQrScannerPageState extends ConsumerState<DeviceQrScannerPage> {
                             children: [
                               const AppIcon(
                                 AppIcons.alert,
-                                size: AppTokens.xxl,
+                                size: AppSpacing.xxl,
                                 color: AppColors.warning,
                               ),
                               const SizedBox(height: AppSpacing.md),

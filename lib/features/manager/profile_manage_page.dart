@@ -35,13 +35,6 @@ class ProfileManagePage extends ConsumerWidget {
   }
 }
 
-String profileTypeLabel(BuildContext context, String type) => switch (type) {
-  'kids' => context.l.profileTypeKids,
-  'admin' => context.l.profileTypeAdmin,
-  'guest' => context.l.profileTypeGuest,
-  _ => context.l.profileTypeRegular,
-};
-
 /// Short role of a family card: Admin, Infantil, Membro or Visitante.
 String roleLabel(BuildContext context, String type) => switch (type) {
   'admin' => context.l.roleAdmin,
@@ -126,7 +119,7 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
                 ),
               ),
             ),
-            const SizedBox(height: AppTokens.lg),
+            const SizedBox(height: AppSpacing.lg),
             SelectableText(
               code,
               key: const Key('profile-link-code'),

@@ -19,6 +19,7 @@ import {saveIptvSource, syncIptvSource, verifyIptvPin, deleteIptvSource, readIpt
 import {acquire, addMember, canStartPlayback, DomainError, hash, idSchema, Lease, LEASE_MS, nameSchema, newToken, pinSchema, seal, sourceInputSchema, sourceSchema, startTrial, Subscription, TOKEN_MS, tokenSchema, unseal} from './domain';
 import {familyHasKids, isAdultProfile, manageParentalPin, parentalGate, PIN_SESSION_MS, verifyProfilePin} from './parental';
 import {decideProgressWrite,parseProgressSession,type SavedProgress} from './playback_progress';
+import {reportPlayback} from './playback_status';
 import {claimPlayRequest, pendingPointer, requestPlayback, UNLINK_MARKER, updatePlayRequest} from './play_requests';
 export type Identity = {uid:string; deviceId?:string; familyId?:string; credentialVersion?:string; authTime?:number; contextFamilyId?:string|null};
 const db=()=>getFirestore();
@@ -192,6 +193,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  if(action==='requestPlayback')return requestPlayback(p,a,tx=>family(tx,a));
  if(action==='claimPlayRequest')return claimPlayRequest(p,a);
  if(action==='updatePlayRequest')return updatePlayRequest(p,a);
+ if(action==='reportPlayback')return reportPlayback(p,a);
  if(action==='listProfileSpaces')return listProfileSpaces(p,a);
  if(action==='getPaymentsConfig'){required(!a.deviceId);return {...await paymentsConfig(a.uid),obfuscatedAccountId:obfuscatedAccount(a.uid)};}
  if(action==='verifyPlayPurchase'){
@@ -359,7 +361,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   if(action==='releaseSession'){
    leases=leases.filter(x=>x.id!==sessionId);
    // Leaving the profile (switch, exit) locks it again; multitasking keeps the PIN session.
-   tx.update(f.ref,{leases});tx.update(f.device,{sessionId:null,lastSeenAt:now,onlineUntil:0,...(p.suspend===true?{}:{pinSession:FieldValue.delete()})});return {ok:true};
+   tx.update(f.ref,{leases});tx.update(f.device,{sessionId:null,lastSeenAt:now,onlineUntil:0,nowPlaying:FieldValue.delete(),...(p.suspend===true?{}:{pinSession:FieldValue.delete()})});return {ok:true};
   }
   if(!canStartPlayback(f.subscription,now))throw new DomainError('subscription-required',{plansRoute:'/account/subscription'});
   leases=leases.map(x=>x.id===sessionId?{...x,expiresAt:now+LEASE_MS}:x);

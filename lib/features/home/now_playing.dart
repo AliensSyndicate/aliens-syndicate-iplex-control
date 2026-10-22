@@ -7,39 +7,67 @@ import '../../core/domain/models.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
-import 'library.dart';
 
-/// PREVIEW: the bar is shown even when nothing plays on a TV, with the first
-/// "Continuar assistindo" title of the account (real data), so the layout
-/// can be reviewed. The final rule — only while a TV of this same account
-/// is playing — replaces [_previewItem] in [nowPlayingProvider].
-const kNowPlayingPreview = true;
+/// A TV reports its status at least this often while it plays; an older one
+/// (TV off, app closed, network lost) is not shown.
+const nowPlayingFresh = Duration(seconds: 120);
 
 /// What the account is watching on a TV: the catalog item, its progress
 /// (movies/series) and, for series, the episode.
 @immutable
 class NowPlaying {
-  const NowPlaying({required this.item, this.deviceId});
+  const NowPlaying({required this.item, required this.deviceId});
   final Entry item;
 
-  /// TV that plays it (null in preview).
-  final String? deviceId;
+  /// TV that plays it.
+  final String deviceId;
 }
 
-Entry? _previewItem(HomeData? home) {
-  if (home == null) return null;
-  return home.continueWatching.firstOrNull ??
-      [
-        ...home.recentMovies,
-        ...home.recentSeries,
-        ...home.libraryFavorites.where((i) => !i.isEditorial),
-      ].firstOrNull;
-}
-
+/// The TV of this family that is playing right now (published by the TV
+/// through `reportPlayback`), or null: the bar only exists while a TV plays.
 final nowPlayingProvider = Provider.autoDispose<NowPlaying?>((ref) {
-  if (!kNowPlayingPreview) return null;
-  final item = _previewItem(ref.watch(currentHomeProvider).asData?.value);
-  return item == null ? null : NowPlaying(item: item);
+  final devices = ref.watch(entriesProvider('devices')).asData?.value;
+  // Re-evaluated every 15 s so a silent TV drops out without a new event.
+  ref.watch(
+    clockProvider.select(
+      (c) => (c.value?.millisecondsSinceEpoch ?? 0) ~/ 15000,
+    ),
+  );
+  if (devices == null) return null;
+  final now = DateTime.now().millisecondsSinceEpoch;
+  NowPlaying? best;
+  var bestAt = 0;
+  for (final device in devices) {
+    final raw = device.data['nowPlaying'];
+    if (raw is! Map || device.text('status') == 'unlinked') continue;
+    final status = Map<String, dynamic>.from(raw);
+    final at = (status['updatedAt'] as num?)?.toInt() ?? 0;
+    final state = status['state'];
+    final itemId = status['itemId'];
+    if ((state != 'playing' && state != 'paused') ||
+        itemId is! String ||
+        now - at > nowPlayingFresh.inMilliseconds ||
+        at <= bestAt) {
+      continue;
+    }
+    final position = status['positionSec'], duration = status['durationSec'];
+    bestAt = at;
+    best = NowPlaying(
+      deviceId: device.id,
+      item: Entry(itemId, {
+        'title': status['title'],
+        'kind': status['kind'],
+        'sourceId': status['sourceId'],
+        'providerRef': status['providerRef'],
+        'imageRef': status['imageRef'],
+        'year': status['year'],
+        'episodeId': status['episodeId'],
+        if (position is num && duration is num && duration > 0)
+          'progress': {'position': position, 'duration': duration},
+      }),
+    );
+  }
+  return best;
 });
 
 /// "Temporada 1 - Episódio 3" of the episode in progress, from the source

@@ -128,8 +128,9 @@ class GooglePlayStoreBilling implements StoreBilling {
       if (offers == null || index == null) continue;
       final offer = offers[index];
       // Only the base plans themselves: no promotional or free-trial offers.
-      if (offer.offerId != null || !basePlans.contains(offer.basePlanId))
+      if (offer.offerId != null || !basePlans.contains(offer.basePlanId)) {
         continue;
+      }
       plans.add(
         StorePlan(
           basePlanId: offer.basePlanId,

@@ -71,12 +71,12 @@ class _PublicIdentitySheetContentState
     Widget content;
     if (_bootstrapping || (code == null && accountState.isLoading)) {
       content = const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppTokens.xl),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
         child: Center(child: CircularProgressIndicator()),
       );
     } else if (code == null || code.isEmpty) {
       content = Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppTokens.md),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: Column(
           children: [
             Text(
@@ -84,7 +84,7 @@ class _PublicIdentitySheetContentState
               style: const TextStyle(color: AppColors.error),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppTokens.md),
+            const SizedBox(height: AppSpacing.md),
             AppButton(
               label: c.l.retry,
               busy: _bootstrapping,
@@ -109,7 +109,7 @@ class _PublicIdentitySheetContentState
               ),
             ),
           ),
-          const SizedBox(height: AppTokens.lg),
+          const SizedBox(height: AppSpacing.lg),
           SelectableText(
             code,
             style: Theme.of(c).textTheme.titleLarge

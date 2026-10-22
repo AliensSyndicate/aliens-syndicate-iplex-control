@@ -285,7 +285,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       skipLoadingOnRefresh: true,
       loading: () => [
         const SliverToBoxAdapter(
-          child: _Padded(child: AppLoadingSkeleton(rows: 4)),
+          child: _Padded(child: PosterRowsSkeleton(rows: 3)),
         ),
       ],
       error: (e, stack) => [
@@ -552,7 +552,7 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
       );
     }
     if (loading && items.isEmpty) {
-      return const _Padded(child: AppLoadingSkeleton(rows: 3));
+      return const _Padded(child: PosterGridSkeleton());
     }
     if (items.isEmpty) {
       return _Padded(

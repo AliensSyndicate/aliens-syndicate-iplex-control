@@ -97,7 +97,7 @@ void main() {
       router.push('/iptv/source/edit');
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      final parent = find.byType(IptvSourceDetailsPage, skipOffstage: false);
+      final parent = find.byType(IptvPage, skipOffstage: false);
       final child = find.byType(IptvSourceForm);
       expect(tester.getTopLeft(parent).dx, lessThan(0));
       expect(tester.getTopLeft(child).dx, greaterThan(0));
@@ -152,7 +152,7 @@ void main() {
       final navigator = GlobalKey<NavigatorState>();
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTokens.theme,
+          theme: AppTheme.darkTheme,
           navigatorKey: navigator,
           home: const Scaffold(body: Text('Parent')),
         ),

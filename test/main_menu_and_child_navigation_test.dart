@@ -4,7 +4,7 @@ import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
@@ -139,16 +139,16 @@ void main() {
         expect(usersAdd, findsOneWidget);
         await tester.tap(usersAdd);
         await tester.pumpAndSettle();
-        expect(find.byType(EntryTile), findsWidgets);
+        expect(navigation.path(container), '/users/invite');
         router.pop();
         await tester.pumpAndSettle();
 
         // 3. Devices - Has + button at top
         router.go('/devices');
         await tester.pumpAndSettle();
-        expect(find.byType(DevicesPage), findsOneWidget);
+        expect(find.byType(DeviceListPage), findsOneWidget);
         final devicesAdd = find.descendant(
-          of: find.byType(DevicesPage),
+          of: find.byType(DeviceListPage),
           matching: find.byWidgetPredicate(
             (w) => w is CircularButton && w.icon == AppIcons.add,
           ),

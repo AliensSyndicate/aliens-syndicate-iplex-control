@@ -190,24 +190,6 @@ abstract class AppLocalizations {
   /// **'Discover here. Watch on your TV.'**
   String get catalogSubtitle;
 
-  /// No description provided for @emptyCatalog.
-  ///
-  /// In en, this message translates to:
-  /// **'Your next discovery starts here'**
-  String get emptyCatalog;
-
-  /// No description provided for @emptyCatalogBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Add an IPTV source to bring your catalog together.'**
-  String get emptyCatalogBody;
-
-  /// No description provided for @emptyUsers.
-  ///
-  /// In en, this message translates to:
-  /// **'A place for everyone'**
-  String get emptyUsers;
-
   /// No description provided for @emptyDevices.
   ///
   /// In en, this message translates to:
@@ -225,12 +207,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All your sources, together'**
   String get emptySources;
-
-  /// No description provided for @emptySourcesBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect an M3U or Xtream Codes source. Your catalog stays synchronized in the cloud.'**
-  String get emptySourcesBody;
 
   /// No description provided for @empty.
   ///
@@ -316,18 +292,6 @@ abstract class AppLocalizations {
   /// **'Create a family'**
   String get createFamily;
 
-  /// No description provided for @joinFamily.
-  ///
-  /// In en, this message translates to:
-  /// **'Join a family'**
-  String get joinFamily;
-
-  /// No description provided for @familyIntro.
-  ///
-  /// In en, this message translates to:
-  /// **'Use your personal account or create a family whenever you want.'**
-  String get familyIntro;
-
   /// No description provided for @invite.
   ///
   /// In en, this message translates to:
@@ -351,12 +315,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Member'**
   String get member;
-
-  /// No description provided for @inviteExpires.
-  ///
-  /// In en, this message translates to:
-  /// **'Single-use invitation. Valid for 5 minutes.'**
-  String get inviteExpires;
 
   /// No description provided for @expired.
   ///
@@ -442,29 +400,11 @@ abstract class AppLocalizations {
   /// **'Sent to Player'**
   String get sent;
 
-  /// No description provided for @acknowledged.
-  ///
-  /// In en, this message translates to:
-  /// **'Received by Player'**
-  String get acknowledged;
-
-  /// No description provided for @noAcknowledgement.
-  ///
-  /// In en, this message translates to:
-  /// **'Player did not confirm receipt.'**
-  String get noAcknowledgement;
-
   /// No description provided for @source.
   ///
   /// In en, this message translates to:
   /// **'Source'**
   String get source;
-
-  /// No description provided for @sourceUrl.
-  ///
-  /// In en, this message translates to:
-  /// **'Source URL (HTTP or HTTPS)'**
-  String get sourceUrl;
 
   /// No description provided for @username.
   ///
@@ -567,12 +507,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Annual'**
   String get annual;
-
-  /// No description provided for @billingUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Purchases are not available yet. No payment will be charged.'**
-  String get billingUnavailable;
 
   /// No description provided for @settings.
   ///
@@ -784,12 +718,6 @@ abstract class AppLocalizations {
   /// **'Create or join a family in Users to manage devices and profiles. Home and IPTV remain available.'**
   String get familyRequiredBody;
 
-  /// No description provided for @familyUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Family information is unavailable'**
-  String get familyUnavailable;
-
   /// No description provided for @memberSetupHint.
   ///
   /// In en, this message translates to:
@@ -826,23 +754,11 @@ abstract class AppLocalizations {
   /// **'We could not synchronize your catalog'**
   String get catalogSyncFailed;
 
-  /// No description provided for @clearSearch.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear search'**
-  String get clearSearch;
-
   /// No description provided for @noResultsBody.
   ///
   /// In en, this message translates to:
   /// **'Try another title or clear the search to see the available catalog.'**
   String get noResultsBody;
-
-  /// No description provided for @noProfilesBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Create a viewing profile before adding favorites.'**
-  String get noProfilesBody;
 
   /// No description provided for @unlinkedAccount.
   ///
@@ -946,18 +862,6 @@ abstract class AppLocalizations {
   /// **'Server'**
   String get sourceHost;
 
-  /// No description provided for @syncInProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'Sync in progress…'**
-  String get syncInProgress;
-
-  /// No description provided for @syncRequested.
-  ///
-  /// In en, this message translates to:
-  /// **'Synchronization requested successfully.'**
-  String get syncRequested;
-
   /// No description provided for @catalogSummary.
   ///
   /// In en, this message translates to:
@@ -981,30 +885,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Server URL'**
   String get serverUrl;
-
-  /// No description provided for @sourceDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Source details'**
-  String get sourceDetails;
-
-  /// No description provided for @syncErrorGeneric.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to synchronize with provider. Previous catalog preserved.'**
-  String get syncErrorGeneric;
-
-  /// No description provided for @noConnection.
-  ///
-  /// In en, this message translates to:
-  /// **'No connection to server'**
-  String get noConnection;
-
-  /// No description provided for @adminOnlyAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Only the family administrator can manage IPTV sources.'**
-  String get adminOnlyAction;
 
   /// No description provided for @managerAccessTitle.
   ///
@@ -1071,12 +951,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No file selected'**
   String get noFileSelected;
-
-  /// No description provided for @fileSelected.
-  ///
-  /// In en, this message translates to:
-  /// **'File: {fileName} ({size})'**
-  String fileSelected(String fileName, String size);
 
   /// No description provided for @invalidFileFormat.
   ///
@@ -1197,18 +1071,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Alternative M3U8 URL'**
   String get otherM3u8Url;
-
-  /// No description provided for @protectedBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'Protected'**
-  String get protectedBadge;
-
-  /// No description provided for @fileLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'File: {fileName}'**
-  String fileLabel(String fileName);
 
   /// No description provided for @confirmChangeFormatTitle.
   ///
@@ -1474,42 +1336,6 @@ abstract class AppLocalizations {
   /// **'Address not allowed for security reasons.'**
   String get errorUnsafeProvider;
 
-  /// No description provided for @pushSuccessTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'IPTV synced'**
-  String get pushSuccessTitle;
-
-  /// No description provided for @pushSuccessBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Playlist \"{name}\" is ready to use.'**
-  String pushSuccessBody(String name);
-
-  /// No description provided for @pushFailureTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to sync IPTV'**
-  String get pushFailureTitle;
-
-  /// No description provided for @pushFailureBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not update \"{name}\". Tap to check.'**
-  String pushFailureBody(String name);
-
-  /// No description provided for @deviceFound.
-  ///
-  /// In en, this message translates to:
-  /// **'Device found'**
-  String get deviceFound;
-
-  /// No description provided for @deviceFoundBody.
-  ///
-  /// In en, this message translates to:
-  /// **'A TV was detected. Confirm the details below to link it.'**
-  String get deviceFoundBody;
-
   /// No description provided for @deviceLinked.
   ///
   /// In en, this message translates to:
@@ -1521,12 +1347,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The TV \"{name}\" is now linked.'**
   String deviceLinkedBody(String name);
-
-  /// No description provided for @deviceAlreadyLinked.
-  ///
-  /// In en, this message translates to:
-  /// **'Device already linked'**
-  String get deviceAlreadyLinked;
 
   /// No description provided for @deviceAlreadyLinkedOtherFamily.
   ///
@@ -1540,35 +1360,11 @@ abstract class AppLocalizations {
   /// **'This TV is already linked here.'**
   String get deviceAlreadyLinkedSameFamily;
 
-  /// No description provided for @deviceOffline.
-  ///
-  /// In en, this message translates to:
-  /// **'Device offline'**
-  String get deviceOffline;
-
   /// No description provided for @invalidQrCode.
   ///
   /// In en, this message translates to:
   /// **'Invalid QR Code. Please check the code displayed on your TV.'**
   String get invalidQrCode;
-
-  /// No description provided for @expiredQrCode.
-  ///
-  /// In en, this message translates to:
-  /// **'This QR Code has expired. Please generate a new one on your TV.'**
-  String get expiredQrCode;
-
-  /// No description provided for @invalidPairingCode.
-  ///
-  /// In en, this message translates to:
-  /// **'Incorrect pairing code. Check the code on the TV and try again.'**
-  String get invalidPairingCode;
-
-  /// No description provided for @cameraPermissionDenied.
-  ///
-  /// In en, this message translates to:
-  /// **'Camera access denied'**
-  String get cameraPermissionDenied;
 
   /// No description provided for @cameraPermissionHelp.
   ///
@@ -1576,47 +1372,11 @@ abstract class AppLocalizations {
   /// **'Camera access is needed to scan the QR Code on your TV. You can also enter the code manually.'**
   String get cameraPermissionHelp;
 
-  /// No description provided for @cameraUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Camera unavailable on this device. Please enter the pairing code manually.'**
-  String get cameraUnavailable;
-
-  /// No description provided for @pairingCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Pairing cancelled'**
-  String get pairingCancelled;
-
   /// No description provided for @pairingCompleted.
   ///
   /// In en, this message translates to:
   /// **'Pairing completed'**
   String get pairingCompleted;
-
-  /// No description provided for @connectionFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Connection failed. Please check your internet connection.'**
-  String get connectionFailed;
-
-  /// No description provided for @deviceUnlinked.
-  ///
-  /// In en, this message translates to:
-  /// **'Device unlinked'**
-  String get deviceUnlinked;
-
-  /// No description provided for @deviceUnlinkedBody.
-  ///
-  /// In en, this message translates to:
-  /// **'The device has been successfully removed from this family.'**
-  String get deviceUnlinkedBody;
-
-  /// No description provided for @noDevicePermission.
-  ///
-  /// In en, this message translates to:
-  /// **'Only family administrators can manage devices.'**
-  String get noDevicePermission;
 
   /// No description provided for @addDeviceInstructionsTitle.
   ///
@@ -1684,12 +1444,6 @@ abstract class AppLocalizations {
   /// **'Confirm device link'**
   String get confirmPairingTitle;
 
-  /// No description provided for @confirmPairingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Review the TV information before linking.'**
-  String get confirmPairingSubtitle;
-
   /// No description provided for @tvNameLabel.
   ///
   /// In en, this message translates to:
@@ -1714,23 +1468,11 @@ abstract class AppLocalizations {
   /// **'Model'**
   String get modelLabel;
 
-  /// No description provided for @targetFamilyLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Destination family'**
-  String get targetFamilyLabel;
-
   /// No description provided for @maskedIdLabel.
   ///
   /// In en, this message translates to:
   /// **'Device ID'**
   String get maskedIdLabel;
-
-  /// No description provided for @identityStabilityLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Identity type'**
-  String get identityStabilityLabel;
 
   /// No description provided for @confirmLinkButton.
   ///
@@ -1780,29 +1522,11 @@ abstract class AppLocalizations {
   /// **'Edit TV Name'**
   String get editDeviceName;
 
-  /// No description provided for @deviceDetailsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Device Details'**
-  String get deviceDetailsTitle;
-
-  /// No description provided for @technicalDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Technical info'**
-  String get technicalDetails;
-
   /// No description provided for @linkedAtLabel.
   ///
   /// In en, this message translates to:
   /// **'Linked on'**
   String get linkedAtLabel;
-
-  /// No description provided for @lastActivityLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Last activity'**
-  String get lastActivityLabel;
 
   /// No description provided for @neverActive.
   ///
@@ -1851,18 +1575,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a 12-character alphanumeric user code.'**
   String get invalidPublicCode;
-
-  /// No description provided for @personalContext.
-  ///
-  /// In en, this message translates to:
-  /// **'Personal account'**
-  String get personalContext;
-
-  /// No description provided for @selectedContext.
-  ///
-  /// In en, this message translates to:
-  /// **'Selected context'**
-  String get selectedContext;
 
   /// No description provided for @membershipRequests.
   ///
@@ -2002,18 +1714,6 @@ abstract class AppLocalizations {
   /// **'Guest'**
   String get profileTypeGuest;
 
-  /// No description provided for @manageProfile.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage profile'**
-  String get manageProfile;
-
-  /// No description provided for @profileInfo.
-  ///
-  /// In en, this message translates to:
-  /// **'Profile information'**
-  String get profileInfo;
-
   /// No description provided for @accountLinked.
   ///
   /// In en, this message translates to:
@@ -2061,12 +1761,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'On the person\'s account, open Family › Link to a profile and scan this QR code or type the code. Single use, valid for 10 minutes.'**
   String get linkCodeBody;
-
-  /// No description provided for @permissionsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Permissions'**
-  String get permissionsTitle;
 
   /// No description provided for @allSpaces.
   ///
@@ -2116,12 +1810,6 @@ abstract class AppLocalizations {
   /// **'This family has no IPTV sources.'**
   String get noFamilySources;
 
-  /// No description provided for @manageData.
-  ///
-  /// In en, this message translates to:
-  /// **'Data management'**
-  String get manageData;
-
   /// No description provided for @clearFavorites.
   ///
   /// In en, this message translates to:
@@ -2133,18 +1821,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear favorites?'**
   String get clearFavoritesTitle;
-
-  /// No description provided for @clearFavoritesBody.
-  ///
-  /// In en, this message translates to:
-  /// **'All of {name}\'s favorites will be permanently deleted. This can\'t be undone. The deletion will sync to every device.'**
-  String clearFavoritesBody(String name);
-
-  /// No description provided for @clearWatched.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear watched'**
-  String get clearWatched;
 
   /// No description provided for @clearWatchedTitle.
   ///
@@ -2176,29 +1852,11 @@ abstract class AppLocalizations {
   /// **'All of {name}\'s saved playback progress will be permanently deleted. This can\'t be undone. The deletion will sync to every device.'**
   String clearProgressBody(String name);
 
-  /// No description provided for @clearProgress.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear progress'**
-  String get clearProgress;
-
   /// No description provided for @dataCleared.
   ///
   /// In en, this message translates to:
   /// **'Data deleted.'**
   String get dataCleared;
-
-  /// No description provided for @addGuest.
-  ///
-  /// In en, this message translates to:
-  /// **'Add guest'**
-  String get addGuest;
-
-  /// No description provided for @guestEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Guest available on the TV'**
-  String get guestEnabled;
 
   /// No description provided for @guestHint.
   ///
@@ -2379,12 +2037,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Watch on TV'**
   String get watchOnTv;
-
-  /// No description provided for @chooseTv.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose the TV'**
-  String get chooseTv;
 
   /// No description provided for @noTvLinked.
   ///
@@ -2638,12 +2290,6 @@ abstract class AppLocalizations {
   /// **'Recently searched'**
   String get homeRecentSearches;
 
-  /// No description provided for @homeSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search'**
-  String get homeSearchHint;
-
   /// No description provided for @selectIptvSource.
   ///
   /// In en, this message translates to:
@@ -2655,12 +2301,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'IPTV sources'**
   String get iptvSources;
-
-  /// No description provided for @selectedSource.
-  ///
-  /// In en, this message translates to:
-  /// **'Selected'**
-  String get selectedSource;
 
   /// No description provided for @homeNowPlaying.
   ///
@@ -2679,12 +2319,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue watching'**
   String get homeContinueWatching;
-
-  /// No description provided for @homeMyList.
-  ///
-  /// In en, this message translates to:
-  /// **'My list'**
-  String get homeMyList;
 
   /// No description provided for @homeRecentMovies.
   ///
@@ -2728,24 +2362,6 @@ abstract class AppLocalizations {
   /// **'Remove from favorites'**
   String get removeFromFavorites;
 
-  /// No description provided for @addToMyList.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to My list'**
-  String get addToMyList;
-
-  /// No description provided for @removeFromMyList.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove from My list'**
-  String get removeFromMyList;
-
-  /// No description provided for @continueWatchingOnTv.
-  ///
-  /// In en, this message translates to:
-  /// **'Continue watching on TV'**
-  String get continueWatchingOnTv;
-
   /// No description provided for @liveChannel.
   ///
   /// In en, this message translates to:
@@ -2782,30 +2398,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 season} other{{count} seasons}}'**
   String seasonsCount(int count);
 
-  /// No description provided for @episodesCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 episode} other{{count} episodes}}'**
-  String episodesCount(int count);
-
-  /// No description provided for @episodesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Episodes'**
-  String get episodesTitle;
-
-  /// No description provided for @showMore.
-  ///
-  /// In en, this message translates to:
-  /// **'Show more'**
-  String get showMore;
-
-  /// No description provided for @showLess.
-  ///
-  /// In en, this message translates to:
-  /// **'Show less'**
-  String get showLess;
-
   /// No description provided for @seasonEpisodeShort.
   ///
   /// In en, this message translates to:
@@ -2817,24 +2409,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rated {rating}'**
   String ageRatingLabel(String rating);
-
-  /// No description provided for @familyOfName.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} family'**
-  String familyOfName(String name);
-
-  /// No description provided for @familyEmptyBody.
-  ///
-  /// In en, this message translates to:
-  /// **'No additional members yet.'**
-  String get familyEmptyBody;
-
-  /// No description provided for @addMembers.
-  ///
-  /// In en, this message translates to:
-  /// **'Add members'**
-  String get addMembers;
 
   /// No description provided for @invitePending.
   ///
@@ -2908,89 +2482,17 @@ abstract class AppLocalizations {
   /// **'Not available to watch in your IPTV catalog. You can still save it.'**
   String get notAvailableToWatch;
 
-  /// No description provided for @originalTitleLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Original title: {title}'**
-  String originalTitleLabel(String title);
-
-  /// No description provided for @releaseDateLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Released {date}'**
-  String releaseDateLabel(String date);
-
-  /// No description provided for @ratingLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Rating {score}/10 (TMDB)'**
-  String ratingLabel(String score);
-
-  /// No description provided for @crewLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Crew'**
-  String get crewLabel;
-
-  /// No description provided for @seasonsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Seasons'**
-  String get seasonsTitle;
-
-  /// No description provided for @seasonsFromTmdb.
-  ///
-  /// In en, this message translates to:
-  /// **'Editorial information from TMDB. Availability depends on your IPTV source.'**
-  String get seasonsFromTmdb;
-
-  /// No description provided for @availableEpisodesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Available on your IPTV'**
-  String get availableEpisodesTitle;
-
   /// No description provided for @filmography.
   ///
   /// In en, this message translates to:
   /// **'Filmography'**
   String get filmography;
 
-  /// No description provided for @careerTimeline.
-  ///
-  /// In en, this message translates to:
-  /// **'Career timeline'**
-  String get careerTimeline;
-
   /// No description provided for @biography.
   ///
   /// In en, this message translates to:
   /// **'Biography'**
   String get biography;
-
-  /// No description provided for @bornLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Born {date}'**
-  String bornLabel(String date);
-
-  /// No description provided for @diedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Died {date}'**
-  String diedLabel(String date);
-
-  /// No description provided for @moviesLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Movies'**
-  String get moviesLabel;
-
-  /// No description provided for @seriesLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Series'**
-  String get seriesLabel;
 
   /// No description provided for @movieKind.
   ///
@@ -3003,18 +2505,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Series'**
   String get seriesKind;
-
-  /// No description provided for @asCharacter.
-  ///
-  /// In en, this message translates to:
-  /// **'as {character}'**
-  String asCharacter(String character);
-
-  /// No description provided for @undatedLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'No date'**
-  String get undatedLabel;
 
   /// No description provided for @metadataUnavailable.
   ///
@@ -3046,12 +2536,6 @@ abstract class AppLocalizations {
   /// **'Your lists were updated on another device. Try again.'**
   String get errorStaleLibrary;
 
-  /// No description provided for @directedByLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Directed by {names}'**
-  String directedByLabel(String names);
-
   /// No description provided for @createdByLabel.
   ///
   /// In en, this message translates to:
@@ -3075,42 +2559,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start over'**
   String get restartLabel;
-
-  /// No description provided for @favoriteAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Favorite'**
-  String get favoriteAction;
-
-  /// No description provided for @unfavoriteAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Unfavorite'**
-  String get unfavoriteAction;
-
-  /// No description provided for @saveAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Save'**
-  String get saveAction;
-
-  /// No description provided for @unsaveAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove'**
-  String get unsaveAction;
-
-  /// No description provided for @seasonEpisodeLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Season {season} - Episode {episode}'**
-  String seasonEpisodeLabel(int season, int episode);
-
-  /// No description provided for @socialNetworks.
-  ///
-  /// In en, this message translates to:
-  /// **'Social media'**
-  String get socialNetworks;
 
   /// No description provided for @seeAll.
   ///
@@ -3261,12 +2709,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You may also like'**
   String get youMayLike;
-
-  /// No description provided for @seeMore.
-  ///
-  /// In en, this message translates to:
-  /// **'See more'**
-  String get seeMore;
 
   /// No description provided for @aboutTab.
   ///
@@ -3544,12 +2986,6 @@ abstract class AppLocalizations {
   /// **'{minutes} min left'**
   String minutesLeft(int minutes);
 
-  /// No description provided for @watchedOn.
-  ///
-  /// In en, this message translates to:
-  /// **'Watched {time}'**
-  String watchedOn(String time);
-
   /// No description provided for @lastSyncLabel.
   ///
   /// In en, this message translates to:
@@ -3567,12 +3003,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Security'**
   String get securitySection;
-
-  /// No description provided for @contentSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Content'**
-  String get contentSection;
 
   /// No description provided for @removeFromFamily.
   ///

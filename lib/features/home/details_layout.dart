@@ -192,8 +192,8 @@ class DetailsCover extends StatelessWidget {
     // TMDB poster first; the source art only if it fails to load.
     return ColoredBox(
       color: Colors.black,
-      child: Image.network(
-        cover,
+      child: Image(
+        image: CachedNetworkImage(cover, decodeWidth: 1080),
         key: const Key('details-cover'),
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,

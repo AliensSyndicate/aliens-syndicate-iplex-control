@@ -8,7 +8,6 @@ import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dar
 import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -180,8 +179,9 @@ void main() {
       if (find
           .descendant(of: menuAvatar(), matching: find.text('A'))
           .evaluate()
-          .isNotEmpty)
+          .isNotEmpty) {
         break;
+      }
     }
     expect(
       find.descendant(

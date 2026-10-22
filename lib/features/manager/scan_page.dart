@@ -137,7 +137,7 @@ class _ScanPageState extends ConsumerState<ScanPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppTokens.lg),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Text(
                 widget.device ? l.scanHelp : l.publicIdentityScanHelp,
               ),

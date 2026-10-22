@@ -31,7 +31,7 @@ class InformationPage extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   a?.email ?? '',
-                  style: const TextStyle(color: AppTokens.secondary),
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ] else ...[
                 Text(

@@ -56,10 +56,6 @@ final canManageIptvProvider = Provider<bool>((ref) {
           account.familyId == null ||
           ref.watch(adminProvider));
 });
-final availableFamilyProvider = StreamProvider.autoDispose
-    .family<Family?, String>(
-      (ref, id) => ref.watch(repositoryProvider).watchFamily(id),
-    );
 final entriesProvider = StreamProvider.autoDispose.family<List<Entry>, String>((
   ref,
   collection,

@@ -42,6 +42,7 @@ export const PLAYER_DEVICE_ACTIONS: ReadonlySet<string> = new Set([
   'listProfileSpaces',
   'acquireSession',
   'heartbeat',
+  'reportPlayback',
   'releaseSession',
   'verifyProfilePin',
   'claimPlayRequest',

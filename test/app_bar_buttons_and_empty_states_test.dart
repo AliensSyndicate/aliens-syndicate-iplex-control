@@ -1,6 +1,6 @@
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/widgets/home_welcome_state.dart';
@@ -56,7 +56,7 @@ void main() {
       router.go('/devices');
       await tester.pumpAndSettle();
       final devicesAdd = find.descendant(
-        of: find.byType(DevicesPage),
+        of: find.byType(DeviceListPage),
         matching: find.byWidgetPredicate(
           (w) => w is CircularButton && w.icon == AppIcons.add,
         ),

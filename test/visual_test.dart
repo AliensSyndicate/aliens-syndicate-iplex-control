@@ -4,7 +4,7 @@ import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_details_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
@@ -83,13 +83,9 @@ void main() {
   final pages = <({String name, Widget page, int? tab})>[
     (name: 'home', page: const HomePage(), tab: 0),
     (name: 'users', page: const UsersPage(), tab: 1),
-    (name: 'devices', page: const DevicesPage(), tab: 2),
+    (name: 'devices', page: const DeviceListPage(), tab: 2),
     (name: 'iptv', page: const ListIptvPage(), tab: 3),
-    (
-      name: 'source-detail',
-      page: const IptvSourceDetailsPage(id: 's'),
-      tab: null,
-    ),
+    (name: 'source-detail', page: const IptvPage(id: 's'), tab: null),
     (name: 'account', page: const AccountPage(), tab: 4),
     (name: 'settings', page: const SettingsPage(), tab: null),
     (name: 'source-form', page: const IptvSourceForm(), tab: null),

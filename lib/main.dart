@@ -7,14 +7,13 @@ import 'app/bootstrap.dart';
 import 'app/splash_gate.dart';
 import 'core/data/firebase_repository.dart';
 import 'core/data/providers.dart';
+import 'core/design_system/components.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Home artwork (posters/logos) stays decoded in memory while the user
-  // scrolls rows and moves between tabs, instead of being fetched again.
-  PaintingBinding.instance.imageCache
-    ..maximumSize = 1500
-    ..maximumSizeBytes = 256 << 20;
+  // Home artwork stays decoded in memory (and on disk) while the user scrolls
+  // rows and moves between tabs, instead of being fetched again.
+  configureImageCache();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(

@@ -11,7 +11,7 @@ import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/repository.dart';
 import 'package:aliens_syndicate_iplex_control/features/authentication/login_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/devices_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
@@ -91,7 +91,7 @@ Widget host(
 }) => ProviderScope(
   overrides: [repositoryProvider.overrideWithValue(repo ?? TestRepository())],
   child: MaterialApp(
-    theme: AppTokens.theme,
+    theme: AppTheme.darkTheme,
     locale: const Locale('en'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -221,7 +221,7 @@ void main() {
   );
   for (final page in [
     const UsersPage(),
-    const DevicesPage(),
+    const DeviceListPage(),
     const ListIptvPage(),
     const AccountPage(),
   ]) {
@@ -249,7 +249,7 @@ void main() {
   testWidgets('error state offers retry', (tester) async {
     await tester.pumpWidget(
       host(
-        const DevicesPage(),
+        const DeviceListPage(),
         repo: TestRepository(signedIn: true, fail: true),
       ),
     );

@@ -127,7 +127,7 @@ Widget buildTestApp({required Widget child, required MockCodexIptvRepo repo}) {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: const [Locale('pt', 'BR'), Locale('en')],
       locale: const Locale('pt', 'BR'),
-      theme: AppTokens.theme,
+      theme: AppTheme.darkTheme,
       home: Scaffold(body: child),
     ),
   );

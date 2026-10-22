@@ -32,7 +32,7 @@ class IplexApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'iPlex',
       debugShowCheckedModeBanner: false,
-      theme: AppTokens.theme,
+      theme: AppTheme.darkTheme,
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,

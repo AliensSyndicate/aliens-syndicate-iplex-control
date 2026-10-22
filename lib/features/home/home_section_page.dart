@@ -75,7 +75,7 @@ class _HomeSectionPageState extends ConsumerState<HomeSectionPage> {
             Padding(
               padding: EdgeToEdge.inset,
               child: data.when(
-                loading: () => const AppLoadingSkeleton(rows: 3),
+                loading: () => const PosterGridSkeleton(),
                 error: (e, stack) => ErrorState(
                   onRetry: () => ref.invalidate(homeSectionProvider(key)),
                 ),

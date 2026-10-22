@@ -62,7 +62,7 @@ class SessionLoadingPage extends ConsumerWidget {
                     ],
                   ] else ...[
                     const SizedBox.square(
-                      dimension: AppTokens.icon,
+                      dimension: AppDimensions.icon,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                     const SizedBox(height: AppSpacing.md),

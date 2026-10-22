@@ -57,16 +57,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get catalogSubtitle => 'Discover here. Watch on your TV.';
 
   @override
-  String get emptyCatalog => 'Your next discovery starts here';
-
-  @override
-  String get emptyCatalogBody =>
-      'Add an IPTV source to bring your catalog together.';
-
-  @override
-  String get emptyUsers => 'A place for everyone';
-
-  @override
   String get emptyDevices => 'Your TVs, connected';
 
   @override
@@ -75,10 +65,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptySources => 'All your sources, together';
-
-  @override
-  String get emptySourcesBody =>
-      'Connect an M3U or Xtream Codes source. Your catalog stays synchronized in the cloud.';
 
   @override
   String get empty => 'Nothing here yet';
@@ -123,13 +109,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createFamily => 'Create a family';
 
   @override
-  String get joinFamily => 'Join a family';
-
-  @override
-  String get familyIntro =>
-      'Use your personal account or create a family whenever you want.';
-
-  @override
   String get invite => 'Invite a member';
 
   @override
@@ -140,9 +119,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get member => 'Member';
-
-  @override
-  String get inviteExpires => 'Single-use invitation. Valid for 5 minutes.';
 
   @override
   String get expired => 'Expired';
@@ -187,16 +163,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sent => 'Sent to Player';
 
   @override
-  String get acknowledged => 'Received by Player';
-
-  @override
-  String get noAcknowledgement => 'Player did not confirm receipt.';
-
-  @override
   String get source => 'Source';
-
-  @override
-  String get sourceUrl => 'Source URL (HTTP or HTTPS)';
 
   @override
   String get username => 'Username';
@@ -250,10 +217,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get annual => 'Annual';
-
-  @override
-  String get billingUnavailable =>
-      'Purchases are not available yet. No payment will be charged.';
 
   @override
   String get settings => 'Settings';
@@ -381,9 +344,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Create or join a family in Users to manage devices and profiles. Home and IPTV remain available.';
 
   @override
-  String get familyUnavailable => 'Family information is unavailable';
-
-  @override
   String get memberSetupHint =>
       'Your family administrator can add devices, profiles and content sources. You can browse the available information here.';
 
@@ -405,15 +365,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get catalogSyncFailed => 'We could not synchronize your catalog';
 
   @override
-  String get clearSearch => 'Clear search';
-
-  @override
   String get noResultsBody =>
       'Try another title or clear the search to see the available catalog.';
-
-  @override
-  String get noProfilesBody =>
-      'Create a viewing profile before adding favorites.';
 
   @override
   String get unlinkedAccount => 'No family linked';
@@ -471,12 +424,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sourceHost => 'Server';
 
   @override
-  String get syncInProgress => 'Sync in progress…';
-
-  @override
-  String get syncRequested => 'Synchronization requested successfully.';
-
-  @override
   String get catalogSummary => 'Catalog contents';
 
   @override
@@ -487,20 +434,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serverUrl => 'Server URL';
-
-  @override
-  String get sourceDetails => 'Source details';
-
-  @override
-  String get syncErrorGeneric =>
-      'Failed to synchronize with provider. Previous catalog preserved.';
-
-  @override
-  String get noConnection => 'No connection to server';
-
-  @override
-  String get adminOnlyAction =>
-      'Only the family administrator can manage IPTV sources.';
 
   @override
   String get managerAccessTitle => 'Free iPlex Gestor';
@@ -537,11 +470,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noFileSelected => 'No file selected';
-
-  @override
-  String fileSelected(String fileName, String size) {
-    return 'File: $fileName ($size)';
-  }
 
   @override
   String get invalidFileFormat =>
@@ -605,14 +533,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get otherM3u8Url => 'Alternative M3U8 URL';
-
-  @override
-  String get protectedBadge => 'Protected';
-
-  @override
-  String fileLabel(String fileName) {
-    return 'File: $fileName';
-  }
 
   @override
   String get confirmChangeFormatTitle => 'Change source format?';
@@ -766,38 +686,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnsafeProvider => 'Address not allowed for security reasons.';
 
   @override
-  String get pushSuccessTitle => 'IPTV synced';
-
-  @override
-  String pushSuccessBody(String name) {
-    return 'Playlist \"$name\" is ready to use.';
-  }
-
-  @override
-  String get pushFailureTitle => 'Failed to sync IPTV';
-
-  @override
-  String pushFailureBody(String name) {
-    return 'Could not update \"$name\". Tap to check.';
-  }
-
-  @override
-  String get deviceFound => 'Device found';
-
-  @override
-  String get deviceFoundBody =>
-      'A TV was detected. Confirm the details below to link it.';
-
-  @override
   String get deviceLinked => 'Device linked';
 
   @override
   String deviceLinkedBody(String name) {
     return 'The TV \"$name\" is now linked.';
   }
-
-  @override
-  String get deviceAlreadyLinked => 'Device already linked';
 
   @override
   String get deviceAlreadyLinkedOtherFamily =>
@@ -807,51 +701,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deviceAlreadyLinkedSameFamily => 'This TV is already linked here.';
 
   @override
-  String get deviceOffline => 'Device offline';
-
-  @override
   String get invalidQrCode =>
       'Invalid QR Code. Please check the code displayed on your TV.';
-
-  @override
-  String get expiredQrCode =>
-      'This QR Code has expired. Please generate a new one on your TV.';
-
-  @override
-  String get invalidPairingCode =>
-      'Incorrect pairing code. Check the code on the TV and try again.';
-
-  @override
-  String get cameraPermissionDenied => 'Camera access denied';
 
   @override
   String get cameraPermissionHelp =>
       'Camera access is needed to scan the QR Code on your TV. You can also enter the code manually.';
 
   @override
-  String get cameraUnavailable =>
-      'Camera unavailable on this device. Please enter the pairing code manually.';
-
-  @override
-  String get pairingCancelled => 'Pairing cancelled';
-
-  @override
   String get pairingCompleted => 'Pairing completed';
-
-  @override
-  String get connectionFailed =>
-      'Connection failed. Please check your internet connection.';
-
-  @override
-  String get deviceUnlinked => 'Device unlinked';
-
-  @override
-  String get deviceUnlinkedBody =>
-      'The device has been successfully removed from this family.';
-
-  @override
-  String get noDevicePermission =>
-      'Only family administrators can manage devices.';
 
   @override
   String get addDeviceInstructionsTitle => 'How to connect your TV';
@@ -889,10 +747,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmPairingTitle => 'Confirm device link';
 
   @override
-  String get confirmPairingSubtitle =>
-      'Review the TV information before linking.';
-
-  @override
   String get tvNameLabel => 'TV Name';
 
   @override
@@ -905,13 +759,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modelLabel => 'Model';
 
   @override
-  String get targetFamilyLabel => 'Destination family';
-
-  @override
   String get maskedIdLabel => 'Device ID';
-
-  @override
-  String get identityStabilityLabel => 'Identity type';
 
   @override
   String get confirmLinkButton => 'Link device';
@@ -939,16 +787,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editDeviceName => 'Edit TV Name';
 
   @override
-  String get deviceDetailsTitle => 'Device Details';
-
-  @override
-  String get technicalDetails => 'Technical info';
-
-  @override
   String get linkedAtLabel => 'Linked on';
-
-  @override
-  String get lastActivityLabel => 'Last activity';
 
   @override
   String get neverActive => 'No activity recorded yet';
@@ -977,12 +816,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get invalidPublicCode =>
       'Enter a 12-character alphanumeric user code.';
-
-  @override
-  String get personalContext => 'Personal account';
-
-  @override
-  String get selectedContext => 'Selected context';
 
   @override
   String get membershipRequests => 'Membership requests';
@@ -1063,12 +896,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileTypeGuest => 'Guest';
 
   @override
-  String get manageProfile => 'Manage profile';
-
-  @override
-  String get profileInfo => 'Profile information';
-
-  @override
   String get accountLinked => 'Linked to an account';
 
   @override
@@ -1096,9 +923,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'On the person\'s account, open Family › Link to a profile and scan this QR code or type the code. Single use, valid for 10 minutes.';
 
   @override
-  String get permissionsTitle => 'Permissions';
-
-  @override
   String get allSpaces => 'All spaces';
 
   @override
@@ -1124,21 +948,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noFamilySources => 'This family has no IPTV sources.';
 
   @override
-  String get manageData => 'Data management';
-
-  @override
   String get clearFavorites => 'Clear favorites';
 
   @override
   String get clearFavoritesTitle => 'Clear favorites?';
-
-  @override
-  String clearFavoritesBody(String name) {
-    return 'All of $name\'s favorites will be permanently deleted. This can\'t be undone. The deletion will sync to every device.';
-  }
-
-  @override
-  String get clearWatched => 'Clear watched';
 
   @override
   String get clearWatchedTitle => 'Clear watched history?';
@@ -1160,16 +973,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get clearProgress => 'Clear progress';
-
-  @override
   String get dataCleared => 'Data deleted.';
-
-  @override
-  String get addGuest => 'Add guest';
-
-  @override
-  String get guestEnabled => 'Guest available on the TV';
 
   @override
   String get guestHint =>
@@ -1273,9 +1077,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get watchOnTv => 'Watch on TV';
-
-  @override
-  String get chooseTv => 'Choose the TV';
 
   @override
   String get noTvLinked => 'No linked TV';
@@ -1434,16 +1235,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecentSearches => 'Recently searched';
 
   @override
-  String get homeSearchHint => 'Search';
-
-  @override
   String get selectIptvSource => 'Select IPTV source';
 
   @override
   String get iptvSources => 'IPTV sources';
-
-  @override
-  String get selectedSource => 'Selected';
 
   @override
   String get homeNowPlaying => 'Now playing';
@@ -1453,9 +1248,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeContinueWatching => 'Continue watching';
-
-  @override
-  String get homeMyList => 'My list';
 
   @override
   String get homeRecentMovies => 'Recently added movies';
@@ -1478,15 +1270,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeFromFavorites => 'Remove from favorites';
-
-  @override
-  String get addToMyList => 'Add to My list';
-
-  @override
-  String get removeFromMyList => 'Remove from My list';
-
-  @override
-  String get continueWatchingOnTv => 'Continue watching on TV';
 
   @override
   String get liveChannel => 'Live';
@@ -1517,26 +1300,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String episodesCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count episodes',
-      one: '1 episode',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get episodesTitle => 'Episodes';
-
-  @override
-  String get showMore => 'Show more';
-
-  @override
-  String get showLess => 'Show less';
-
-  @override
   String seasonEpisodeShort(int season, String episode) {
     return 'S${season}E$episode';
   }
@@ -1545,17 +1308,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String ageRatingLabel(String rating) {
     return 'Rated $rating';
   }
-
-  @override
-  String familyOfName(String name) {
-    return '$name family';
-  }
-
-  @override
-  String get familyEmptyBody => 'No additional members yet.';
-
-  @override
-  String get addMembers => 'Add members';
 
   @override
   String get invitePending => 'Invitation pending';
@@ -1599,71 +1351,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Not available to watch in your IPTV catalog. You can still save it.';
 
   @override
-  String originalTitleLabel(String title) {
-    return 'Original title: $title';
-  }
-
-  @override
-  String releaseDateLabel(String date) {
-    return 'Released $date';
-  }
-
-  @override
-  String ratingLabel(String score) {
-    return 'Rating $score/10 (TMDB)';
-  }
-
-  @override
-  String get crewLabel => 'Crew';
-
-  @override
-  String get seasonsTitle => 'Seasons';
-
-  @override
-  String get seasonsFromTmdb =>
-      'Editorial information from TMDB. Availability depends on your IPTV source.';
-
-  @override
-  String get availableEpisodesTitle => 'Available on your IPTV';
-
-  @override
   String get filmography => 'Filmography';
 
   @override
-  String get careerTimeline => 'Career timeline';
-
-  @override
   String get biography => 'Biography';
-
-  @override
-  String bornLabel(String date) {
-    return 'Born $date';
-  }
-
-  @override
-  String diedLabel(String date) {
-    return 'Died $date';
-  }
-
-  @override
-  String get moviesLabel => 'Movies';
-
-  @override
-  String get seriesLabel => 'Series';
 
   @override
   String get movieKind => 'Movie';
 
   @override
   String get seriesKind => 'Series';
-
-  @override
-  String asCharacter(String character) {
-    return 'as $character';
-  }
-
-  @override
-  String get undatedLabel => 'No date';
 
   @override
   String get metadataUnavailable =>
@@ -1686,11 +1383,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your lists were updated on another device. Try again.';
 
   @override
-  String directedByLabel(String names) {
-    return 'Directed by $names';
-  }
-
-  @override
   String createdByLabel(String names) {
     return 'Created by $names';
   }
@@ -1703,26 +1395,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restartLabel => 'Start over';
-
-  @override
-  String get favoriteAction => 'Favorite';
-
-  @override
-  String get unfavoriteAction => 'Unfavorite';
-
-  @override
-  String get saveAction => 'Save';
-
-  @override
-  String get unsaveAction => 'Remove';
-
-  @override
-  String seasonEpisodeLabel(int season, int episode) {
-    return 'Season $season - Episode $episode';
-  }
-
-  @override
-  String get socialNetworks => 'Social media';
 
   @override
   String get seeAll => 'See all';
@@ -1798,9 +1470,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get youMayLike => 'You may also like';
-
-  @override
-  String get seeMore => 'See more';
 
   @override
   String get aboutTab => 'About';
@@ -1945,11 +1614,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String watchedOn(String time) {
-    return 'Watched $time';
-  }
-
-  @override
   String lastSyncLabel(String time) {
     return 'Last sync: $time';
   }
@@ -1959,9 +1623,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get securitySection => 'Security';
-
-  @override
-  String get contentSection => 'Content';
 
   @override
   String get removeFromFamily => 'Remove from family';

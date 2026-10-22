@@ -118,7 +118,7 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                               child: Center(
                                 child: AppIcon(
                                   AppIcons.devices,
-                                  size: AppTokens.xxl,
+                                  size: AppSpacing.xxl,
                                   color: isOnline
                                       ? AppColors.accent
                                       : AppColors.textDisabled,

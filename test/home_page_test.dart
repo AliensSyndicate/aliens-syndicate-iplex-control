@@ -9,6 +9,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'navigation_test.dart' as navigation;
+import 'support/now_playing_fixture.dart';
 import 'widget_test.dart' as fixtures;
 
 Map<String, dynamic> item(
@@ -501,17 +502,26 @@ void main() {
   testWidgets(
     'now playing item: top of the Home, standard background, opens the title',
     (tester) async {
-      final repo = repoWith({
-        'profile': profile,
-        'continueWatching': [
-          item(
-            'm1',
-            'Missão Fictícia',
-            'movie',
-            progress: {'position': 30, 'duration': 100},
-          ),
-        ],
-      });
+      final repo =
+          repoWith({
+              'profile': profile,
+              'continueWatching': [
+                item(
+                  'm1',
+                  'Missão Fictícia',
+                  'movie',
+                  progress: {'position': 30, 'duration': 100},
+                ),
+              ],
+            })
+            ..devices = [
+              tvPlaying(
+                itemId: 'm1',
+                title: 'Missão Fictícia',
+                position: 30,
+                duration: 100,
+              ),
+            ];
       final c = await navigation.launch(tester, repo);
       final bar = find.byKey(const Key('now-playing-bar'));
       expect(bar, findsOneWidget);
@@ -571,11 +581,14 @@ void main() {
       await navigation.launch(
         tester,
         repoWith({
-          'profile': profile,
-          'library': {
-            'favorites': [item('ch1', 'Canal Notícias', 'channel')],
-          },
-        }),
+            'profile': profile,
+            'library': {
+              'favorites': [item('ch1', 'Canal Notícias', 'channel')],
+            },
+          })
+          ..devices = [
+            tvPlaying(itemId: 'ch1', title: 'Canal Notícias', kind: 'channel'),
+          ],
       );
       final bar = find.byKey(const Key('now-playing-bar'));
       expect(
@@ -600,7 +613,7 @@ void main() {
         repoWith({
           'profile': profile,
           'recentMovies': [item('r1', 'Filme Novo', 'movie')],
-        }),
+        })..devices = [tvPlaying(itemId: 'r1', title: 'Filme Novo')],
       );
       final track = tester.widget<AppProgressBar>(
         find.byKey(const Key('now-playing-progress')),

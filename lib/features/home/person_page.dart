@@ -302,7 +302,7 @@ class _PersonLoadedState extends State<_PersonLoaded> {
     }
     // A missing or slow photo never blocks the page for long.
     precacheImage(
-      NetworkImage(url),
+      CachedNetworkImage(url, decodeWidth: 1080),
       context,
       // A failed photo falls back to initials; it is not an app error.
       onError: (error, stack) {},
@@ -360,8 +360,8 @@ class _PersonCover extends StatelessWidget {
     if (photo == null) return _initials();
     return ColoredBox(
       color: Colors.black,
-      child: Image.network(
-        photo,
+      child: Image(
+        image: CachedNetworkImage(photo, decodeWidth: 1080),
         key: const Key('person-cover'),
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,

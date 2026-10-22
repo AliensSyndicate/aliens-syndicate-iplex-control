@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _Repo implements ManagerRepository {
-  _Repo(this.profile, {this.admin = true, this.library = _library});
+  _Repo(this.profile, {this.admin = true}) : library = _library;
   Map<String, dynamic> profile;
   final bool admin;
   final Map<String, dynamic> library;
@@ -130,7 +130,7 @@ const _library = <String, dynamic>{
 Widget _host(_Repo repo) => ProviderScope(
   overrides: [repositoryProvider.overrideWithValue(repo)],
   child: MaterialApp(
-    theme: AppTokens.theme,
+    theme: AppTheme.darkTheme,
     locale: const Locale('pt', 'BR'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,

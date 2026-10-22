@@ -133,7 +133,7 @@ Widget createTestApp({
 }) => ProviderScope(
   overrides: [repositoryProvider.overrideWithValue(repo)],
   child: MaterialApp(
-    theme: AppTokens.theme,
+    theme: AppTheme.darkTheme,
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -641,7 +641,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: const IptvSourceDetailsPage(id: 'source-abc'),
+          child: const IptvPage(id: 'source-abc'),
           repo: repo,
         ),
       );
@@ -679,7 +679,7 @@ void main() {
 
         await tester.pumpWidget(
           createTestApp(
-            child: const IptvSourceDetailsPage(id: 'source-sync'),
+            child: const IptvPage(id: 'source-sync'),
             repo: repo,
           ),
         );
@@ -712,7 +712,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: const IptvSourceDetailsPage(id: 'source-ready'),
+          child: const IptvPage(id: 'source-ready'),
           repo: repo,
         ),
       );
@@ -743,7 +743,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: const IptvSourceDetailsPage(id: 'source-err'),
+          child: const IptvPage(id: 'source-err'),
           repo: repo,
         ),
       );
@@ -778,7 +778,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: const IptvSourceDetailsPage(id: 'source-err-count'),
+          child: const IptvPage(id: 'source-err-count'),
           repo: repo,
         ),
       );
@@ -805,7 +805,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: const IptvSourceDetailsPage(id: 'source-del'),
+          child: const IptvPage(id: 'source-del'),
           repo: repo,
         ),
       );
@@ -851,7 +851,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: const IptvSourceDetailsPage(id: 'source-cancel'),
+          child: const IptvPage(id: 'source-cancel'),
           repo: repo,
         ),
       );
@@ -889,7 +889,7 @@ void main() {
 
         await tester.pumpWidget(
           createTestApp(
-            child: const IptvSourceDetailsPage(id: 'source-view-only'),
+            child: const IptvPage(id: 'source-view-only'),
             repo: repo,
           ),
         );
@@ -987,7 +987,7 @@ void main() {
 
         await tester.pumpWidget(
           createTestApp(
-            child: const IptvSourceDetailsPage(id: 'source-secret-check'),
+            child: const IptvPage(id: 'source-secret-check'),
             repo: repo,
           ),
         );

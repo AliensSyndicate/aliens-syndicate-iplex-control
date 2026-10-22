@@ -135,7 +135,7 @@ class HomeCard extends StatelessWidget {
                           child: AppProgressBar(
                             value: progress.fraction,
                             margin: const EdgeInsets.all(AppSpacing.sm),
-                            color: const Color(0xFF00E676),
+                            color: AppColors.primary,
                             trackColor: const Color(0x66000000),
                           ),
                         ),
@@ -157,7 +157,7 @@ class HomeCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   item.name,
-                  maxLines: item.year == null ? 2 : 1,
+                  maxLines: (detail ?? item.year) == null ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.bodyMedium.copyWith(
                     fontSize: 13,
@@ -248,6 +248,7 @@ class _ArtworkState extends ConsumerState<Artwork> {
         item: item,
         alignment: widget.alignment,
         background: widget.background,
+        decodeWidth: widget.backdrop ? 1080 : 480,
       );
     }
     if (metadata == null) return _Initials(item: item);
@@ -265,6 +266,7 @@ class _ArtworkState extends ConsumerState<Artwork> {
             item: item,
             alignment: widget.alignment,
             background: widget.background,
+            decodeWidth: widget.backdrop ? 1080 : 480,
           );
         }
         // No TMDB cover: the source's own art, cropped, before initials.
@@ -279,6 +281,7 @@ class _ArtworkState extends ConsumerState<Artwork> {
             item: item,
             alignment: widget.alignment,
             background: widget.background,
+            decodeWidth: widget.backdrop ? 1080 : 480,
           );
         }
         return _Initials(
@@ -297,8 +300,10 @@ class _NetworkImage extends StatelessWidget {
     required this.item,
     this.alignment = Alignment.center,
     this.background = AppColors.surfaceRecessed,
+    this.decodeWidth = 480,
   });
   final String url;
+  final int decodeWidth;
   final BoxFit fit;
   final Entry item;
   final Alignment alignment;
@@ -311,8 +316,8 @@ class _NetworkImage extends StatelessWidget {
       padding: fit == BoxFit.contain
           ? const EdgeInsets.all(AppSpacing.md)
           : EdgeInsets.zero,
-      child: Image.network(
-        url,
+      child: Image(
+        image: CachedNetworkImage(url, decodeWidth: decodeWidth),
         fit: fit,
         alignment: alignment,
         width: double.infinity,

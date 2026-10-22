@@ -123,8 +123,11 @@ class _EpisodeRow extends StatelessWidget {
                           color: AppColors.surfaceElevated,
                           child: still == null
                               ? null
-                              : Image.network(
-                                  still,
+                              : Image(
+                                  image: CachedNetworkImage(
+                                    still,
+                                    decodeWidth: 480,
+                                  ),
                                   fit: BoxFit.cover,
                                   gaplessPlayback: true,
                                   excludeFromSemantics: true,

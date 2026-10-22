@@ -308,7 +308,7 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                 onFormatSelected: _handleFormatSelection,
                 disabled: busy,
               ),
-              const SizedBox(height: AppTokens.lg),
+              const SizedBox(height: AppSpacing.lg),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: Column(
@@ -653,7 +653,7 @@ class _IptvSourceFormState extends ConsumerState<IptvSourceForm> {
                       ],
                     ],
 
-                    const SizedBox(height: AppTokens.lg),
+                    const SizedBox(height: AppSpacing.lg),
                     AppButton.primary(
                       label: l.save,
                       busy: busy,

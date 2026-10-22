@@ -64,7 +64,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             child: Row(
               children: [
                 const AccountAvatar(),
-                const SizedBox(width: AppTokens.lg),
+                const SizedBox(width: AppSpacing.lg),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +75,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                       ),
                       Text(
                         a?.email ?? '',
-                        style: const TextStyle(color: AppTokens.secondary),
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                       Text(
                         a?.familyId == null
@@ -83,7 +83,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                             : admin
                             ? l.administrator
                             : l.member,
-                        style: const TextStyle(color: AppTokens.accent),
+                        style: const TextStyle(color: AppColors.accent),
                       ),
                     ],
                   ),
@@ -91,7 +91,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
               ],
             ),
           ),
-          const SizedBox(height: AppTokens.xl),
+          const SizedBox(height: AppSpacing.xl),
           EntryTile(
             title: l.myProfile,
             onTap: () => context.push('/account/profile'),
@@ -110,13 +110,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             title: l.about,
             onTap: () => context.push('/account/about'),
           ),
-          const SizedBox(height: AppTokens.lg),
+          const SizedBox(height: AppSpacing.lg),
           AppButton(
             label: l.logout,
             busy: busy,
             onPressed: () => operation(false),
           ),
-          const SizedBox(height: AppTokens.lg),
+          const SizedBox(height: AppSpacing.lg),
           AppButton.red(
             label: l.deleteAccount,
             busy: busy,

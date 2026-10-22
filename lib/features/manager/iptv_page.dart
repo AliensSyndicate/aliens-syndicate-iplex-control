@@ -316,19 +316,19 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                       ),
                     ],
                     if (admin) ...[
-                      const SizedBox(height: AppTokens.xl),
+                      const SizedBox(height: AppSpacing.xl),
                       AppButton(
                         label: l.syncNow,
                         busy: syncBusy,
                         onPressed: syncNow,
                       ),
-                      const SizedBox(height: AppTokens.md),
+                      const SizedBox(height: AppSpacing.md),
                       AppButton(
                         label: l.editSource,
                         onPressed: () =>
                             context.push('/iptv/${e.id}/edit', extra: e.name),
                       ),
-                      const SizedBox(height: AppTokens.md),
+                      const SizedBox(height: AppSpacing.md),
                       AppButton(
                         label: l.deleteSource,
                         busy: deleteBusy,
@@ -386,6 +386,3 @@ class _SourceDetailRow extends StatelessWidget {
           ],
         );
 }
-
-/// Backward compatibility alias
-typedef IptvSourceDetailsPage = IptvPage;

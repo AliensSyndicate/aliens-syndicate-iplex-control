@@ -17,7 +17,7 @@ Widget _page(Entry entry) => ProviderScope(
     canManageIptvProvider.overrideWithValue(false),
   ],
   child: MaterialApp(
-    theme: AppTokens.theme,
+    theme: AppTheme.darkTheme,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('pt'),

@@ -101,7 +101,7 @@ class _Repo implements ManagerRepository {
 Widget _host(Widget child, _Repo repo, {bool page = false}) => ProviderScope(
   overrides: [repositoryProvider.overrideWithValue(repo)],
   child: MaterialApp(
-    theme: AppTokens.theme,
+    theme: AppTheme.darkTheme,
     locale: const Locale('pt'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,

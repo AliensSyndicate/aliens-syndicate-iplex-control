@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget host(Widget child) => MaterialApp(
-  theme: AppTokens.theme,
+  theme: AppTheme.darkTheme,
   home: Scaffold(
     body: Padding(padding: const EdgeInsets.all(24), child: child),
   ),

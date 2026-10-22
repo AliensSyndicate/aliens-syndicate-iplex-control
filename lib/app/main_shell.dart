@@ -42,7 +42,7 @@ class MainShell extends StatelessWidget {
               right: 0,
               bottom: 0,
               child: BottomNavigation(
-                selected: menuBranches.indexOf(shell.currentIndex) < 0
+                selected: !menuBranches.contains(shell.currentIndex)
                     ? null
                     : menuBranches.indexOf(shell.currentIndex),
                 onSelected: (i) => shell.goBranch(

@@ -116,7 +116,7 @@ Widget _host(_Repo repo, _Store store) => ProviderScope(
     storeBillingProvider.overrideWithValue(store),
   ],
   child: MaterialApp(
-    theme: AppTokens.theme,
+    theme: AppTheme.darkTheme,
     locale: const Locale('pt', 'BR'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,

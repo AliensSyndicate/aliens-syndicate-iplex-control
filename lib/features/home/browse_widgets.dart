@@ -97,8 +97,8 @@ class PhotoOrInitials extends StatelessWidget {
   Widget build(BuildContext context) {
     final photo = url;
     if (photo == null) return _initials();
-    return Image.network(
-      photo,
+    return Image(
+      image: CachedNetworkImage(photo, decodeWidth: 360),
       fit: BoxFit.cover,
       gaplessPlayback: true,
       excludeFromSemantics: true,

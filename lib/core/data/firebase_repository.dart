@@ -164,8 +164,9 @@ class FirebaseManagerRepository implements ManagerRepository {
     if (!kIsWeb && _auth.currentUser != null) {
       try {
         final token = _pushToken;
-        if (token != null)
+        if (token != null) {
           await mutate('unregisterPushToken', {'token': token});
+        }
         await FirebaseMessaging.instance.unregister();
         _pushToken = null;
       } catch (_) {
@@ -222,8 +223,9 @@ class FirebaseManagerRepository implements ManagerRepository {
             'action': action,
             'payload': {'contextFamilyId': _contextFamilyId, ...payload},
           });
-      if (action == 'registerPushToken')
+      if (action == 'registerPushToken') {
         _pushToken = payload['token'] as String?;
+      }
       return Map<String, dynamic>.from(result.data as Map);
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'unauthenticated' && _auth.currentUser != null) {

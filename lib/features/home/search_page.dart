@@ -206,7 +206,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
     if (error != null) return [ErrorState(onRetry: run)];
     if (loading && titles.isEmpty && people.isEmpty) {
-      return const [AppLoadingSkeleton(rows: 3)];
+      return const [PosterGridSkeleton(count: 6)];
     }
     final shownTitles = _shownTitles;
     final showPeople =

@@ -98,8 +98,9 @@ class IptvNotificationController with WidgetsBindingObserver {
   void _scheduleDrain() {
     if (_disposed ||
         _timer != null ||
-        (_pending.isEmpty && _pendingSource == null))
+        (_pending.isEmpty && _pendingSource == null)) {
       return;
+    }
     _timer = Timer(const Duration(milliseconds: 600), () {
       _timer = null;
       unawaited(_drain());
@@ -195,8 +196,9 @@ class IptvNotificationController with WidgetsBindingObserver {
         _handleNotificationClick,
       );
       final initial = await messaging.getInitialMessage();
-      if (!_disposed && _uid == uid && initial != null)
+      if (!_disposed && _uid == uid && initial != null) {
         _handleNotificationClick(initial);
+      }
     } catch (_) {
       /* Persistent completion inbox also works without APNs/FCM. */
     }
@@ -205,8 +207,9 @@ class IptvNotificationController with WidgetsBindingObserver {
   void _handleNotificationClick(RemoteMessage message) {
     if (message.data['recipientUid'] != _uid) return;
     final source = message.data['sourceId'] as String?;
-    if (source == null || !RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(source))
+    if (source == null || !RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(source)) {
       return;
+    }
     _pendingSource = source;
     _scheduleDrain();
   }

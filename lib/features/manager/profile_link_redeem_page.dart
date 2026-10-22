@@ -69,7 +69,7 @@ class _ProfileLinkRedeemPageState extends ConsumerState<ProfileLinkRedeemPage> {
                 l.linkToProfileBody,
                 style: const TextStyle(color: AppColors.textSecondary),
               ),
-              const SizedBox(height: AppTokens.lg),
+              const SizedBox(height: AppSpacing.lg),
               AppTextField(
                 key: const Key('profile-link-input'),
                 label: l.linkCode,
@@ -78,9 +78,9 @@ class _ProfileLinkRedeemPageState extends ConsumerState<ProfileLinkRedeemPage> {
                     ? l.invalidCode
                     : null,
               ),
-              const SizedBox(height: AppTokens.lg),
+              const SizedBox(height: AppSpacing.lg),
               AppButton.primary(label: l.save, busy: busy, onPressed: redeem),
-              const SizedBox(height: AppTokens.md),
+              const SizedBox(height: AppSpacing.md),
               AppButton(
                 label: l.scanQrCode,
                 icon: AppIcons.qr,

@@ -261,7 +261,7 @@ export async function playableItem(actor:Identity,sourceId:string,itemId:string)
  const access=await authorize(actor,sourceId),catalog=await load(access.data.version);
  const item=catalog.items.find(i=>hash(`${sourceId}:${i.id}`)===itemId);
  if(!item||!canSee(access.viewer,sourceId,item))throw new DomainError('not-found');
- return {fid:access.fid,kind:item.kind,title:item.title};
+ return {fid:access.fid,kind:item.kind,title:item.title,providerRef:item.providerRef,year:item.year,imageRef:item.imageRef};
 }
 
 /** Public id (the one readSourceCatalog returns) → catalog item, per published version. */

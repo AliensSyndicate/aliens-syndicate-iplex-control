@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../graphite_surface.dart';
 import '../tokens.dart';
+import 'app_network_image.dart';
 
 /// Only https photos are drawn; anything else shows the default avatar.
 String? avatarPhotoOrNull(String? url) =>
@@ -38,8 +39,12 @@ class AppAvatarFace extends StatelessWidget {
       child: url == null
           ? _initial(context)
           : ClipOval(
-              child: Image.network(
-                url,
+              child: Image(
+                image: CachedNetworkImage(
+                  url,
+                  decodeWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                      .round(),
+                ),
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
                 excludeFromSemantics: true,

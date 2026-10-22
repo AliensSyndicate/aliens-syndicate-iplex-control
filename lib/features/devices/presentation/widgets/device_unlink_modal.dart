@@ -26,7 +26,7 @@ Future<bool> showDeviceUnlinkModal(
                 child: const Center(
                   child: AppIcon(
                     AppIcons.delete,
-                    size: AppTokens.lg,
+                    size: AppSpacing.lg,
                     color: AppColors.error,
                   ),
                 ),

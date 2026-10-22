@@ -79,7 +79,7 @@ class _NameFormState extends ConsumerState<NameForm> {
                   : null,
             ),
             if (creatingProfile) ...[
-              const SizedBox(height: AppTokens.lg),
+              const SizedBox(height: AppSpacing.lg),
               AppDropdownField<String>(
                 key: const Key('profile-type'),
                 label: context.l.profileType,
@@ -97,7 +97,7 @@ class _NameFormState extends ConsumerState<NameForm> {
                 onChanged: (v) => setState(() => profileType = v ?? 'regular'),
               ),
             ],
-            const SizedBox(height: AppTokens.lg),
+            const SizedBox(height: AppSpacing.lg),
             AppButton.primary(
               label: context.l.save,
               busy: busy,

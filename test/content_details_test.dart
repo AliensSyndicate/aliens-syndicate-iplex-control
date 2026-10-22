@@ -20,6 +20,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import 'home_page_test.dart' show item, profile;
 import 'navigation_test.dart' as navigation;
+import 'support/now_playing_fixture.dart';
 import 'widget_test.dart' as fixtures;
 
 /// Backend double with a real in-memory library (same contract as readHome /
@@ -1137,6 +1138,16 @@ void main() {
           'progress': {'position': 10, 'duration': 100},
           'episodeId': '3012',
         },
+      ]
+      ..devices = [
+        tvPlaying(
+          itemId: 'se1',
+          title: 'Série Exemplo',
+          kind: 'series',
+          episodeId: '3012',
+          position: 10,
+          duration: 100,
+        ),
       ];
     await launchWith(tester, repo, metadataFixture());
     expect(

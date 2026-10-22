@@ -127,7 +127,7 @@ Widget createTestApp({
 }) => ProviderScope(
   overrides: [repositoryProvider.overrideWithValue(repo)],
   child: MaterialApp(
-    theme: AppTokens.theme,
+    theme: AppTheme.darkTheme,
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
@@ -772,7 +772,7 @@ void main() {
 
         await tester.pumpWidget(
           createTestApp(
-            child: const IptvSourceDetailsPage(id: 'src-ready-1'),
+            child: const IptvPage(id: 'src-ready-1'),
             repo: repo,
           ),
         );
@@ -805,7 +805,7 @@ void main() {
 
         await tester.pumpWidget(
           createTestApp(
-            child: const IptvSourceDetailsPage(id: 'src-err-1'),
+            child: const IptvPage(id: 'src-err-1'),
             repo: repo,
           ),
         );
@@ -846,7 +846,7 @@ void main() {
         // Na página de detalhes
         await tester.pumpWidget(
           createTestApp(
-            child: const IptvSourceDetailsPage(id: 'src-member-1'),
+            child: const IptvPage(id: 'src-member-1'),
             repo: repo,
           ),
         );
@@ -909,7 +909,7 @@ void main() {
 
       await tester.pumpWidget(
         createTestApp(
-          child: const IptvSourceDetailsPage(id: 'src-secure-data'),
+          child: const IptvPage(id: 'src-secure-data'),
           repo: repo,
         ),
       );

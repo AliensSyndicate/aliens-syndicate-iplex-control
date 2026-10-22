@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/data/providers.dart';
 import '../../core/domain/models.dart';
 import 'home_data.dart';
-import 'metadata_service.dart';
 
 /// Device storage for small UI preferences (overridable in tests).
 final preferencesProvider = FutureProvider<SharedPreferencesAsync>(
@@ -161,15 +160,3 @@ final homeSectionProvider = FutureProvider.autoDispose
           .timeout(const Duration(seconds: 30));
       return HomeData.fromJson(result);
     }, retry: (retryCount, error) => null);
-
-/// Fetches the TMDB backdrop image of type backdrops for the currently playing item.
-final nowPlayingBackdropProvider = FutureProvider.autoDispose
-    .family<String?, Entry>((ref, item) async {
-      if (!item.isPlayableTitle || item.isEditorial) return item.sourceImage;
-      final metadata = await ref.read(metadataServiceProvider).summary(item);
-      final backdrop = metadata?.backdrop;
-      if (backdrop != null && backdrop.isNotEmpty) {
-        return tmdbSized(backdrop, 'w1280') ?? backdrop;
-      }
-      return item.sourceImage ?? item.editorialPoster;
-    });

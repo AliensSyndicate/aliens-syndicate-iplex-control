@@ -11,15 +11,6 @@ final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
   return DeviceRepositoryImpl(managerRepository);
 });
 
-final familyDevicesStreamProvider = StreamProvider<List<DeviceEntity>>((ref) {
-  final familyId = ref.watch(accountProvider).asData?.value?.resourceScopeId;
-  if (familyId == null || familyId.isEmpty) {
-    return Stream.value(const []);
-  }
-  final repo = ref.watch(deviceRepositoryProvider);
-  return repo.watchDevices(familyId);
-});
-
 final deviceDetailStreamProvider = StreamProvider.family<DeviceEntity?, String>(
   (ref, deviceId) {
     final familyId = ref.watch(accountProvider).asData?.value?.resourceScopeId;

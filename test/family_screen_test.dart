@@ -21,6 +21,9 @@ class FamilyRepository extends navigation.SessionRepository {
       'photoUrl': 'https://lh3.googleusercontent.com/a/admin',
     }),
   ];
+  List<Entry> profiles = [
+    Entry('admin', {'name': 'Account', 'type': 'admin', 'linkedUid': 'u'}),
+  ];
   List<Entry> sent = [], received = [];
   bool membersFailure = false;
   Completer<List<Entry>>? pendingMembers;
@@ -35,10 +38,7 @@ class FamilyRepository extends navigation.SessionRepository {
       case 'invitations':
         yield received;
       default:
-        yield [
-          if (collection == 'profiles')
-            Entry('admin', {'name': 'Account', 'type': 'admin'}),
-        ];
+        yield collection == 'profiles' ? profiles : [];
     }
   }
 }
@@ -56,7 +56,7 @@ void main() {
       final repo = FamilyRepository();
       final c = await navigation.launch(tester, repo, location: '/users');
       // The account that created the family is a member: no empty state.
-      expect(find.byKey(const ValueKey('member-u')), findsOneWidget);
+      expect(find.byKey(const ValueKey('profile-admin')), findsOneWidget);
       expect(find.text('No additional members yet.'), findsNothing);
       expect(find.widgetWithText(AppButton, 'Add members'), findsNothing);
       expect(find.text('Create a family'), findsNothing);
@@ -100,8 +100,8 @@ void main() {
       expect(find.text('Sam'), findsOneWidget);
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey('member-u')),
-          matching: find.text('Administrator'),
+          of: find.byKey(const ValueKey('profile-admin')),
+          matching: find.text('Admin'),
         ),
         findsOneWidget,
       );
@@ -120,7 +120,6 @@ void main() {
       );
       expect(find.text('Invitation pending'), findsOneWidget);
       expect(find.byType(AppAvatar), findsNWidgets(3));
-      expect(find.byKey(const Key('parental-control')), findsOneWidget);
       await loadImages(tester);
       await fixtures.screenshot(tester, 'family-members');
       // The administrator's own entry has no management; a member opens its detail.
@@ -160,6 +159,14 @@ void main() {
           Entry('admin', {'name': 'Dana', 'role': 'admin'}),
           Entry('u', {'name': 'Account', 'role': 'member'}),
           Entry('m2', {'name': 'Pat', 'role': 'member'}),
+        ]
+        ..profiles = [
+          Entry('admin', {
+            'name': 'Dana',
+            'type': 'admin',
+            'linkedUid': 'admin',
+          }),
+          Entry('pu', {'name': 'Account', 'type': 'regular', 'linkedUid': 'u'}),
         ];
       final c = await navigation.launch(tester, repo, location: '/users');
       expect(find.widgetWithText(AppButton, 'Add members'), findsNothing);
@@ -180,9 +187,9 @@ void main() {
         '/users',
         reason: 'other members are read-only',
       );
-      await tester.tap(find.byKey(const ValueKey('member-u')));
+      await tester.tap(find.byKey(const ValueKey('profile-pu')));
       await tester.pumpAndSettle();
-      expect(navigation.path(c), '/users/member/u');
+      expect(navigation.path(c), '/users/pu');
     },
   );
 
@@ -210,56 +217,6 @@ void main() {
     );
   });
 
-  testWidgets('member cards: on / off and the date it was last on', (
-    tester,
-  ) async {
-    final recent = DateTime.now().subtract(const Duration(minutes: 1));
-    final repo = FamilyRepository()
-      ..members = [
-        ...FamilyRepository().members,
-        Entry('m1', {
-          'name': 'Sam',
-          'role': 'member',
-          'lastActiveAt': recent.millisecondsSinceEpoch,
-        }),
-        Entry('m2', {
-          'name': 'Lia',
-          'role': 'member',
-          'lastActiveAt': DateTime(2026, 1, 2, 10, 30).millisecondsSinceEpoch,
-        }),
-        Entry('m3', {'name': 'Noa', 'role': 'member'}),
-      ];
-    await navigation.launch(tester, repo, location: '/users');
-    Color? dot(String id) => tester
-        .widget<NeumorphicStatusIndicator>(
-          find.descendant(
-            of: find.byKey(ValueKey('member-$id')),
-            matching: find.byType(NeumorphicStatusIndicator),
-          ),
-        )
-        .color;
-    // The account using the app is on; Sam reported a minute ago.
-    expect(dot('u'), AppColors.statusOn);
-    expect(dot('m1'), AppColors.statusOn);
-    // Lia: off, with the last time on; Noa never was.
-    expect(dot('m2'), AppColors.disabled);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('member-m2')),
-        matching: find.text('1/2/2026 10:30'),
-      ),
-      findsOneWidget,
-    );
-    expect(dot('m3'), AppColors.disabled);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('member-m3')),
-        matching: find.text('Never on'),
-      ),
-      findsOneWidget,
-    );
-  });
-
   testWidgets('while loading, the page frame stays and a skeleton shows', (
     tester,
   ) async {
@@ -273,7 +230,7 @@ void main() {
     expect(find.text('Family'), findsWidgets);
     pending.complete(loading.members);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('member-u')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-admin')), findsOneWidget);
   });
 
   testWidgets('a failing member stream shows the error state with retry', (
