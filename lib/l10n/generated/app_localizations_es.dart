@@ -1879,6 +1879,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get roleGuest => 'Visitante';
 
   @override
+  String get kidsAccount => 'Cuenta infantil';
+
+  @override
   String get addMember => 'Agregar miembro';
 
   @override

@@ -88,6 +88,7 @@ test('public codes, membership pointers and requests are backend-owned and recip
   await assertFails(getDoc(doc(db,'public_user_codes/ABC123DEF456')));
   await assertFails(setDoc(doc(db,`users/${uid}`),{publicCode:'ABC123DEF456',familyIds:['f']},{merge:true}));
   await assertFails(updateDoc(doc(db,'family_requests/r'),{status:'accepted'}));
+  await assertFails(updateDoc(doc(db,'family_requests/r'),{profileType:'regular'}));
   // The invitee and the inviting family's administrator follow the request; nobody else.
   if(uid==='member'||uid==='admin')await assertSucceeds(getDoc(doc(db,'family_requests/r')));
   else await assertFails(getDoc(doc(db,'family_requests/r')));
@@ -177,4 +178,11 @@ test('one account, one family: clients cannot create families, move themselves o
  await assertFails(updateDoc(doc(member,'families/f'),{members:{member:'admin',admin:'member'}}));
  await assertFails(setDoc(doc(member,'users/member'),{photoUrl:'https://example.invalid/a.png'},{merge:true}));
  await assertFails(getDoc(doc(db,'families/f/members/admin')));
+});
+
+test('classification cannot be changed by direct client writes, including the administrator',async()=>{
+ for(const uid of ['admin','member','outsider']) {
+  const db=env.authenticatedContext(uid).firestore();
+  for(const type of ['regular','kids']) await assertFails(setDoc(doc(db,'families/f/profiles/joao'),{type},{merge:true}));
+ }
 });

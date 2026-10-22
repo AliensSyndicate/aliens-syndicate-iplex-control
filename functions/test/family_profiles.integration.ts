@@ -44,7 +44,9 @@ test('profiles exist without accounts; four associates max; guest is a sixth opt
  await execute('saveProfile',{id:'guest',name:'Convidado',...ctx},admin);
  assert.equal((await profiles(fid).doc('guest').get()).data()!.type,'guest');
  await assert.rejects(execute('saveProfile',{id:'guest',name:'Convidado',type:'regular',...ctx},admin),/profile-type-immutable/);
- await assert.rejects(execute('saveProfile',{id:first.id,name:'João',type:'regular',...ctx},admin),/profile-type-immutable/);
+ await assert.rejects(execute('saveProfile',{name:'João',type:'regular',requestId:'req-1',...ctx},admin),/profile-type-immutable/);
+ await execute('saveProfile',{id:first.id,name:'João',type:'regular',...ctx},admin);
+ assert.equal((await profiles(fid).doc(first.id).get()).data()!.type,'regular');
  await assert.rejects(execute('deleteProfile',{id:'admin',...ctx},admin),/administrator-protected/);
  const member=await account();
  await assert.rejects(execute('saveProfile',{name:'Intruso',contextFamilyId:fid},member),/permission-denied/);
@@ -128,7 +130,7 @@ test('account linking keeps the profile id and data; single-use codes; conflicts
  const linked=await execute('redeemProfileLink',{code:code.toLowerCase()},lia) as {profileId:string;familyId:string};
  assert.deepEqual(linked,{familyId:fid,profileId:pid});
  const after=(await profiles(fid).doc(pid).get()).data()!;
- assert.equal(after.linkedUid,lia.uid);assert.equal(after.type,'kids');assert.deepEqual(after.permissions,{allSpaces:false,spaces:['s1:movie'],adult:true});
+ assert.equal(after.linkedUid,lia.uid);assert.equal(after.type,'kids');assert.deepEqual(after.permissions,{allSpaces:false,spaces:['s1:movie'],adult:false});
  assert.equal((await profiles(fid).doc(pid).collection('favorites').get()).size,1);
  assert.equal((await profiles(fid).doc(pid).collection('watch_progress').get()).size,1);
  assert.equal((await profiles(fid).get()).size,2);

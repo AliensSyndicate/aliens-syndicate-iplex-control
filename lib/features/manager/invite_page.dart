@@ -18,6 +18,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   Map<String, dynamic>? person;
   String? targetFamilyId;
   bool busy = false;
+  bool kidsAccount = false;
   @override
   void dispose() {
     code.dispose();
@@ -51,6 +52,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
       await ref.read(repositoryProvider).mutate('requestMembership', {
         'code': person!['code'],
         'familyId': targetFamilyId,
+        'profileType': kidsAccount ? 'kids' : 'regular',
       });
       if (mounted) {
         context.pop();
@@ -69,12 +71,20 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: PageTemplate(
-      title: context.l.invite,
+      title: context.l.addMember,
       showBack: true,
       child: Form(
         key: form,
         child: Column(
           children: [
+            NeumorphicSwitchTile(
+              key: const Key('kids-account-toggle'),
+              title: context.l.kidsAccount,
+              subtitle: kidsAccount ? context.l.kidsRestrictionNote : null,
+              value: kidsAccount,
+              disabled: busy || !ref.watch(adminProvider),
+              onChanged: (value) => setState(() => kidsAccount = value),
+            ),
             AppTextField(
               label: context.l.publicUserCode,
               controller: code,

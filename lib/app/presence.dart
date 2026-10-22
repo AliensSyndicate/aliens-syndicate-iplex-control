@@ -5,11 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/firebase_repository.dart';
 import '../core/data/providers.dart';
+import '../features/home/home_providers.dart';
 
 /// How often the app reports that the account is on, and how long after the
 /// last report a member still shows as "ligado" on the Family screen.
 const presenceInterval = Duration(minutes: 2);
 const presenceWindow = Duration(minutes: 5);
+
+/// Coming back after at least this long refreshes the Home, so the saved
+/// progress (written by a TV meanwhile) is current without a pull.
+const progressRefreshAfter = Duration(seconds: 30);
 
 /// A member is on when the app reported within [presenceWindow].
 bool memberOnline(num lastActiveAt, DateTime now) =>
@@ -27,6 +32,7 @@ class PresenceReporter extends ConsumerStatefulWidget {
 class _PresenceReporterState extends ConsumerState<PresenceReporter>
     with WidgetsBindingObserver {
   Timer? timer;
+  DateTime? pausedAt;
 
   @override
   void initState() {
@@ -57,7 +63,14 @@ class _PresenceReporterState extends ConsumerState<PresenceReporter>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       start();
+      final since = pausedAt;
+      pausedAt = null;
+      if (since != null &&
+          DateTime.now().difference(since) >= progressRefreshAfter) {
+        ref.invalidate(homeProvider);
+      }
     } else if (state == AppLifecycleState.paused) {
+      pausedAt = DateTime.now();
       timer?.cancel();
     }
   }

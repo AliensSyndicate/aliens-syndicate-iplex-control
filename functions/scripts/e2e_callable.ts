@@ -94,11 +94,26 @@ async function scenarioBC(a: Client) {
   assert.deepEqual(Object.keys(found).sort(), ['code', 'name']);
   step('lookup by code returns only public name + code');
   for (const m of members.slice(0, 4)) {
-    const r = await a.call('requestMembership', {code: await code(m), familyId: f1});
+    const profileType = m === members[0] ? 'kids' : 'regular';
+    const r = await a.call('requestMembership', {code: await code(m), familyId: f1, profileType});
     const mine = (await getDoc(doc(m.db, `family_requests/${r.id}`))).data()!;
     assert.equal(mine.status, 'pending');
+    assert.equal(mine.profileType, profileType);
     assert.equal((await getDoc(doc(a.db, `family_requests/${r.id}`))).data()!.status, 'pending'); // the administrator follows it
-    await m.call('respondMembership', {id: r.id, accept: true});
+    await m.call('respondMembership', {id: r.id, accept: true, profileType: profileType === 'kids' ? 'regular' : 'kids'});
+    const linked = (await getDocs(query(collection(a.db, `families/${f1}/profiles`), where('linkedUid', '==', m.uid)))).docs;
+    assert.equal(linked.length, 1);
+    assert.equal(linked[0]!.data().type, profileType);
+    if (profileType === 'kids') {
+      const profile = linked[0]!;
+      await rejects(m.call('saveProfile', {id: profile.id, name: profile.data().name, type: 'regular'}), /permission-denied/);
+      await a.call('saveProfile', {id: profile.id, name: profile.data().name, type: 'regular'});
+      await a.call('saveProfile', {id: profile.id, name: profile.data().name, type: 'kids'});
+      const updated = (await getDoc(doc(a.db, `families/${f1}/profiles/${profile.id}`))).data()!;
+      assert.equal(updated.type, 'kids');
+      assert.equal(updated.permissions.adult, false);
+      assert.equal(updated.permissionsVersion, 2);
+    }
     assert.equal((await getDoc(doc(m.db, `users/${m.uid}`))).data()!.familyId, f1);
   }
   step('4 members accepted addressed requests (5/5 seats with the administrator); each moved out of its individual family');

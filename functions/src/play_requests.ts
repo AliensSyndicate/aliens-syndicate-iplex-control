@@ -22,6 +22,7 @@ import {FieldValue, getFirestore} from 'firebase-admin/firestore';
 import {z} from 'zod';
 import {canStartPlayback, DomainError, idSchema, Lease, nameSchema} from './domain';
 import {playableItem} from './iptv_catalog_access';
+import {chooseResume, episodeContentId, type ResumeHint, resumePosition, type SavedProgress} from './playback_progress';
 import {playerContext, type Identity} from './service';
 
 /** Written on unlink (status "revoked"): wakes open TV listeners; never a playable request. */
@@ -51,6 +52,19 @@ function visibilityError(error: unknown): DomainError {
     return error;
   }
   throw error;
+}
+
+const progressContentId = (itemId: string, episodeId: string | null) => (episodeId ? episodeContentId(itemId, episodeId) : itemId);
+
+/** Saved progress of the requester's own profile (what their Control showed), or null. */
+async function requesterProgress(tx: FirebaseFirestore.Transaction, family: FirebaseFirestore.DocumentReference, uid: string, contentId: string): Promise<ResumeHint | null> {
+  const profileId = (await tx.get(family.collection('profile_links').doc(uid))).data()?.profileId;
+  if (typeof profileId !== 'string') return null;
+  const profile = family.collection('profiles').doc(profileId);
+  const [meta, progress] = await tx.getAll(profile, profile.collection('watch_progress').doc(contentId));
+  const generation = meta!.data()?.generations?.progress ?? 0, d = progress!.data();
+  if (!meta!.exists || meta!.data()?.deleting === true || !d || (d.generation ?? 0) !== generation) return null;
+  return resumePosition(d) === null ? null : {positionSec: Math.floor(Number(d.position)), durationSec: Number(d.duration), profileId, updatedAt: Number(d.updatedAt) || 0};
 }
 
 /** Control (manager): a family member asks one of the family's TVs to start a title. */
@@ -92,6 +106,8 @@ export async function requestPlayback(p: Record<string, unknown>, actor: Identit
   const deviceRef = target.ref.collection('devices').doc(deviceId), ref = deviceRef.collection('play_requests').doc(id);
   return db().runTransaction(async tx => {
     const [existing, device] = await tx.getAll(ref, deviceRef);
+    // "Continuar assistindo": the position the person saw in the Control travels with the request.
+    const hint = resume && own.kind !== 'channel' ? await requesterProgress(tx, target.ref, actor.uid, progressContentId(itemId, episodeId)) : null;
     if (existing!.exists) {
       // Idempotent retry of the same phone request.
       require_(existing!.data()?.requesterUid === actor.uid, 'invalid-argument');
@@ -104,7 +120,7 @@ export async function requestPlayback(p: Record<string, unknown>, actor: Identit
     pending.docs.forEach(d => tx.update(d.ref, {status: 'superseded', updatedAt: now, finishedAt: now}));
     tx.create(ref, {
       schemaVersion: 1, deviceId, familyId: target.fid, requesterUid: actor.uid, requesterName,
-      sourceId, itemId, episodeId, episodeLabel, kind: own.kind, title: own.title.slice(0, 300), resume: resume && own.kind !== 'channel',
+      sourceId, itemId, episodeId, episodeLabel, kind: own.kind, title: own.title.slice(0, 300), resume: resume && own.kind !== 'channel', resumeHint: hint,
       status: 'pending', errorCode: null, createdAt: now, updatedAt: now, expiresAt: now + PLAY_REQUEST_TTL_MS,
       deliveredAt: null, finishedAt: null, expireAt: new Date(now + 86_400_000),
     });
@@ -128,10 +144,21 @@ export async function claimPlayRequest(p: Record<string, unknown>, actor: Identi
   }
   return db().runTransaction(async tx => {
     // Linked device with the current credential (unlinked/re-paired TVs stop here).
-    await playerContext(tx, actor);
+    const ctx = await playerContext(tx, actor);
     const [current, device] = await tx.getAll(ref, deviceRef), d = current!.data()!;
     require_(current!.exists, 'play-request-not-found');
     const clearPointer = device!.data()?.pendingPlayRequest?.id === id ? {pendingPlayRequest: FieldValue.delete()} : {};
+    // Resume: the TV's ACTIVE profile progress is read here, in the same transaction that delivers.
+    let resumeFromTv: {profileId: string; progress: FirebaseFirestore.DocumentData | undefined} | undefined;
+    if (d.resume === true && d.status === 'pending') {
+      const lease = ((ctx.data.leases ?? []) as Lease[]).find(l => l.deviceId === actor.deviceId && l.expiresAt > now);
+      if (lease) {
+        const profile = ctx.ref.collection('profiles').doc(lease.profileId);
+        const [meta, progress] = await tx.getAll(profile, profile.collection('watch_progress').doc(progressContentId(d.itemId, d.episodeId ?? null)));
+        const p = progress!.data();
+        resumeFromTv = {profileId: lease.profileId, progress: meta!.exists && p && (p.generation ?? 0) === (meta!.data()?.generations?.progress ?? 0) ? p : undefined};
+      }
+    }
     if (d.status !== 'pending') throw new DomainError(d.status === 'expired' || d.status === 'superseded' ? 'play-request-expired' : 'play-request-claimed');
     if (d.expiresAt <= now) {
       tx.update(ref, {status: 'expired', updatedAt: now, finishedAt: now});
@@ -145,7 +172,8 @@ export async function claimPlayRequest(p: Record<string, unknown>, actor: Identi
     }
     tx.update(ref, {status: 'delivered', updatedAt: now, deliveredAt: now});
     if (Object.keys(clearPointer).length) tx.update(deviceRef, clearPointer);
-    return {id, status: 'delivered' as PlayRequestStatus, request: {sourceId: d.sourceId, itemId: d.itemId, episodeId: d.episodeId ?? null, episodeLabel: d.episodeLabel ?? null, kind: d.kind, title: d.title, requesterName: d.requesterName ?? '', ...(d.resume === true ? {resume: true} : {})}};
+    const resumeAt = resumeFromTv === undefined ? null : chooseResume(d.resumeHint as ResumeHint | null, resumeFromTv.progress as SavedProgress | undefined, resumeFromTv.profileId);
+    return {id, status: 'delivered' as PlayRequestStatus, request: {sourceId: d.sourceId, itemId: d.itemId, episodeId: d.episodeId ?? null, episodeLabel: d.episodeLabel ?? null, kind: d.kind, title: d.title, requesterName: d.requesterName ?? '', ...(d.resume === true ? {resume: true, ...(resumeAt ? {resumePositionSec: resumeAt.positionSec, resumeDurationSec: resumeAt.durationSec} : {})} : {})}};
   });
 }
 

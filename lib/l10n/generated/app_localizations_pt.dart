@@ -1872,6 +1872,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get roleGuest => 'Visitante';
 
   @override
+  String get kidsAccount => 'Conta infantil';
+
+  @override
   String get addMember => 'Adicionar membro';
 
   @override

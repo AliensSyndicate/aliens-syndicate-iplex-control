@@ -828,6 +828,7 @@
   "roleKids": "Kids",
   "roleMember": "Member",
   "roleGuest": "Guest",
+  "kidsAccount": "Child account",
   "addMember": "Add member",
   "guestAccount": "Guest account",
   "guestAccountHint": "Settings are kept when turned off.",

@@ -47,7 +47,7 @@ export function effectivePermissions(limits: Permissions, preferences: Preferenc
 export function profileView(id: string, data: FirebaseFirestore.DocumentData): ProfileView {
   const type = (['admin', 'regular', 'kids', 'guest'] as const).includes(data.type) ? data.type as ProfileType : 'regular';
   const limits: Permissions = {allSpaces: data.permissions?.allSpaces !== false, spaces: Array.isArray(data.permissions?.spaces) ? data.permissions.spaces : [],
-    adult: data.permissions?.adult !== false};
+    adult: type !== 'kids' && data.permissions?.adult !== false};
   const preferences: Preferences = {adult: data.preferences?.adult !== false,
     spaces: Array.isArray(data.preferences?.spaces) ? data.preferences.spaces : null};
   return {
@@ -88,14 +88,14 @@ export function writeAdminProfile(tx: Transaction, family: DocumentReference, ui
 }
 
 /** New associate profile linked to an account accepted through the membership flow. */
-export async function linkedAssociateForAccount(tx: Transaction, family: DocumentReference, uid: string, name: string, now: number) {
+export async function linkedAssociateForAccount(tx: Transaction, family: DocumentReference, uid: string, name: string, now: number, type: 'regular' | 'kids' = 'regular') {
   const link = await tx.get(family.collection('profile_links').doc(uid));
   if (link.exists) return () => {};
   require_((await associateCount(tx, family)) < MAX_ASSOCIATES, 'family-limit');
   return () => {
     const ref = family.collection('profiles').doc();
-    tx.set(ref, {name: name || 'Associado', type: 'regular', linkedUid: uid, linkedAt: now, enabled: true, familyId: family.id,
-      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
+    tx.set(ref, {name: name || 'Associado', type, linkedUid: uid, linkedAt: now, enabled: true, familyId: family.id,
+      permissions: {allSpaces: true, spaces: [], adult: type !== 'kids'}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
     tx.set(family.collection('profile_links').doc(uid), {profileId: ref.id, linkedAt: now});
   };
 }
@@ -123,9 +123,15 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     const requested = p.type === undefined ? undefined : z.enum(['regular', 'kids']).parse(p.type);
     if (snap.exists) {
       const current = profileView(id, snap.data()!);
-      // Type is fixed at creation: switching kids -> regular would lift the mandatory restriction.
-      require_(requested === undefined || requested === current.type, 'profile-type-immutable');
-      if (!requestId || p.id) tx.update(ref, {name, updatedAt: now});
+      const changingType = requested !== undefined && requested !== current.type;
+      // Only an explicit administrator edit may reclassify an associate. A retry
+      // of profile creation cannot change its type, nor can admin/guest be converted.
+      require_(!changingType || (!!p.id && isAssociate(snap.data()!)), 'profile-type-immutable');
+      require_(!snap.data()?.deleting, 'not-found');
+      if (!requestId || p.id) tx.update(ref, {name, updatedAt: now,
+        ...(changingType ? {type: requested, permissionsVersion: current.permissionsVersion + 1,
+          ...(requested === 'kids' ? {'permissions.adult': false} : {})} : {}),
+      });
       return {id};
     }
     // Reserved ids are only created by setGuestEnabled / createFamily.

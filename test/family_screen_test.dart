@@ -69,8 +69,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('add-member')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('add-profile')), findsNothing);
+      expect(find.byType(AppModalSheet), findsNothing);
       expect(navigation.path(c), '/users/invite');
     },
   );

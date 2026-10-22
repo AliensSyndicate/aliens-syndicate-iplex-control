@@ -3382,6 +3382,12 @@ abstract class AppLocalizations {
   /// **'Guest'**
   String get roleGuest;
 
+  /// No description provided for @kidsAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Child account'**
+  String get kidsAccount;
+
   /// No description provided for @addMember.
   ///
   /// In en, this message translates to:

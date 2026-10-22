@@ -20,7 +20,7 @@ Ids fixos: `admin` (perfil do administrador, criado em `createFamily`) e `guest`
 
 | Ação | Quem | Efeito |
 |---|---|---|
-| `saveProfile {name, type?, requestId?, id?}` | admin | cria (`regular`/`kids`, limite de 4 associados, idempotente por `requestId`) ou renomeia; tipo imutável |
+| `saveProfile {name, type?, requestId?, id?}` | admin | cria (`regular`/`kids`, limite de 4 associados, idempotente por `requestId`) renomeia ou altera `regular` ↔ `kids` em edição explícita por `id`; tipos `admin`/`guest` protegidos |
 | `setGuestEnabled {enabled, name?}` | admin | cria/ativa/desativa o visitante sem apagar configuração |
 | `setProfilePermissions {profileId, allSpaces, spaces[]}` | admin | espaços `{sourceId}:{channel\|movie\|series}`; incrementa `permissionsVersion` |
 | `createProfileLinkCode {profileId}` | admin | código de 8 caracteres + QR `iplex://profile-link?v=1&code=`; revoga o anterior |
@@ -32,6 +32,10 @@ Ids fixos: `admin` (perfil do administrador, criado em `createFamily`) e `guest`
 | `favorite` / `watchProgress` / `markWatched` | TV/app | exigem `generation` atual da categoria; visitante sempre rejeitado |
 
 ## Classificação infantil
+
+Na Família, o botão "+" abre diretamente Adicionar membro. O toggle "Conta infantil" começa desligado. `requestMembership {code, familyId?, profileType?}` aceita apenas `regular`/`kids` e só pode ser chamado pelo administrador da própria família. A classificação fica no convite; `respondMembership` usa esse valor do servidor, nunca uma classificação enviada pelo convidado. Convites antigos sem o campo criam `regular`.
+
+O administrador também pode alterar a classificação nos detalhes do integrante. `saveProfile` preserva o perfil, vínculo e dados e incrementa `permissionsVersion` quando muda o tipo. Ativar Infantil grava `permissions.adult = false`; voltar a Membro preserva os limites e preferências existentes, que o administrador pode ajustar pelos controles habituais. Nenhuma dessas ações cria contas Firebase Auth.
 
 `functions/src/content_audience.ts`, aplicada no backend a cada leitura:
 1. Sinal adulto no título ou na categoria → nunca infantil.

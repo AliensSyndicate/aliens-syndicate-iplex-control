@@ -66,10 +66,16 @@ export async function familyMembership(action:string,p:Record<string,unknown>,a:
       requireValue(Object.keys(f.data.members).length<5&&(await associateCount(tx,f.ref))<MAX_ASSOCIATES,'family-limit');
       const name=String(target.data()?.name??target.data()?.displayName??'').slice(0,80);
       if(action==='lookupPublicUser')return {code,name};
+      const profileType=p.profileType===undefined?undefined:z.enum(['regular','kids']).parse(p.profileType);
       const ref=db.doc(`family_requests/${hash(`${f.ref.id}:${held!.uid}`)}`),old=(await tx.get(ref)).data();
-      if(old?.status==='pending'&&old.expiresAt>now)return {id:ref.id};
+      if(old?.status==='pending'&&old.expiresAt>now){
+        // Only the issuing administrator can revise the pending classification.
+        // Older clients that omit it must not reset a child invitation.
+        if(profileType!==undefined)tx.update(ref,{profileType,updatedAt:now});
+        return {id:ref.id};
+      }
       const photoUrl=safePhotoUrl(target.data()?.photoUrl);
-      tx.set(ref,{familyId:f.ref.id,familyName:f.data.name,issuerUid:a.uid,recipientUid:held!.uid,recipientName:name,...(photoUrl?{recipientPhotoUrl:photoUrl}:{}),status:'pending',createdAt:now,expiresAt:now+7*86400000});
+      tx.set(ref,{familyId:f.ref.id,familyName:f.data.name,issuerUid:a.uid,profileType:profileType??'regular',recipientUid:held!.uid,recipientName:name,...(photoUrl?{recipientPhotoUrl:photoUrl}:{}),status:'pending',createdAt:now,expiresAt:now+7*86400000});
       return {id:ref.id};
     });
   }
@@ -86,7 +92,9 @@ export async function familyMembership(action:string,p:Record<string,unknown>,a:
     requireValue(data&&!data.deleting&&!data.parked&&data.kind!=='personalIptv'&&(data.adminUid??data.adminId)===request!.issuerUid&&data.members?.[request!.issuerUid]==='admin','invitation-expired');
     const others=await tx.get(db.collection('family_requests').where('recipientUid','==',a.uid).where('status','==','pending'));
     const join=await prepareJoin(tx,a.uid,u!.data()!,{ref:fr,data:data!},now);
-    const writeProfile=await linkedAssociateForAccount(tx,fr,a.uid,u!.data()?.name??'',now);
+    // Never trust a classification supplied by the accepting account. Legacy requests are regular.
+    const profileType=z.enum(['regular','kids']).parse(request!.profileType??'regular');
+    const writeProfile=await linkedAssociateForAccount(tx,fr,a.uid,u!.data()?.name??'',now,profileType);
     join();
     writeProfile();
     // The account now has its one family: every other pending invitation is void.

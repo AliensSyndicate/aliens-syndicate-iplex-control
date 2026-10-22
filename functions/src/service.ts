@@ -18,6 +18,7 @@ import {z} from 'zod';
 import {saveIptvSource, syncIptvSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
 import {acquire, addMember, canStartPlayback, DomainError, hash, idSchema, Lease, LEASE_MS, nameSchema, newToken, pinSchema, seal, sourceInputSchema, sourceSchema, startTrial, Subscription, TOKEN_MS, tokenSchema, unseal} from './domain';
 import {familyHasKids, isAdultProfile, manageParentalPin, parentalGate, PIN_SESSION_MS, verifyProfilePin} from './parental';
+import {decideProgressWrite,parseProgressSession,type SavedProgress} from './playback_progress';
 import {claimPlayRequest, pendingPointer, requestPlayback, UNLINK_MARKER, updatePlayRequest} from './play_requests';
 export type Identity = {uid:string; deviceId?:string; familyId?:string; credentialVersion?:string; authTime?:number; contextFamilyId?:string|null};
 const db=()=>getFirestore();
@@ -442,7 +443,13 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   } else {
    const generation=requireWritableGeneration(view,'progress',p.generation);
    const position=z.number().finite().min(0).parse(p.position),duration=z.number().finite().positive().parse(p.duration);required(position<=duration,'invalid-argument');
-   tx.set(profile.collection('watch_progress').doc(contentId),{contentId,position,duration,generation,updatedAt:now});
+   // Session-aware write (docs/CONTRACTS.md §4.1): late, out-of-order or initialisation events never
+   // overwrite valid progress; legitimate rewinds inside a session always pass. No error: nothing to retry.
+   const progressRef=profile.collection('watch_progress').doc(contentId),session=parseProgressSession(p);
+   const saved=session?(await tx.get(progressRef)).data() as SavedProgress|undefined:undefined;
+   const decision=decideProgressWrite(saved&&saved.generation===generation?saved:undefined,session,position);
+   if(!decision.accept)return {ok:true,ignored:decision.reason};
+   tx.set(progressRef,{contentId,position,duration,generation,updatedAt:now,...(session?{playId:session.playId,startedAt:session.startedAt,seq:session.seq,origin:session.origin,...(a.deviceId?{deviceId:a.deviceId}:{})}:{})});
    // Completion feeds "Assistidos" only with the caller's current watched generation.
    if(position/duration>=0.9&&p.watchedGeneration!==undefined&&p.watchedGeneration===view.generations.watched)
     tx.set(profile.collection('watched').doc(contentId),{contentId,title:null,generation:view.generations.watched,completedAt:now});

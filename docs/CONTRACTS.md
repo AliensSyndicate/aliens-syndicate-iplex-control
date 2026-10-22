@@ -136,6 +136,23 @@ marcador de desvinculação para o ouvinte da TV.
 | Aceitar | `player.claimPlayRequest {playRequestId}` | credencial atual; uma vez; antes de expirar; revalida visibilidade para o perfil ativo → `delivered` (com o conteúdo) ou `failed`/`expired` |
 | Resultado | `player.updatePlayRequest {playRequestId, status, errorCode?}` | transições fechadas; `confirming` sem resposta em 45 s não pode virar `started` |
 
+#### 4.1 Retomada e progresso (v1.1, compatível)
+
+- `requestPlayback {…, resume:true}`: o backend lê o progresso do **perfil de quem pede** (o que o Control
+  mostrou) para o `contentId` do filme (`itemId`) ou do episódio (`{itemId}_e{episodeId}`) e guarda `resumeHint` no pedido.
+- `claimPlayRequest` devolve, com `resume:true`, `resumePositionSec` e `resumeDurationSec` — escolhidos entre o
+  `resumeHint` e o progresso do **perfil ativo da TV** (mesmo perfil: vale o mais recente; perfis diferentes: vale o
+  que o Control mostrou). Ausentes quando o título não foi iniciado (< 10 s), está concluído (≥ 95 % ou últimos 30 s) ou é canal.
+  A TV abre `/assistir?…&r=1&ra=<segundos>`; sem `ra`, usa a biblioteca local só depois de carregada.
+- `watchProgress` aceita, opcionais (TVs antigas continuam válidas): `playId`, `startedAt`, `seq`, `origin`
+  (`start|resume|restart`) e `userSeek`. O documento `watch_progress/{contentId}` guarda a última sessão aceita e o
+  backend responde `{ok:true, ignored}` (sem erro) para: `stale-event` (seq repetido/fora de ordem), `stale-session`
+  (sessão mais antiga, ex.: outra TV), `initial-zero` (zero de inicialização sobre progresso salvo) e
+  `resume-not-applied` (retomada que não chegou ao ponto salvo, ex.: stream sem seek). Reinício intencional
+  (`origin:restart`) e seek do usuário (`userSeek`) sempre são aceitos, inclusive para trás.
+- A TV só grava depois de confirmar a posição restaurada (ou de desistir sem gravar), uma gravação por vez e a cada ≥ 30 s / ≥ 10 s de deslocamento,
+  mais pausa, seek e saída; falha de rede repete a posição mais recente.
+
 Códigos de falha: `content-not-allowed`, `source-protected`,
 `content-unavailable`, `stream-unavailable`, `playback-failed`,
 `format-unsupported`, `session-limit`, `subscription-required`, `no-answer`, `busy`.

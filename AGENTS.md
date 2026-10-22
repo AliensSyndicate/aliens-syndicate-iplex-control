@@ -118,8 +118,8 @@ Regras permanentes:
 2. Uma conta liga-se a no máximo um perfil por família (`profile_links/{uid}`); vincular nunca recria o perfil nem altera favoritos, histórico, progresso ou permissões. Sem mesclagem automática: conflito retorna `account-already-linked`.
 3. Vincular exige código temporário (10 min), de uso único, emitido pelo administrador e confirmado pela conta (`createProfileLinkCode` → `redeemProfileLink`), com limite de tentativas.
 4. Desvincular (`unlinkProfileAccount`) ou remover a conta da família (`removeMember`) **mantém o perfil e seus dados**; a vaga só é liberada ao excluir o perfil.
-5. O tipo do perfil é imutável após a criação (trocar `kids` por `regular` liberaria conteúdo restrito).
-6. Contas da família continuam limitadas a cinco (administrador + 4) em transação; aceitar uma solicitação de associação cria um perfil `regular` vinculado e consome vaga de membro.
+5. Somente o administrador da família pode alterar a classificação de um perfil entre `kids` (Infantil) e `regular` (Membro), via backend. A alteração preserva vínculos e dados e incrementa `permissionsVersion`; ativar Infantil desabilita conteúdo adulto e aplica o filtro infantil obrigatório. Tipos `admin` e `guest` não podem ser convertidos.
+6. Contas da família continuam limitadas a cinco (administrador + 4) em transação; aceitar uma solicitação de associação cria um perfil vinculado com a classificação `regular`/`kids` definida pelo administrador no convite (padrão `regular`) e consome vaga de membro.
 
 ---
 

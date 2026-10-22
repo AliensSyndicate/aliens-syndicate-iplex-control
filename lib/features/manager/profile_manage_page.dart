@@ -233,6 +233,19 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
               }),
             ),
 
+          if (linkable)
+            NeumorphicSwitchTile(
+              key: const Key('kids-account-toggle'),
+              title: l.kidsAccount,
+              value: type == 'kids',
+              disabled: busy,
+              onChanged: (value) => _run('saveProfile', {
+                'id': profile.id,
+                'name': profile.name,
+                'type': value ? 'kids' : 'regular',
+              }),
+            ),
+
           // Administrator limits.
           if (type == 'admin')
             Text(

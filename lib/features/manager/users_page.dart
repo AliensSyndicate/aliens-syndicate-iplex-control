@@ -72,36 +72,7 @@ class UsersPage extends ConsumerWidget {
                   label: l.addMember,
                   icon: AppIcons.add,
                   size: AppDimensions.touch,
-                  onPressed: () => showAppModalSheet<void>(
-                    context: context,
-                    builder: (c) => AppModalSheet(
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          SheetHeader(icon: AppIcons.users, title: l.addMember),
-                          SheetActionRow(
-                            key: const Key('add-member'),
-                            icon: AppIcons.qr,
-                            label: l.invite,
-                            onTap: () {
-                              Navigator.pop(c);
-                              context.push('/users/invite');
-                            },
-                          ),
-                          SheetActionRow(
-                            key: const Key('add-profile'),
-                            icon: AppIcons.add,
-                            label: l.newProfile,
-                            onTap: () {
-                              Navigator.pop(c);
-                              context.push('/users/add');
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  onPressed: () => context.push('/users/invite'),
                 ),
               ],
             )

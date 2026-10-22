@@ -603,6 +603,7 @@
   "roleKids": "Infantil",
   "roleMember": "Miembro",
   "roleGuest": "Visitante",
+  "kidsAccount": "Cuenta infantil",
   "addMember": "Agregar miembro",
   "guestAccount": "Cuenta de visitante",
   "guestAccountHint": "La configuración se mantiene al desactivarla.",

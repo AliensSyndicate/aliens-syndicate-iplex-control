@@ -156,10 +156,41 @@ const _regular = {
 Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
-  await _tap(tester, finder);
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
 }
 
 void main() {
+  for (final type in ['regular', 'kids']) {
+    testWidgets(
+      'administrator can reclassify $type without recreating the profile',
+      (tester) async {
+        final repo = _Repo({..._regular, 'type': type});
+        await _open(tester, repo);
+        final toggle = find.byKey(const Key('kids-account-toggle'));
+        expect(
+          tester.widget<NeumorphicSwitchTile>(toggle).value,
+          type == 'kids',
+        );
+        await _tap(tester, toggle);
+        expect(repo.actions.single.$1, 'saveProfile');
+        expect(repo.actions.single.$2, {
+          'id': 'p1',
+          'name': 'João',
+          'type': type == 'kids' ? 'regular' : 'kids',
+        });
+      },
+    );
+  }
+  testWidgets('member cannot change its own classification', (tester) async {
+    final repo = _Repo({
+      ..._regular,
+      'type': 'kids',
+      'linkedUid': 'u',
+    }, admin: false);
+    await _open(tester, repo);
+    expect(find.byKey(const Key('kids-account-toggle')), findsNothing);
+  });
   Finder inSection(String section, Finder f) => find.descendant(
     of: find.byKey(ValueKey('library-$section')),
     matching: f,

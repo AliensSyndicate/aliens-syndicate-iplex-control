@@ -1860,6 +1860,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleGuest => 'Guest';
 
   @override
+  String get kidsAccount => 'Child account';
+
+  @override
   String get addMember => 'Add member';
 
   @override
