@@ -67,7 +67,7 @@ test('guest toggle keeps configuration, hides it on the TV and never persists me
  assert.ok(!listed.includes('guest'));
  await assert.rejects(execute('acquireSession',{profileId:'guest'},player),/profile-disabled/);
  const kept=(await profiles(fid).doc('guest').get()).data()!;
- assert.equal(kept.enabled,false);assert.deepEqual(kept.permissions,{allSpaces:false,spaces:['src:movie']});
+ assert.equal(kept.enabled,false);assert.deepEqual(kept.permissions,{allSpaces:false,spaces:['src:movie'],adult:true});
  for(const c of ['favorites','watch_progress','watched'])assert.equal((await profiles(fid).doc('guest').collection(c).get()).size,0);
 });
 
@@ -128,7 +128,7 @@ test('account linking keeps the profile id and data; single-use codes; conflicts
  const linked=await execute('redeemProfileLink',{code:code.toLowerCase()},lia) as {profileId:string;familyId:string};
  assert.deepEqual(linked,{familyId:fid,profileId:pid});
  const after=(await profiles(fid).doc(pid).get()).data()!;
- assert.equal(after.linkedUid,lia.uid);assert.equal(after.type,'kids');assert.deepEqual(after.permissions,{allSpaces:false,spaces:['s1:movie']});
+ assert.equal(after.linkedUid,lia.uid);assert.equal(after.type,'kids');assert.deepEqual(after.permissions,{allSpaces:false,spaces:['s1:movie'],adult:true});
  assert.equal((await profiles(fid).doc(pid).collection('favorites').get()).size,1);
  assert.equal((await profiles(fid).doc(pid).collection('watch_progress').get()).size,1);
  assert.equal((await profiles(fid).get()).size,2);
@@ -229,4 +229,64 @@ test('deleting an associate account clears its profile link but keeps the profil
  assert.equal((await db().doc(`families/${fid}/profile_links/${ana.uid}`).get()).exists,false);
  const kept=(await profiles(fid).doc(pid).get()).data()!;assert.equal(kept.linkedUid,null);
  assert.equal((await db().doc(`families/${fid}`).get()).data()!.members[ana.uid],undefined);
+});
+
+test('adult content and member preferences: limits by the administrator, narrower preferences by the member; personal PIN and library by owner',async()=>{
+ const {admin,fid,ctx}=await family();
+ const catalog={schemaVersion:1,items:[
+  {id:'m1',title:'Drama',titleKey:'drama',kind:'movie',category:'Filmes',providerRef:'1',ageRating:'14'},
+  {id:'m2',title:'XXX Night',titleKey:'xxx night',kind:'movie',category:'Filmes',providerRef:'2'},
+  {id:'c1',title:'Canal Notícias',titleKey:'canal noticias',kind:'channel',category:'Notícias',providerRef:'3'},
+ ]};
+ const body=JSON.stringify(catalog),version=hash(body);
+ await getStorage().bucket().file(`catalogs/${version}.json`).save(body);
+ await db().doc(`catalogs/${version}`).set({storagePath:`catalogs/${version}.json`,integrityHash:hash(body)});
+ await db().doc(`families/${fid}/sources/src1`).set({name:'Lista',enabled:true,version,revision:1});
+ const pid=(await execute('saveProfile',{name:'Rui',...ctx},admin) as {id:string}).id;
+ const rui=await account('Rui');
+ const {code}=await execute('createProfileLinkCode',{profileId:pid,...ctx},admin) as {code:string};
+ await execute('redeemProfileLink',{code},rui);
+ const read=async()=>(await execute('readSourceCatalog',{id:'src1',contextFamilyId:fid},rui) as {items:{catalogItemId:string}[]}).items.map(i=>i.catalogItemId).sort();
+ assert.deepEqual(await read(),['c1','m1','m2']);
+ // Administrator turns adult content off: hidden for the member, kept for the administrator.
+ await execute('setProfilePermissions',{profileId:pid,allSpaces:true,spaces:[],adult:false,...ctx},admin);
+ assert.deepEqual(await read(),['c1','m1']);
+ assert.equal((await execute('readSourceCatalog',{id:'src1',contextFamilyId:fid},admin) as {items:unknown[]}).items.length,3);
+ // The member cannot widen it…
+ await assert.rejects(execute('setProfilePreferences',{adult:true,spaces:null},rui),/beyond-limit/);
+ // …but can narrow its own access further (only the channels), and undo it.
+ await execute('setProfilePreferences',{adult:false,spaces:['src1:channel']},rui);
+ assert.deepEqual(await read(),['c1']);
+ await execute('setProfilePermissions',{profileId:pid,allSpaces:false,spaces:['src1:movie'],adult:true,...ctx},admin);
+ await assert.rejects(execute('setProfilePreferences',{adult:true,spaces:['src1:channel']},rui),/beyond-limit/);
+ await execute('setProfilePreferences',{adult:false,spaces:null},rui);
+ assert.deepEqual(await read(),['m1'],'effective = administrator limits ∩ member preferences');
+ // Preferences belong to the linked account: the administrator's call changes its own profile only.
+ await execute('setProfilePreferences',{adult:true,spaces:null,...ctx},admin);
+ assert.equal((await profiles(fid).doc(pid).get()).data()!.preferences.adult,false);
+
+ // Personal PIN: only the account linked to the profile; current PIN required to change or remove.
+ await execute('setPersonalPin',{pin:'1234',confirmPin:'1234'},rui);
+ assert.deepEqual((await profiles(fid).doc(pid).get()).data()!.personalPin.configured,true);
+ const secret=(await db().doc(`families/${fid}/private/personal_pin_${pid}`).get()).data()!;
+ assert.notEqual(secret.pinHash,'1234');
+ await assert.rejects(execute('setPersonalPin',{pin:'9999',confirmPin:'9999'},rui),/pin-invalid/);
+ await execute('setPersonalPin',{currentPin:'1234',pin:'9999',confirmPin:'9999'},rui);
+ // The administrator's call never reaches the member's PIN (it acts on its own profile).
+ await execute('setPersonalPin',{pin:'1111',confirmPin:'1111',...ctx},admin);
+ assert.ok((await db().doc(`families/${fid}/private/personal_pin_admin`).get()).exists);
+ await assert.rejects(execute('clearPersonalPin',{currentPin:'1111'},rui),/pin-invalid/);
+ await execute('clearPersonalPin',{currentPin:'9999'},rui);
+ assert.equal((await db().doc(`families/${fid}/private/personal_pin_${pid}`).get()).exists,false);
+
+ // Library of a profile: its own account or the administrator; never another member.
+ await profiles(fid).doc(pid).collection('watch_progress').doc(hash('src1:m1')).set({contentId:hash('src1:m1'),position:30,duration:100,generation:0,updatedAt:Date.now()});
+ await profiles(fid).doc(pid).collection('watched').doc(hash('src1:c1')).set({contentId:hash('src1:c1'),generation:0,completedAt:Date.now()});
+ const lib=await execute('readProfileLibrary',{profileId:pid,...ctx},admin) as {continueWatching:{id:string;progress:{position:number}}[];watched:{id:string}[]};
+ assert.deepEqual(lib.continueWatching.map(i=>[i.id,i.progress.position]),[[hash('src1:m1'),30]]);
+ assert.deepEqual(lib.watched.map(i=>i.id),[hash('src1:c1')]);
+ assert.ok(await execute('readProfileLibrary',{profileId:pid},rui));
+ const other=(await execute('saveProfile',{name:'Bia',...ctx},admin) as {id:string}).id;
+ await assert.rejects(execute('readProfileLibrary',{profileId:other},rui),/permission-denied/);
+ await assert.rejects(execute('readProfileLibrary',{profileId:pid,contextFamilyId:fid},await account()),/permission|family/);
 });

@@ -721,7 +721,7 @@ abstract class AppLocalizations {
   /// No description provided for @continueWatching.
   ///
   /// In en, this message translates to:
-  /// **'Continue watching on TV'**
+  /// **'Continue watching'**
   String get continueWatching;
 
   /// No description provided for @sessionLimit.
@@ -3357,6 +3357,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Never on'**
   String get neverOnline;
+
+  /// No description provided for @roleAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get roleAdmin;
+
+  /// No description provided for @roleKids.
+  ///
+  /// In en, this message translates to:
+  /// **'Kids'**
+  String get roleKids;
+
+  /// No description provided for @roleMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Member'**
+  String get roleMember;
+
+  /// No description provided for @roleGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest'**
+  String get roleGuest;
+
+  /// No description provided for @addMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Add member'**
+  String get addMember;
+
+  /// No description provided for @guestAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest account'**
+  String get guestAccount;
+
+  /// No description provided for @guestAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings are kept when turned off.'**
+  String get guestAccountHint;
+
+  /// No description provided for @invitePendingShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation pending'**
+  String get invitePendingShort;
+
+  /// No description provided for @adultContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Adult content'**
+  String get adultContent;
+
+  /// No description provided for @adultContentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Titles and channels marked as adult.'**
+  String get adultContentHint;
+
+  /// No description provided for @adminLimitsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Access limits'**
+  String get adminLimitsTitle;
+
+  /// No description provided for @adminLimitsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The member can restrict these further, never widen them.'**
+  String get adminLimitsHint;
+
+  /// No description provided for @myPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'My preferences'**
+  String get myPreferences;
+
+  /// No description provided for @myPreferencesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only within what the administrator allows.'**
+  String get myPreferencesHint;
+
+  /// No description provided for @notAllowedByAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed by the administrator'**
+  String get notAllowedByAdmin;
+
+  /// No description provided for @personalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal PIN'**
+  String get personalPin;
+
+  /// No description provided for @personalPinOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get personalPinOn;
+
+  /// No description provided for @personalPinOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get personalPinOff;
+
+  /// No description provided for @personalPinHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Protects your profile. Only you can set or change it.'**
+  String get personalPinHint;
+
+  /// No description provided for @enablePersonalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on PIN'**
+  String get enablePersonalPin;
+
+  /// No description provided for @changePersonalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get changePersonalPin;
+
+  /// No description provided for @disablePersonalPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off PIN'**
+  String get disablePersonalPin;
+
+  /// No description provided for @currentPinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current PIN'**
+  String get currentPinLabel;
+
+  /// No description provided for @newPinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New PIN (4 digits)'**
+  String get newPinLabel;
+
+  /// No description provided for @personalPinSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN updated.'**
+  String get personalPinSaved;
+
+  /// No description provided for @personalPinRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN turned off.'**
+  String get personalPinRemoved;
+
+  /// No description provided for @watchedHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Watched'**
+  String get watchedHistory;
+
+  /// No description provided for @clearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear history'**
+  String get clearHistory;
+
+  /// No description provided for @emptyKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet.'**
+  String get emptyKind;
+
+  /// No description provided for @minutesLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min left'**
+  String minutesLeft(int minutes);
+
+  /// No description provided for @watchedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Watched {time}'**
+  String watchedOn(String time);
+
+  /// No description provided for @lastSyncLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync: {time}'**
+  String lastSyncLabel(String time);
+
+  /// No description provided for @accountSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get accountSection;
+
+  /// No description provided for @securitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get securitySection;
+
+  /// No description provided for @contentSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get contentSection;
+
+  /// No description provided for @removeFromFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from family'**
+  String get removeFromFamily;
+
+  /// No description provided for @removeFromFamilyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} goes back to their own family. The profile and its data stay here.'**
+  String removeFromFamilyBody(String name);
+
+  /// No description provided for @deleteProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete profile'**
+  String get deleteProfile;
+
+  /// No description provided for @clearFavoritesAndWishlistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All favorites and the wishlist of {name} will be permanently deleted (they are one library). This cannot be undone.'**
+  String clearFavoritesAndWishlistBody(String name);
+
+  /// No description provided for @errorPinInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect current PIN.'**
+  String get errorPinInvalid;
+
+  /// No description provided for @errorBeyondLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'This goes beyond what the administrator allows.'**
+  String get errorBeyondLimit;
+
+  /// No description provided for @errorProfileNotLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is not linked to a profile in this family.'**
+  String get errorProfileNotLinked;
 }
 
 class _AppLocalizationsDelegate

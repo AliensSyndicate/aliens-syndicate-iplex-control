@@ -103,7 +103,7 @@
   "familyHasMembers": "Remova os membros da família antes de excluir sua conta.",
   "loading": "Carregando",
   "edit": "Editar",
-  "continueWatching": "Continue assistindo na TV",
+  "continueWatching": "Continuar assistindo",
   "sessionLimit": "Três TVs já estão em uso: {devices}.",
   "@sessionLimit": {
     "placeholders": {
@@ -598,5 +598,82 @@
   "connectedStatus": "Conectado",
   "availableStatus": "Disponível",
   "removeFromContinueWatching": "Remover de Continuar assistindo",
-  "neverOnline": "Nunca ligado"
+  "neverOnline": "Nunca ligado",
+  "roleAdmin": "Admin",
+  "roleKids": "Infantil",
+  "roleMember": "Membro",
+  "roleGuest": "Visitante",
+  "addMember": "Adicionar membro",
+  "guestAccount": "Conta visitante",
+  "guestAccountHint": "As configurações são mantidas ao desativar.",
+  "invitePendingShort": "Convite pendente",
+  "adultContent": "Conteúdo adulto",
+  "adultContentHint": "Títulos e canais identificados como adultos.",
+  "adminLimitsTitle": "Limites de acesso",
+  "adminLimitsHint": "O membro pode restringir ainda mais, nunca ampliar.",
+  "myPreferences": "Minhas preferências",
+  "myPreferencesHint": "Somente dentro do que o administrador permite.",
+  "notAllowedByAdmin": "Não permitido pelo administrador",
+  "personalPin": "PIN pessoal",
+  "personalPinOn": "Ativado",
+  "personalPinOff": "Desativado",
+  "personalPinHint": "Protege o seu perfil. Somente você pode definir ou alterar.",
+  "enablePersonalPin": "Ativar PIN",
+  "changePersonalPin": "Alterar PIN",
+  "disablePersonalPin": "Desativar PIN",
+  "currentPinLabel": "PIN atual",
+  "newPinLabel": "Novo PIN (4 dígitos)",
+  "personalPinSaved": "PIN atualizado.",
+  "personalPinRemoved": "PIN desativado.",
+  "watchedHistory": "Assistidos",
+  "clearHistory": "Limpar histórico",
+  "emptyKind": "Nada por aqui ainda.",
+  "minutesLeft": "{minutes} min restantes",
+  "@minutesLeft": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "watchedOn": "Assistido em {time}",
+  "@watchedOn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSyncLabel": "Última sincronização: {time}",
+  "@lastSyncLabel": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "accountSection": "Conta",
+  "securitySection": "Segurança",
+  "contentSection": "Conteúdos",
+  "removeFromFamily": "Remover da família",
+  "removeFromFamilyBody": "{name} volta para a própria família. O perfil e seus dados continuam aqui.",
+  "@removeFromFamilyBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteProfile": "Excluir perfil",
+  "clearFavoritesAndWishlistBody": "Todos os favoritos e a lista de desejos de {name} serão excluídos permanentemente (fazem parte da mesma biblioteca). Esta ação não pode ser desfeita.",
+  "@clearFavoritesAndWishlistBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorPinInvalid": "PIN atual incorreto.",
+  "errorBeyondLimit": "Isso ultrapassa o que o administrador permite.",
+  "errorProfileNotLinked": "Sua conta não está vinculada a um perfil nesta família."
 }

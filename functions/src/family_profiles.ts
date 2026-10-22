@@ -4,6 +4,8 @@ import {z} from 'zod';
 import {DomainError, hash, idSchema, nameSchema} from './domain';
 import {limitIdentityAttempts, PUBLIC_CODE_ALPHABET} from './account_identity';
 import {prepareJoin} from './family_individual';
+import {randomBytes} from 'node:crypto';
+import {hashParentalPin, matchesParentalPin, PARENTAL_PIN} from './parental';
 
 /**
  * Media profiles are independent of Firebase accounts:
@@ -26,19 +28,45 @@ const PAGE = 400;
 export const LINK_CODE = /^[A-Z0-9]{8}$/;
 export const spaceSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}:(channel|movie|series)$/);
 
-export type Permissions = {allSpaces: boolean; spaces: string[]};
+export type Permissions = {allSpaces: boolean; spaces: string[]; adult: boolean};
+/** The member's own restrictions (never wider than the administrator's limits). */
+export type Preferences = {adult: boolean; spaces: string[] | null};
 export type ProfileView = {id: string; name: string; type: ProfileType; linkedUid: string | null; enabled: boolean;
-  permissions: Permissions; generations: Record<DataCategory, number>; permissionsVersion: number};
+  /** Effective permissions: administrator limits combined with the member's preferences. */
+  permissions: Permissions; limits: Permissions; preferences: Preferences;
+  generations: Record<DataCategory, number>; permissionsVersion: number};
+
+/** Effective = limits ∩ preferences: a preference can only narrow what the administrator allows. */
+export function effectivePermissions(limits: Permissions, preferences: Preferences): Permissions {
+  const adult = limits.adult && preferences.adult;
+  if (!preferences.spaces) return {...limits, adult};
+  if (limits.allSpaces) return {allSpaces: false, spaces: [...preferences.spaces], adult};
+  return {allSpaces: false, spaces: limits.spaces.filter(s => preferences.spaces!.includes(s)), adult};
+}
 
 export function profileView(id: string, data: FirebaseFirestore.DocumentData): ProfileView {
   const type = (['admin', 'regular', 'kids', 'guest'] as const).includes(data.type) ? data.type as ProfileType : 'regular';
+  const limits: Permissions = {allSpaces: data.permissions?.allSpaces !== false, spaces: Array.isArray(data.permissions?.spaces) ? data.permissions.spaces : [],
+    adult: data.permissions?.adult !== false};
+  const preferences: Preferences = {adult: data.preferences?.adult !== false,
+    spaces: Array.isArray(data.preferences?.spaces) ? data.preferences.spaces : null};
   return {
     id, name: String(data.name ?? ''), type, linkedUid: data.linkedUid ?? null, enabled: data.enabled !== false,
-    permissions: {allSpaces: data.permissions?.allSpaces !== false, spaces: Array.isArray(data.permissions?.spaces) ? data.permissions.spaces : []},
+    permissions: effectivePermissions(limits, preferences), limits, preferences,
     generations: {favorites: data.generations?.favorites ?? 0, watched: data.generations?.watched ?? 0, progress: data.generations?.progress ?? 0},
     permissionsVersion: data.permissionsVersion ?? 0,
   };
 }
+/** Profile linked to the calling account in this family (own data, preferences, PIN). */
+async function ownProfile(tx: Transaction, f: Scope, uid: string) {
+  const link = await tx.get(f.ref.collection('profile_links').doc(uid));
+  const profileId = link.data()?.profileId;
+  require_(typeof profileId === 'string', 'profile-not-linked');
+  const ref = f.ref.collection('profiles').doc(profileId), snap = await tx.get(ref);
+  require_(snap.exists && snap.data()?.deleting !== true, 'not-found');
+  return {ref, profile: profileView(ref.id, snap.data()!)};
+}
+
 const isAssociate = (data: FirebaseFirestore.DocumentData) => !['admin', 'guest'].includes(data.type);
 const require_ = (ok: unknown, code = 'permission-denied'): void => { if (!ok) throw new DomainError(code); };
 
@@ -77,7 +105,10 @@ export async function unlinkAccountProfiles(tx: Transaction, family: DocumentRef
   const link = await tx.get(family.collection('profile_links').doc(uid));
   const profileId = link.data()?.profileId as string | undefined;
   return () => {
-    if (profileId) tx.set(family.collection('profiles').doc(profileId), {linkedUid: null, updatedAt: Date.now()}, {merge: true});
+    if (profileId) {
+      tx.set(family.collection('profiles').doc(profileId), {linkedUid: null, personalPin: {configured: false, updatedAt: Date.now()}, updatedAt: Date.now()}, {merge: true});
+      tx.delete(family.collection('private').doc(`personal_pin_${profileId}`));
+    }
     tx.delete(family.collection('profile_links').doc(uid));
   };
 }
@@ -122,9 +153,50 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     const current = profileView(ref.id, snap.data()!);
     require_(current.type !== 'admin', 'administrator-protected');
     const allSpaces = z.boolean().parse(p.allSpaces), spaces = Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces ?? [])));
-    tx.update(ref, {permissions: {allSpaces, spaces}, permissionsVersion: current.permissionsVersion + 1, updatedAt: now});
+    // "Conteúdo adulto": kept when not sent (older clients).
+    const adult = p.adult === undefined ? current.limits.adult : z.boolean().parse(p.adult);
+    tx.update(ref, {permissions: {allSpaces, spaces, adult}, permissionsVersion: current.permissionsVersion + 1, updatedAt: now});
     return {ok: true, permissionsVersion: current.permissionsVersion + 1};
   });
+
+  // The member's own preferences, only on the profile linked to the calling account and
+  // never beyond the administrator's limits (rejected, not silently widened).
+  if (action === 'setProfilePreferences') return db.runTransaction(async tx => {
+    const f = await resolve(tx, false, false);
+    const {ref, profile} = await ownProfile(tx, f, uid);
+    require_(profile.type !== 'guest', 'guest-not-persisted');
+    const adult = z.boolean().parse(p.adult);
+    const spaces = p.spaces === null || p.spaces === undefined ? null : Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces)));
+    require_(!adult || profile.limits.adult, 'beyond-limit');
+    require_(!spaces || profile.limits.allSpaces || spaces.every(s => profile.limits.spaces.includes(s)), 'beyond-limit');
+    tx.update(ref, {preferences: {adult, spaces}, permissionsVersion: profile.permissionsVersion + 1, updatedAt: now});
+    return {ok: true, permissionsVersion: profile.permissionsVersion + 1};
+  });
+
+  // Personal PIN: set, changed or removed only by the account linked to the profile; an
+  // existing PIN is required to change or remove it. Stored hashed in private/, never
+  // returned; the profile only carries {personalPin: {configured}}.
+  if (action === 'setPersonalPin' || action === 'clearPersonalPin') {
+    await limitIdentityAttempts(uid, 'personal-pin');
+    return db.runTransaction(async tx => {
+      const f = await resolve(tx, false, false);
+      const {ref, profile} = await ownProfile(tx, f, uid);
+      require_(profile.type !== 'guest', 'permission-denied');
+      const secretRef = f.ref.collection('private').doc(`personal_pin_${ref.id}`), secret = await tx.get(secretRef);
+      if (secret.exists) require_(matchesParentalPin(String(p.currentPin ?? ''), secret.data()), 'pin-invalid');
+      if (action === 'clearPersonalPin') {
+        tx.delete(secretRef);
+        tx.update(ref, {personalPin: {configured: false, updatedAt: now}, updatedAt: now});
+        return {configured: false};
+      }
+      const pin = z.string().regex(PARENTAL_PIN).parse(p.pin);
+      require_(p.confirmPin === pin, 'pin-mismatch');
+      const salt = randomBytes(16).toString('base64');
+      tx.set(secretRef, {pinHash: hashParentalPin(pin, salt), salt, profileId: ref.id, uid, updatedAt: now});
+      tx.update(ref, {personalPin: {configured: true, updatedAt: now}, updatedAt: now});
+      return {configured: true};
+    });
+  }
 
   if (action === 'createProfileLinkCode') return db.runTransaction(async tx => {
     const f = await resolve(tx, true, false); familyOnly(f);
@@ -177,7 +249,9 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     const profile = profileView(ref.id, snap.data()!);
     require_(profile.type !== 'admin', 'administrator-protected');
     if (!profile.linkedUid) return {ok: true};
-    tx.update(ref, {linkedUid: null, updatedAt: now});
+    // The personal PIN belongs to the account: it leaves with it.
+    tx.update(ref, {linkedUid: null, personalPin: {configured: false, updatedAt: now}, updatedAt: now});
+    tx.delete(f.ref.collection('private').doc(`personal_pin_${ref.id}`));
     tx.delete(f.ref.collection('profile_links').doc(profile.linkedUid));
     return {ok: true};
   });

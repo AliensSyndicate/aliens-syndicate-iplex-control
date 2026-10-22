@@ -23,6 +23,7 @@ class HomeCard extends StatelessWidget {
     this.onLongPress,
     this.width,
     this.showCaption = false,
+    this.detail,
   });
   final Entry item;
   final VoidCallback onTap;
@@ -36,6 +37,10 @@ class HomeCard extends StatelessWidget {
 
   /// Whether to show the text caption below the poster (default false for Home lists).
   final bool showCaption;
+
+  /// Complementary line under the name, instead of the year (episode, time
+  /// left, date watched). Only real data; null hides it.
+  final String? detail;
 
   @override
   Widget build(BuildContext context) {
@@ -161,10 +166,11 @@ class HomeCard extends StatelessWidget {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                if (item.year case final year?)
+                if (detail ?? item.year?.toString() case final line?)
                   Text(
-                    '$year',
+                    line,
                     maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.bodyMedium.copyWith(
                       fontSize: 12,
                       height: 1.25,

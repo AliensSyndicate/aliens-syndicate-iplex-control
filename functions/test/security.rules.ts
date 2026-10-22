@@ -108,8 +108,22 @@ test('media profiles sync to members and the family TV; clear jobs, links and li
    'profile_link_codes/h':{familyId:'f',profileId:'joao'},
    'families/g':{adminId:'other',members:{other:'admin'}},
    'families/g/profiles/x':{name:'X'},
+   'families/f/profiles/ana':{name:'Ana',type:'regular',linkedUid:'other-member'},
+   'families/f/profiles/ana/watched/c3':{contentId:'c3',generation:0},
+   'families/f/profiles/mine':{name:'Me',type:'regular',linkedUid:'member'},
+   'families/f/profiles/mine/watch_progress/c4':{contentId:'c4',generation:0},
+   'families/f/private/personal_pin_mine':{pinHash:'h',salt:'s'},
   }))await setDoc(doc(db,path),data);
  });
+ {
+  // Personal data: the linked account and the administrator only; never another member.
+  const m=env.authenticatedContext('member').firestore(),a=env.authenticatedContext('admin').firestore();
+  await assertSucceeds(getDoc(doc(m,'families/f/profiles/mine/watch_progress/c4')));
+  await assertFails(getDoc(doc(m,'families/f/profiles/ana/watched/c3')));
+  await assertSucceeds(getDoc(doc(a,'families/f/profiles/ana/watched/c3')));
+  await assertSucceeds(getDoc(doc(m,'families/f/profiles/ana')));
+  for(const db of [m,a])await assertFails(getDoc(doc(db,'families/f/private/personal_pin_mine')));
+ }
  const tvDb=env.authenticatedContext('tv_tv',{deviceId:'tv',familyId:'f'}).firestore();
  for(const path of ['families/f/profiles/joao','families/f/profiles/joao/favorites/c1','families/f/profiles/joao/watched/c2'])await assertFails(getDoc(doc(tvDb,path)));
  await assertFails(getDoc(doc(tvDb,'families/g/profiles/x')));

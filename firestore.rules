@@ -101,9 +101,13 @@ service cloud.firestore {
       match /profiles/{pid} {
         allow read: if isFamilyMember(familyId);
         allow write: if false;
+        // Personal data: only the account linked to the profile or the administrator
+        // (another member never reads it). Writes are backend-only.
         match /{collection}/{id} {
-          allow read: if (isFamilyMember(familyId))
-            && collection in ['favorites', 'wishlist', 'watch_progress', 'watched'];
+          allow read: if collection in ['favorites', 'wishlist', 'watch_progress', 'watched']
+            && (isFamilyAdmin(familyId)
+              || (isFamilyMember(familyId)
+                && get(/databases/$(database)/documents/families/$(familyId)/profiles/$(pid)).data.get('linkedUid', null) == request.auth.uid));
           allow write: if false;
         }
       }

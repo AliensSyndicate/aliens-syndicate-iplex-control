@@ -335,7 +335,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get edit => 'Editar';
 
   @override
-  String get continueWatching => 'Continue assistindo na TV';
+  String get continueWatching => 'Continuar assistindo';
 
   @override
   String sessionLimit(String devices) {
@@ -1858,4 +1858,145 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get neverOnline => 'Nunca ligado';
+
+  @override
+  String get roleAdmin => 'Admin';
+
+  @override
+  String get roleKids => 'Infantil';
+
+  @override
+  String get roleMember => 'Membro';
+
+  @override
+  String get roleGuest => 'Visitante';
+
+  @override
+  String get addMember => 'Adicionar membro';
+
+  @override
+  String get guestAccount => 'Conta visitante';
+
+  @override
+  String get guestAccountHint => 'As configurações são mantidas ao desativar.';
+
+  @override
+  String get invitePendingShort => 'Convite pendente';
+
+  @override
+  String get adultContent => 'Conteúdo adulto';
+
+  @override
+  String get adultContentHint => 'Títulos e canais identificados como adultos.';
+
+  @override
+  String get adminLimitsTitle => 'Limites de acesso';
+
+  @override
+  String get adminLimitsHint =>
+      'O membro pode restringir ainda mais, nunca ampliar.';
+
+  @override
+  String get myPreferences => 'Minhas preferências';
+
+  @override
+  String get myPreferencesHint =>
+      'Somente dentro do que o administrador permite.';
+
+  @override
+  String get notAllowedByAdmin => 'Não permitido pelo administrador';
+
+  @override
+  String get personalPin => 'PIN pessoal';
+
+  @override
+  String get personalPinOn => 'Ativado';
+
+  @override
+  String get personalPinOff => 'Desativado';
+
+  @override
+  String get personalPinHint =>
+      'Protege o seu perfil. Somente você pode definir ou alterar.';
+
+  @override
+  String get enablePersonalPin => 'Ativar PIN';
+
+  @override
+  String get changePersonalPin => 'Alterar PIN';
+
+  @override
+  String get disablePersonalPin => 'Desativar PIN';
+
+  @override
+  String get currentPinLabel => 'PIN atual';
+
+  @override
+  String get newPinLabel => 'Novo PIN (4 dígitos)';
+
+  @override
+  String get personalPinSaved => 'PIN atualizado.';
+
+  @override
+  String get personalPinRemoved => 'PIN desativado.';
+
+  @override
+  String get watchedHistory => 'Assistidos';
+
+  @override
+  String get clearHistory => 'Limpar histórico';
+
+  @override
+  String get emptyKind => 'Nada por aqui ainda.';
+
+  @override
+  String minutesLeft(int minutes) {
+    return '$minutes min restantes';
+  }
+
+  @override
+  String watchedOn(String time) {
+    return 'Assistido em $time';
+  }
+
+  @override
+  String lastSyncLabel(String time) {
+    return 'Última sincronização: $time';
+  }
+
+  @override
+  String get accountSection => 'Conta';
+
+  @override
+  String get securitySection => 'Segurança';
+
+  @override
+  String get contentSection => 'Conteúdos';
+
+  @override
+  String get removeFromFamily => 'Remover da família';
+
+  @override
+  String removeFromFamilyBody(String name) {
+    return '$name volta para a própria família. O perfil e seus dados continuam aqui.';
+  }
+
+  @override
+  String get deleteProfile => 'Excluir perfil';
+
+  @override
+  String clearFavoritesAndWishlistBody(String name) {
+    return 'Todos os favoritos e a lista de desejos de $name serão excluídos permanentemente (fazem parte da mesma biblioteca). Esta ação não pode ser desfeita.';
+  }
+
+  @override
+  String get errorPinInvalid => 'PIN atual incorreto.';
+
+  @override
+  String get errorBeyondLimit =>
+      'Isso ultrapassa o que o administrador permite.';
+
+  @override
+  String get errorProfileNotLinked =>
+      'Sua conta não está vinculada a um perfil nesta família.';
 }

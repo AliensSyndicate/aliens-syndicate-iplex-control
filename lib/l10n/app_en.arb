@@ -103,7 +103,7 @@
   "familyHasMembers": "Remove the family members before deleting your account.",
   "loading": "Loading",
   "edit": "Edit",
-  "continueWatching": "Continue watching on TV",
+  "continueWatching": "Continue watching",
   "sessionLimit": "Three TVs are already in use: {devices}.",
   "@sessionLimit": {
     "placeholders": {
@@ -823,5 +823,82 @@
   "connectedStatus": "Connected",
   "availableStatus": "Available",
   "removeFromContinueWatching": "Remove from Continue watching",
-  "neverOnline": "Never on"
+  "neverOnline": "Never on",
+  "roleAdmin": "Admin",
+  "roleKids": "Kids",
+  "roleMember": "Member",
+  "roleGuest": "Guest",
+  "addMember": "Add member",
+  "guestAccount": "Guest account",
+  "guestAccountHint": "Settings are kept when turned off.",
+  "invitePendingShort": "Invitation pending",
+  "adultContent": "Adult content",
+  "adultContentHint": "Titles and channels marked as adult.",
+  "adminLimitsTitle": "Access limits",
+  "adminLimitsHint": "The member can restrict these further, never widen them.",
+  "myPreferences": "My preferences",
+  "myPreferencesHint": "Only within what the administrator allows.",
+  "notAllowedByAdmin": "Not allowed by the administrator",
+  "personalPin": "Personal PIN",
+  "personalPinOn": "On",
+  "personalPinOff": "Off",
+  "personalPinHint": "Protects your profile. Only you can set or change it.",
+  "enablePersonalPin": "Turn on PIN",
+  "changePersonalPin": "Change PIN",
+  "disablePersonalPin": "Turn off PIN",
+  "currentPinLabel": "Current PIN",
+  "newPinLabel": "New PIN (4 digits)",
+  "personalPinSaved": "PIN updated.",
+  "personalPinRemoved": "PIN turned off.",
+  "watchedHistory": "Watched",
+  "clearHistory": "Clear history",
+  "emptyKind": "Nothing here yet.",
+  "minutesLeft": "{minutes} min left",
+  "@minutesLeft": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "watchedOn": "Watched {time}",
+  "@watchedOn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSyncLabel": "Last sync: {time}",
+  "@lastSyncLabel": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "accountSection": "Account",
+  "securitySection": "Security",
+  "contentSection": "Content",
+  "removeFromFamily": "Remove from family",
+  "removeFromFamilyBody": "{name} goes back to their own family. The profile and its data stay here.",
+  "@removeFromFamilyBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteProfile": "Delete profile",
+  "clearFavoritesAndWishlistBody": "All favorites and the wishlist of {name} will be permanently deleted (they are one library). This cannot be undone.",
+  "@clearFavoritesAndWishlistBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorPinInvalid": "Incorrect current PIN.",
+  "errorBeyondLimit": "This goes beyond what the administrator allows.",
+  "errorProfileNotLinked": "Your account is not linked to a profile in this family."
 }

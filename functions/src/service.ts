@@ -1,5 +1,5 @@
 import {calculateCanonicalDeviceId, calculateIdentityFingerprint, maskIdentityFingerprint, generatePairingCode, hashPairingCode, PlatformType} from './device_identity';
-import {authorizeMetadata, libraryItem, readHome, readSourceCatalog, readSourceSeries, resolveSourceStream, resolveTitle} from './iptv_catalog_access';
+import {authorizeMetadata, libraryItem, readHome, readProfileLibrary, readSourceCatalog, readSourceSeries, resolveSourceStream, resolveTitle} from './iptv_catalog_access';
 import {libraryInputSchema, sameTitleDocs, writeLibraryItem} from './library';
 import {firestoreQuota} from './player';
 import {registerPushToken} from './iptv_notifications';
@@ -137,7 +137,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   return {ok:true,lastActiveAt:now};
  }
  if(['createFamily','selectContext','createMemberLink','joinFamily','removeMember','leaveFamily','lookupPublicUser','requestMembership','respondMembership','cancelMembershipRequest'].includes(action))return familyMembership(action,p,a);
- if(['saveProfile','setGuestEnabled','setProfilePermissions','createProfileLinkCode','redeemProfileLink','unlinkProfileAccount','clearProfileData'].includes(action)){
+ if(['saveProfile','setGuestEnabled','setProfilePermissions','setProfilePreferences','setPersonalPin','clearPersonalPin','createProfileLinkCode','redeemProfileLink','unlinkProfileAccount','clearProfileData'].includes(action)){
   required(!a.deviceId);
   return familyProfiles(action,p,a.uid,(tx,admin,create)=>family(tx,a,admin,create));
  }
@@ -368,6 +368,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  });
  if(action==='readSourceCatalog')return readSourceCatalog(p,a);
  if(action==='readHome')return readHome(p,a);
+ if(action==='readProfileLibrary')return readProfileLibrary(p,a);
  // TMDB grant for the Control (iplexWebTmdb → manager, with App Check): same item rules as the TV.
  if(action==='authorizeMetadata'){required(!a.deviceId,'permission-denied');return authorizeMetadata(p,a);}
  // Editorial discovery (TMDB titles, people, filmographies) for the Control only: person

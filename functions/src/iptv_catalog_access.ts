@@ -11,7 +11,7 @@ import {parseXtreamJson} from './iptv_adapters';
 import {xtreamBase} from './iptv_server';
 import {lookup} from 'node:dns/promises';
 import {activePlayer,type Identity} from './service';
-import {classifyAudience} from './content_audience';
+import {classifyAudience, isAdultContent} from './content_audience';
 import {profileView, ProfileView} from './family_profiles';
 import {TitleResolver, type LibraryList} from './library';
 
@@ -22,6 +22,8 @@ export type Viewer = ProfileView | null;
 export function canSee(viewer:Viewer,sourceId:string,item:{kind:Kind;title?:string;category?:string;ageRating?:string}) {
   if(!viewer||viewer.type==='admin')return true;
   if(!viewer.permissions.allSpaces&&!viewer.permissions.spaces.includes(`${sourceId}:${item.kind}`))return false;
+  // Adult content off (administrator limit or the member's own, narrower preference).
+  if(!viewer.permissions.adult&&isAdultContent(item))return false;
   // Mandatory and not configurable: kids profiles only receive positively identified children's content.
   return viewer.type!=='kids'||classifyAudience(item)==='kids';
 }
@@ -336,15 +338,33 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
   const resolved=(id:string)=>{const v=visible.get(id);return v?publicItem(v,id):null;};
   const recentSearches:Record<string,unknown>[]=[];
   if(profile?.type!=='guest')for(const id of new Set(recentSearchIds)){const item=resolved(id);if(item)recentSearches.push(item);}
+  const {favoriteIds,favorites,myList,continueWatching,library,saved}=profile&&profile.type!=='guest'
+    ?await profileLibrary(context.ref,profile,visible,known,selected,rowLimit,full==='continueWatching'?SECTION_MAX:50)
+    :emptyLibrary();
+  return {schemaVersion:2,selectedSourceId:selected,
+    profile:profile?{id:profile.id,name:profile.name,type:profile.type,generations:profile.generations}:null,
+    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries,recentSearches,library,saved};
+}
+
+type RowLimit=(section:typeof HOME_SECTIONS[number])=>number;
+const emptyLibrary=()=>({favoriteIds:[] as string[],favorites:[] as Record<string,unknown>[],myList:[] as Record<string,unknown>[],
+  continueWatching:[] as Record<string,unknown>[],library:{favorites:[],wishlist:[]} as Record<LibraryList,Record<string,unknown>[]>,
+  saved:{favorites:[],wishlist:[]} as Record<LibraryList,string[]>});
+
+/** Favorites, wishlist and progress of one profile resolved against the visible catalog
+ * (shared by the Home and the member details page). Saved titles that no catalog offers
+ * are editorial entries (`available: false`) for non-kids profiles. */
+async function profileLibrary(family:FirebaseFirestore.DocumentReference,profile:ProfileView,visible:Map<string,Visible>,known:Set<string>,selected:string|null,rowLimit:RowLimit,progressLimit:number) {
+  const resolved=(id:string)=>{const v=visible.get(id);return v?publicItem(v,id):null;};
   const favoriteIds:string[]=[],favorites:Record<string,unknown>[]=[],myList:Record<string,unknown>[]=[],continueWatching:Record<string,unknown>[]=[];
   const library:Record<LibraryList,Record<string,unknown>[]>={favorites:[],wishlist:[]};
   const saved:Record<LibraryList,string[]>={favorites:[],wishlist:[]};
-  if(profile&&profile.type!=='guest'){
-    const ref=context.ref.collection('profiles').doc(profile.id);
+  {
+    const ref=family.collection('profiles').doc(profile.id);
     const [fav,wish,progress]=await Promise.all([
       ref.collection('favorites').orderBy('updatedAt','desc').limit(100).get(),
       ref.collection('wishlist').orderBy('updatedAt','desc').limit(100).get(),
-      ref.collection('watch_progress').orderBy('updatedAt','desc').limit(full==='continueWatching'?SECTION_MAX:50).get(),
+      ref.collection('watch_progress').orderBy('updatedAt','desc').limit(progressLimit).get(),
     ]);
     const resolver=new TitleResolver(candidates(visible),known,selected);
     const links=getFirestore().batch();let linkWrites=0;
@@ -386,9 +406,41 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
       continueWatching.push({...item,progress:{position:Number(d.position),duration:Number(d.duration),updatedAt:Number(d.updatedAt)||0},...(episode?{episodeId:episode[2]}:{})});
     }
   }
-  return {schemaVersion:2,selectedSourceId:selected,
-    profile:profile?{id:profile.id,name:profile.name,type:profile.type,generations:profile.generations}:null,
-    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries,recentSearches,library,saved};
+  return {favoriteIds,favorites,myList,continueWatching,library,saved};
+}
+
+/** Member details (Família › integrante): the library of one profile of the caller's
+ * family, by kind, for the account linked to it or the family administrator only.
+ * Also the history ("assistidos"). The guest never persists anything. */
+export async function readProfileLibrary(input:Record<string,unknown>,actor:Identity) {
+  if(actor.deviceId)throw new DomainError('permission-denied');
+  const profileId=idSchema.parse(input.profileId);
+  const db=getFirestore();
+  const scope=await db.runTransaction(async tx=>{
+    const ws=await iptvWorkspace(tx,actor,false,false);
+    const [family,link,snap]=await tx.getAll(ws.ref,ws.ref.collection('profile_links').doc(actor.uid),ws.ref.collection('profiles').doc(profileId));
+    const fd=family!.data()??{};
+    const admin=(fd.adminUid??fd.adminId)===actor.uid||fd.members?.[actor.uid]==='admin';
+    if(!snap!.exists||snap!.data()?.deleting===true)throw new DomainError('not-found');
+    if(!admin&&link!.data()?.profileId!==profileId)throw new DomainError('permission-denied');
+    const sources=(await tx.get(ws.ref.collection('sources'))).docs.filter(d=>d.data().enabled&&d.data().version);
+    return {ref:ws.ref,profile:profileView(snap!.id,snap!.data()!),sources};
+  });
+  const profile=scope.profile;
+  if(profile.type==='guest')return {profile:{id:profile.id,type:profile.type},favorites:[],wishlist:[],continueWatching:[],watched:[]};
+  const {visible,known}=await visibleCatalog(actor,scope.sources);
+  const lib=await profileLibrary(scope.ref,profile,visible,known,null,()=>SECTION_MAX,SECTION_MAX);
+  const watched:Record<string,unknown>[]=[];
+  const rows=await scope.ref.collection('profiles').doc(profile.id).collection('watched').orderBy('completedAt','desc').limit(SECTION_MAX).get();
+  for(const doc of rows.docs){
+    const d=doc.data();
+    if(d.generation!==profile.generations.watched||typeof d.contentId!=='string')continue;
+    const episode=/^([A-Za-z0-9-]+)_e([A-Za-z0-9_-]+)$/.exec(d.contentId);
+    const v=visible.get(episode?episode[1]!:d.contentId);
+    if(!v||(episode&&v.item.kind!=='series'))continue;
+    watched.push({...publicItem(v,episode?episode[1]!:d.contentId),watchedAt:Number(d.completedAt)||0,...(episode?{episodeId:episode[2]}:{})});
+  }
+  return {profile:{id:profile.id,type:profile.type},favorites:lib.library.favorites,wishlist:lib.library.wishlist,continueWatching:lib.continueWatching,watched};
 }
 
 const titleQuerySchema=z.object({kind:z.enum(['movie','series']),tmdbId:z.number().int().positive().max(999_999_999),

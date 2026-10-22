@@ -6,6 +6,10 @@ abstract final class AppIcons {
       devices = HugeIcons.strokeRoundedTv01,
       iptv = HugeIcons.strokeRoundedSatellite,
       account = HugeIcons.strokeRoundedUserCircle;
+
+  /// On/off switch as an icon (e.g. Conta visitante on the Family app bar).
+  static const toggleOff = HugeIcons.strokeRoundedToggleLeft,
+      toggleOn = HugeIcons.strokeRoundedToggleRight;
   static const up = HugeIcons.strokeRoundedArrowUp01,
       down = HugeIcons.strokeRoundedArrowDown01,
       left = HugeIcons.strokeRoundedArrowLeft01,

@@ -5,132 +5,119 @@ import 'package:go_router/go_router.dart';
 import '../../core/design_system/components.dart';
 import '../../core/data/providers.dart';
 import '../../core/domain/models.dart';
-import '../../app/presence.dart';
 import 'profile_manage_page.dart';
 import 'widgets/entries_view.dart';
 
+/// Família: only the people of the family. Administrator first, members in
+/// alphabetical order, then pending invitations and the guest last (when on).
+/// Each card: avatar, name and role (Admin, Infantil, Membro, Visitante).
+/// The administrator adds members ("+") and turns the guest account on/off;
+/// everything else lives in the member's details page.
 class UsersPage extends ConsumerWidget {
   const UsersPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l;
-    final hasFamily = ref.watch(
-      accountProvider.select((a) => a.asData?.value?.familyId != null),
-    );
-    final hasGuest =
-        ref
-            .watch(entriesProvider('profiles'))
-            .asData
-            ?.value
-            .any((p) => p.id == 'guest') ??
-        true;
+    final account = ref.watch(accountProvider).asData?.value;
+    final hasFamily = account?.familyId != null;
     final admin = ref.watch(adminProvider);
+    final profiles = ref.watch(entriesProvider('profiles')).asData?.value;
+    final guest = profiles?.where((p) => p.id == 'guest').firstOrNull;
+    final guestOn = guest != null && guest.data['enabled'] != false;
+    // A member account that is not linked to any profile yet (legacy).
+    final unlinked =
+        !admin &&
+        hasFamily &&
+        profiles != null &&
+        !profiles.any((p) => p.data['linkedUid'] == account?.uid);
     return PageTemplate(
       title: l.familyTitle,
       hasBottomNav: true,
       action: admin
-          ? CircularButton(
-              label: l.add,
-              icon: AppIcons.add,
-              size: AppDimensions.touch,
-              onPressed: () => showAppModalSheet<void>(
-                context: context,
-                builder: (c) => AppModalSheet(
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SheetHeader(icon: AppIcons.users, title: l.add),
-                      SheetActionRow(
-                        key: const Key('add-member'),
-                        icon: AppIcons.qr,
-                        label: l.invite,
-                        onTap: () {
-                          Navigator.pop(c);
-                          context.push('/users/invite');
-                        },
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasFamily) ...[
+                  // Conta visitante: toggle icon (right = on, left = off). Off keeps
+                  // the guest profile and its configuration.
+                  Semantics(
+                    toggled: guestOn,
+                    child: CircularButton(
+                      key: const Key('guest-toggle'),
+                      label: l.guestAccount,
+                      icon: guestOn ? AppIcons.toggleOn : AppIcons.toggleOff,
+                      size: AppDimensions.touch,
+                      onPressed: profiles == null
+                          ? null
+                          : () async {
+                              try {
+                                await ref.read(repositoryProvider).mutate(
+                                  'setGuestEnabled',
+                                  {
+                                    'enabled': !guestOn,
+                                    'name': l.profileTypeGuest,
+                                  },
+                                );
+                              } catch (e) {
+                                if (context.mounted) showFailure(context, e);
+                              }
+                            },
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                CircularButton(
+                  key: const Key('add-member-button'),
+                  label: l.addMember,
+                  icon: AppIcons.add,
+                  size: AppDimensions.touch,
+                  onPressed: () => showAppModalSheet<void>(
+                    context: context,
+                    builder: (c) => AppModalSheet(
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SheetHeader(icon: AppIcons.users, title: l.addMember),
+                          SheetActionRow(
+                            key: const Key('add-member'),
+                            icon: AppIcons.qr,
+                            label: l.invite,
+                            onTap: () {
+                              Navigator.pop(c);
+                              context.push('/users/invite');
+                            },
+                          ),
+                          SheetActionRow(
+                            key: const Key('add-profile'),
+                            icon: AppIcons.add,
+                            label: l.newProfile,
+                            onTap: () {
+                              Navigator.pop(c);
+                              context.push('/users/add');
+                            },
+                          ),
+                        ],
                       ),
-                      SheetActionRow(
-                        key: const Key('add-profile'),
-                        icon: AppIcons.add,
-                        label: l.newProfile,
-                        onTap: () {
-                          Navigator.pop(c);
-                          context.push('/users/add');
-                        },
-                      ),
-                      if (hasFamily && !hasGuest)
-                        SheetActionRow(
-                          key: const Key('add-guest'),
-                          icon: AppIcons.account,
-                          label: l.addGuest,
-                          onTap: () async {
-                            Navigator.pop(c);
-                            try {
-                              await ref.read(repositoryProvider).mutate(
-                                'setGuestEnabled',
-                                {'enabled': true, 'name': l.profileTypeGuest},
-                              );
-                            } catch (e) {
-                              if (context.mounted) showFailure(context, e);
-                            }
-                          },
-                        ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             )
           : null,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _ReceivedInvitations(),
           const _FamilyMembers(),
-          if (hasFamily && admin)
-            EntryTile(
-              key: const Key('parental-control'),
-              title: l.parentalControl,
-              icon: AppIcons.lock,
-              onTap: () => context.push('/users/parental'),
-            ),
-          if (hasFamily && !admin)
+          if (unlinked)
             EntryTile(
               key: const Key('link-to-profile'),
               title: l.linkToProfile,
               icon: AppIcons.link,
               onTap: () => context.push('/family/link-profile'),
             ),
-          SectionHeader(l.profiles),
-          EntriesView(
-            collection: 'profiles',
-            empty: EmptyState(
-              title: l.emptyUsers,
-              body: l.noProfilesBody,
-              icon: AppIcons.users,
-              action: AppButton(
-                label: l.newProfile,
-                onPressed: () => context.push('/users/add'),
-              ),
-            ),
-            builder: (items) => Column(
-              children: items
-                  .map(
-                    (e) => EntryTile(
-                      title: e.name,
-                      subtitle: [
-                        profileTypeLabel(context, e.text('type')),
-                        if (e.text('type') == 'guest' &&
-                            e.data['enabled'] == false)
-                          l.disabled,
-                      ].join(' · '),
-                      onTap: () => context.push('/users/${e.id}'),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
         ],
       ),
     );
@@ -169,9 +156,18 @@ class _ReceivedInvitations extends StatelessWidget {
   );
 }
 
-/// The family always has a member (the account that created it): one tile per
-/// member, the administrator included, then the invitations still pending.
-/// Adding members is the "+" of the top bar, as on Devices and IPTV.
+/// Alphabetical, accent and case insensitive.
+String _sortKey(String name) => name
+    .toLowerCase()
+    .replaceAll(RegExp('[áàâãä]'), 'a')
+    .replaceAll(RegExp('[éèêë]'), 'e')
+    .replaceAll(RegExp('[íìîï]'), 'i')
+    .replaceAll(RegExp('[óòôõö]'), 'o')
+    .replaceAll(RegExp('[úùûü]'), 'u')
+    .replaceAll('ç', 'c');
+
+/// The family list: profiles (the family's people) with the photo of the
+/// account linked to each, in the mandatory order.
 class _FamilyMembers extends ConsumerWidget {
   const _FamilyMembers();
   @override
@@ -181,88 +177,108 @@ class _FamilyMembers extends ConsumerWidget {
     final admin = ref.watch(adminProvider);
     if (account?.familyId == null) return const AppLoadingSkeleton();
     final members = ref.watch(entriesProvider('members'));
+    final profiles = ref.watch(entriesProvider('profiles'));
     final sent = admin ? ref.watch(entriesProvider('sentInvitations')) : null;
-    return members.when(
-      skipLoadingOnRefresh: false,
-      skipLoadingOnReload: false,
-      loading: () => const AppLoadingSkeleton(),
-      error: (e, s) =>
-          ErrorState(onRetry: () => ref.invalidate(entriesProvider('members'))),
-      data: (items) {
-        final now = ref.watch(clockProvider).asData?.value ?? DateTime.now();
-        final pending =
-            sent?.asData?.value.where(
-              (r) => r.number('expiresAt') > now.millisecondsSinceEpoch,
-            ) ??
-            const <Entry>[];
-        return Column(
-          children: [
-            for (final entry in items)
-              EntryTile(
-                key: ValueKey('member-${entry.id}'),
-                leading: AppAvatar(
-                  name: entry.name,
-                  photoUrl: entry.text('photoUrl'),
-                  size: AppDimensions.touch,
-                ),
-                title: entry.name,
-                subtitle: entry.text('role') == 'admin'
-                    ? l.administrator
-                    : l.member,
-                // On / off and the date it was last on (the account using
-                // the app is on now).
-                lines: [
-                  if (entry.id == account?.uid)
-                    formatCardDateTime(context, now)
-                  else if (entry.number('lastActiveAt') > 0)
-                    formatCardDateTime(
-                      context,
-                      DateTime.fromMillisecondsSinceEpoch(
-                        entry.number('lastActiveAt').toInt(),
-                      ),
-                    )
-                  else
-                    l.neverOnline,
-                ],
-                trailing: () {
-                  final on =
-                      entry.id == account?.uid ||
-                      memberOnline(entry.number('lastActiveAt'), now);
-                  return OnOffDot(on: on, label: on ? l.online : l.offline);
-                }(),
-                // Administrators manage members; a member only opens its own entry (to leave).
-                onTap:
-                    (admin && entry.text('role') != 'admin') ||
-                        (!admin &&
-                            entry.id == account?.uid &&
-                            entry.text('role') != 'admin')
-                    ? () => context.push('/users/member/${entry.id}')
-                    : null,
+    if (members.hasError || profiles.hasError) {
+      return ErrorState(
+        onRetry: () => ref
+          ..invalidate(entriesProvider('members'))
+          ..invalidate(entriesProvider('profiles')),
+      );
+    }
+    final accounts = members.asData?.value, people = profiles.asData?.value;
+    if (members.isLoading || accounts == null || people == null) {
+      return const AppLoadingSkeleton();
+    }
+    final byUid = {for (final m in accounts) m.id: m};
+    final live = people.where((p) => p.data['deleting'] != true).toList();
+    final adminProfile = live.where((p) => p.text('type') == 'admin');
+    final associates = live.where(
+      (p) => p.text('type') != 'admin' && p.text('type') != 'guest',
+    );
+    final linkedUids = {for (final p in live) p.data['linkedUid']};
+    // Accounts of the family without a profile (legacy): still listed.
+    final orphans = accounts.where(
+      (m) => m.text('role') != 'admin' && !linkedUids.contains(m.id),
+    );
+    final guest = live
+        .where((p) => p.id == 'guest' && p.data['enabled'] != false)
+        .firstOrNull;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final pending =
+        sent?.asData?.value.where((r) => r.number('expiresAt') > now) ??
+        const <Entry>[];
+
+    Widget card(Entry profile) {
+      final type = profile.text('type').isEmpty
+          ? 'regular'
+          : profile.text('type');
+      final linked = byUid[profile.data['linkedUid']];
+      final own = profile.data['linkedUid'] == account?.uid;
+      return EntryTile(
+        key: ValueKey('profile-${profile.id}'),
+        leading: AppAvatar(
+          name: profile.name,
+          photoUrl: linked?.text('photoUrl'),
+          size: AppDimensions.touch,
+        ),
+        title: profile.name,
+        subtitle: roleLabel(context, type),
+        // Administrators open every member; a member only its own details.
+        onTap: admin || own ? () => context.push('/users/${profile.id}') : null,
+      );
+    }
+
+    final sorted = [
+      for (final p in associates) (_sortKey(p.name), card(p)),
+      for (final m in orphans)
+        (
+          _sortKey(m.name),
+          EntryTile(
+            key: ValueKey('member-${m.id}'),
+            leading: AppAvatar(
+              name: m.name,
+              photoUrl: m.text('photoUrl'),
+              size: AppDimensions.touch,
+            ),
+            title: m.name,
+            subtitle: l.roleMember,
+            onTap: admin || m.id == account?.uid
+                ? () => context.push('/users/member/${m.id}')
+                : null,
+          ),
+        ),
+    ]..sort((a, b) => a.$1.compareTo(b.$1));
+
+    return Column(
+      key: const Key('family-list'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final p in adminProfile) card(p),
+        for (final (_, tile) in sorted) tile,
+        for (final request in pending)
+          EntryTile(
+            key: ValueKey('invite-${request.id}'),
+            leading: AppAvatar(
+              name: request.text('recipientName'),
+              photoUrl: request.text('recipientPhotoUrl'),
+              size: AppDimensions.touch,
+            ),
+            title: request.text('recipientName'),
+            subtitle: l.invitePendingShort,
+            onTap: () => confirmAndRun(
+              context,
+              title: l.cancelInvitation,
+              body: l.cancelInvitationBody,
+              confirmLabel: l.cancelInvitation,
+              operation: () => ref.read(repositoryProvider).mutate(
+                'cancelMembershipRequest',
+                {'id': request.id},
               ),
-            for (final request in pending)
-              EntryTile(
-                key: ValueKey('invite-${request.id}'),
-                leading: AppAvatar(
-                  name: request.text('recipientName'),
-                  photoUrl: request.text('recipientPhotoUrl'),
-                  size: AppDimensions.touch,
-                ),
-                title: request.text('recipientName'),
-                subtitle: l.invitePending,
-                onTap: () => confirmAndRun(
-                  context,
-                  title: l.cancelInvitation,
-                  body: l.cancelInvitationBody,
-                  confirmLabel: l.cancelInvitation,
-                  operation: () => ref.read(repositoryProvider).mutate(
-                    'cancelMembershipRequest',
-                    {'id': request.id},
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
+            ),
+          ),
+        if (guest != null) card(guest),
+      ],
     );
   }
 }

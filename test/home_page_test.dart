@@ -436,6 +436,14 @@ void main() {
         greaterThan(tester.getTopRight(find.text(title)).dx),
         reason: 'at the end of the section title row',
       );
+      final seeAllText = tester.widget<Text>(
+        find.descendant(of: link, matching: find.byType(Text)),
+      );
+      expect(seeAllText.style?.color, Colors.white);
+      expect(
+        find.descendant(of: link, matching: find.byType(Icon)),
+        findsNothing,
+      );
     }
     final row = tester.widget<ListView>(
       find.byKey(const PageStorageKey('home-row-Favorites')),

@@ -44,7 +44,7 @@ final nowPlayingProvider = Provider.autoDispose<NowPlaying?>((ref) {
 
 /// "Temporada 1 - Episódio 3" of the episode in progress, from the source
 /// itself (never guessed).
-final _episodeLabelProvider = FutureProvider.autoDispose
+final episodeLabelProvider = FutureProvider.autoDispose
     .family<String?, (String, String, String)>((ref, key) async {
       final (sourceId, providerRef, episodeId) = key;
       final result = await ref.read(repositoryProvider).mutate(
@@ -58,6 +58,29 @@ final _episodeLabelProvider = FutureProvider.autoDispose
           ? null
           : '${episode.season}|${int.tryParse(episode.number) ?? episode.number}';
     }, retry: (retryCount, error) => null);
+
+/// "T1E3" (or "Temporada 1") of [item]'s episode, from the source itself;
+/// null while unknown or without an episode (never guessed).
+String? episodeLabel(BuildContext context, WidgetRef ref, Entry item) {
+  final episodeId = item.episodeId;
+  if (item.kind != 'series' || episodeId == null) return null;
+  final raw = ref
+      .watch(
+        episodeLabelProvider((
+          item.sourceId,
+          item.text('providerRef'),
+          episodeId,
+        )),
+      )
+      .asData
+      ?.value;
+  if (raw == null) return null;
+  final [season, number] = raw.split('|');
+  final n = int.tryParse(number);
+  return n == null
+      ? context.l.seasonNumber(int.parse(season))
+      : context.l.seasonEpisodeShort(int.parse(season), '$n');
+}
 
 /// "Now playing" item of the Home (Meu iPlex, between the tabs and the
 /// rows): artwork, name, kind with runtime (and episode for series) and the
@@ -77,7 +100,7 @@ class NowPlayingBar extends ConsumerWidget {
     if (item.kind == 'series' && episodeId != null) {
       final raw = ref
           .watch(
-            _episodeLabelProvider((
+            episodeLabelProvider((
               item.sourceId,
               item.text('providerRef'),
               episodeId,
