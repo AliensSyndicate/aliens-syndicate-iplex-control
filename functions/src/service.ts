@@ -124,6 +124,18 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   await ensureFamily(a.uid);
   return {ok:true};
  }
+ // Presence of the account in its family ("ligado" on the Family screen): the app
+ // reports while it is in the foreground; only the account's own member record.
+ if(action==='touchPresence'){
+  required(!a.deviceId);
+  const fid=(await db().doc(`users/${a.uid}`).get()).data()?.familyId;
+  if(typeof fid!=='string'||!fid)return {ok:true};
+  const member=db().doc(`families/${fid}/members/${a.uid}`);
+  await db().runTransaction(async tx=>{
+   if((await tx.get(member)).exists)tx.update(member,{lastActiveAt:now});
+  });
+  return {ok:true,lastActiveAt:now};
+ }
  if(['createFamily','selectContext','createMemberLink','joinFamily','removeMember','leaveFamily','lookupPublicUser','requestMembership','respondMembership','cancelMembershipRequest'].includes(action))return familyMembership(action,p,a);
  if(['saveProfile','setGuestEnabled','setProfilePermissions','createProfileLinkCode','redeemProfileLink','unlinkProfileAccount','clearProfileData'].includes(action)){
   required(!a.deviceId);

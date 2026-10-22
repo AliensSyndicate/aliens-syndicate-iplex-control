@@ -3351,6 +3351,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove from Continue watching'**
   String get removeFromContinueWatching;
+
+  /// No description provided for @neverOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Never on'**
+  String get neverOnline;
 }
 
 class _AppLocalizationsDelegate

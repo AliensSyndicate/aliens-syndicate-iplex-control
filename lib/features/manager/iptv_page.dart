@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'widgets/iptv_source_status.dart';
+
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../iptv/presentation/controllers/iptv_sync_controller.dart';
@@ -178,139 +180,36 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppSurface(
-                      child: Column(
+                    // The app list card: icon circle, name (lock when
+                    // protected), state and details; indicator on the right.
+                    NeumorphicListTile(
+                      key: const Key('source-details-card'),
+                      icon: AppIcons.iptv,
+                      title: e.name,
+                      titlePrefix: isProtected
+                          ? const AppIcon(
+                              AppIcons.lock,
+                              size: 14,
+                              color: AppColors.primary,
+                            )
+                          : null,
+                      subtitleWidget: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const GraphiteSurface(
-                                circle: true,
-                                recessed: true,
-                                padding: EdgeInsets.all(
-                                  AppSpacing.sm + AppSpacing.xs,
-                                ),
-                                child: AppIcon(
-                                  AppIcons.iptv,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.md),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      e.name,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.xs),
-                                    Row(
-                                      children: [
-                                        if (isSyncing) ...[
-                                          const SizedBox.square(
-                                            dimension: 10,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 1.5,
-                                              color: AppColors.brandBlue,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              isRetrying
-                                                  ? l.sourceRetrying
-                                                  : l.sourceSyncing,
-                                              style: const TextStyle(
-                                                color: AppColors.brandBlue,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ] else if (isError) ...[
-                                          const NeumorphicStatusIndicator(
-                                            status: IndicatorStatus.error,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              l.sourceFailure,
-                                              style: const TextStyle(
-                                                color: AppColors.error,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ] else if (isOnline) ...[
-                                          const NeumorphicStatusIndicator(
-                                            status: IndicatorStatus.online,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              l.online,
-                                              style: const TextStyle(
-                                                color: AppColors.textSecondary,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ] else ...[
-                                          const NeumorphicStatusIndicator(
-                                            status: IndicatorStatus.offline,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              l.offline,
-                                              style: const TextStyle(
-                                                color: AppColors.textSecondary,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (isProtected)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.sm,
-                                    vertical: AppSpacing.xxs,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceElevated,
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadii.xs,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    l.protectedBadge,
-                                    style: const TextStyle(
-                                      color: AppColors.brandBlue,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                          const Divider(
-                            color: AppColors.borderLight,
-                            height: 1,
+                          Text(
+                            isSyncing
+                                ? (isRetrying
+                                      ? l.sourceRetrying
+                                      : l.sourceSyncing)
+                                : isError
+                                ? l.sourceFailure
+                                : (isOnline ? l.online : l.offline),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isError
+                                  ? AppColors.error
+                                  : AppColors.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.md),
                           _SourceDetailRow(
@@ -365,6 +264,7 @@ class _IptvPageState extends ConsumerState<IptvPage> {
                           ],
                         ],
                       ),
+                      trailing: IptvSourceIndicator(source: e),
                     ),
                     if (isError || isRetrying) ...[
                       const SizedBox(height: AppSpacing.lg),
@@ -459,24 +359,28 @@ class _SourceDetailRow extends StatelessWidget {
           label,
           style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
         )
+      // Label and value share the card width (narrow screens).
       : Row(
           children: [
-            Text(
-              '$label: ',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
+            Flexible(
+              child: Text(
+                '$label: ',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
             ),
-            Expanded(
+            Flexible(
               child: Text(
                 value,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

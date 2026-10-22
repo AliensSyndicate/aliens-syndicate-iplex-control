@@ -27,14 +27,15 @@ class DeviceCard extends ConsumerWidget {
     final now = ref.watch(clockProvider).value ?? DateTime.now();
     final isOnline = device.isOnline(now);
 
-    // Reference: "Card de dispositivo".
+    // Same card as IPTV: name, date/time it was last on, state on the right.
+    final seen = device.lastSeenAt;
     return InfoCard(
       icon: _platformIcon(device.platform),
       title: device.displayName,
-      status: isOnline ? l.connectedStatus : l.offline,
-      extra: device.subtitleInfo,
-      active: isOnline,
-      dot: NeumorphicStatusIndicator(online: isOnline),
+      status: seen == null || seen.millisecondsSinceEpoch <= 0
+          ? l.neverOnline
+          : formatCardDateTime(context, seen),
+      dot: OnOffDot(on: isOnline, label: isOnline ? l.online : l.offline),
       onTap: onTap,
     );
   }

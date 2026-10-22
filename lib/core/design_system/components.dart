@@ -27,6 +27,7 @@ export 'components/neumorphic_switch.dart';
 export 'components/neumorphic_text_field.dart';
 export 'components/page_template.dart';
 export 'components/sheet_rows.dart';
+export 'components/status_date.dart';
 export 'feedback/confirm_removal.dart';
 export 'feedback/failure_feedback.dart';
 export 'graphite_material.dart';

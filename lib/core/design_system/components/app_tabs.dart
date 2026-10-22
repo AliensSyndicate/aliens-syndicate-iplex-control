@@ -14,6 +14,7 @@ class AppTabs<T> extends StatelessWidget {
     required this.onSelected,
     this.enabled = true,
     this.padding = EdgeInsets.zero,
+    this.translucent = false,
   });
 
   /// Value and label of each tab, in order.
@@ -22,6 +23,7 @@ class AppTabs<T> extends StatelessWidget {
   final ValueChanged<T> onSelected;
   final bool enabled;
   final EdgeInsetsGeometry padding;
+  final bool translucent;
 
   static const height = 36.0;
 
@@ -38,6 +40,7 @@ class AppTabs<T> extends StatelessWidget {
             label: label,
             selected: value == selected,
             onTap: enabled ? () => onSelected(value) : null,
+            translucent: translucent,
           ),
         ],
       ],
@@ -51,10 +54,12 @@ class _Pill extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.translucent = false,
   });
   final String label;
   final bool selected;
   final VoidCallback? onTap;
+  final bool translucent;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -63,8 +68,16 @@ class _Pill extends StatelessWidget {
     child: Opacity(
       opacity: onTap == null && !selected ? 0.45 : 1,
       child: Material(
-        color: selected ? AppColors.primary : AppColors.surfaceElevated,
-        shape: const StadiumBorder(),
+        color: selected
+            ? (translucent ? Colors.white : AppColors.primary)
+            : (translucent
+                  ? const Color(0x33FFFFFF)
+                  : AppColors.surfaceElevated),
+        shape: StadiumBorder(
+          side: translucent && !selected
+              ? const BorderSide(color: Color(0x26FFFFFF))
+              : BorderSide.none,
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -77,8 +90,10 @@ class _Pill extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: selected ? AppColors.onPrimary : AppColors.textPrimary,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected
+                    ? (translucent ? Colors.black : AppColors.onPrimary)
+                    : AppColors.textPrimary,
               ),
             ),
           ),

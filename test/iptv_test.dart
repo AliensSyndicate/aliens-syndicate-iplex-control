@@ -218,10 +218,20 @@ void main() {
         }
 
         expect(find.text('Lista Esportes M3U'), findsOneWidget);
-        expect(find.text('Online'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Online',
+          ),
+          findsOneWidget,
+        );
 
         expect(find.text('Servidor Cinema Xtream'), findsOneWidget);
-        expect(find.text('Sincronizando'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Sincronizando',
+          ),
+          findsOneWidget,
+        );
         expect(find.text('Nunca sincronizada'), findsOneWidget);
 
         // Credenciais ou tokens nunca devem ser vazados

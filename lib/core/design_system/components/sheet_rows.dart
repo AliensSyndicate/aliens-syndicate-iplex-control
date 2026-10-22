@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../icons.dart';
 import '../tokens.dart';
 import 'app_icon.dart';
+import 'neumorphic_list_tile.dart';
 
 /// Left-aligned sheet header (reference: "Assistir na TV / Selecione um
 /// dispositivo"): an icon or artwork, the title and an optional subtitle.
@@ -120,9 +122,9 @@ class SheetActionRow extends StatelessWidget {
   }
 }
 
-/// One option of a selection sheet (reference: devices, filters): icon box,
-/// title, status line and a radio / check on the right. The selected row is
-/// highlighted; unavailable rows are dimmed and not tappable.
+/// One option of a selection sheet (devices, sources, seasons): the list
+/// card ([NeumorphicListTile]); the chosen one has the white border,
+/// unavailable ones are dimmed and not tappable.
 class SelectionRow extends StatelessWidget {
   const SelectionRow({
     super.key,
@@ -132,116 +134,33 @@ class SelectionRow extends StatelessWidget {
     this.icon,
     this.leading,
     this.subtitle,
+    this.subtitleWidget,
     this.highlightSubtitle = false,
   });
   final String title;
   final String? subtitle;
+  final Widget? subtitleWidget;
   final List<List<dynamic>>? icon;
   final Widget? leading;
   final bool selected;
 
-  /// Status line in the main green (e.g. "Conectado").
+  /// Status line in the main color (e.g. "Conectado").
   final bool highlightSubtitle;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    final iconColor = selected || highlightSubtitle
-        ? AppColors.primary
-        : AppColors.textPrimary;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        enabled: enabled,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.45,
-          child: Material(
-            color: selected ? AppColors.surfaceElevated : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadii.md),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadii.md),
-              onTap: onTap,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.sm + 2),
-                child: Row(
-                  children: [
-                    if (leading != null)
-                      leading!
-                    else if (icon != null)
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(AppRadii.sm),
-                        ),
-                        child: Center(child: AppIcon(icon!, color: iconColor)),
-                      ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          if (subtitle != null && subtitle!.isNotEmpty)
-                            Text(
-                              subtitle!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: highlightSubtitle
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _Radio(selected: selected, enabled: enabled),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Radio extends StatelessWidget {
-  const _Radio({required this.selected, required this.enabled});
-  final bool selected, enabled;
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 22,
-    height: 22,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: selected ? AppColors.primary : Colors.transparent,
-      border: selected
-          ? null
-          : Border.all(color: AppColors.textSecondary, width: 1.5),
-    ),
-    child: selected
-        ? const Icon(Icons.check_rounded, size: 16, color: AppColors.onPrimary)
-        : !enabled
-        ? const Icon(
-            Icons.block_rounded,
-            size: 14,
-            color: AppColors.textSecondary,
-          )
-        : null,
+  Widget build(BuildContext context) => NeumorphicListTile(
+    title: title,
+    subtitle: subtitle,
+    subtitleWidget: subtitleWidget,
+    subtitleColor: highlightSubtitle ? AppColors.primary : null,
+    selected: selected,
+    enabled: onTap != null,
+    onTap: onTap,
+    showLeading: leading != null || icon != null,
+    leading: leading,
+    icon: icon ?? AppIcons.account,
+    iconColor: AppColors.textPrimary,
   );
 }
 

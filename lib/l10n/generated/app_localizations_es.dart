@@ -1862,4 +1862,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get removeFromContinueWatching => 'Quitar de Seguir viendo';
+
+  @override
+  String get neverOnline => 'Nunca encendido';
 }

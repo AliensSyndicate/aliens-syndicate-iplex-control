@@ -597,5 +597,6 @@
   "selectDevice": "Selecione um dispositivo",
   "connectedStatus": "Conectado",
   "availableStatus": "Disponível",
-  "removeFromContinueWatching": "Remover de Continuar assistindo"
+  "removeFromContinueWatching": "Remover de Continuar assistindo",
+  "neverOnline": "Nunca ligado"
 }

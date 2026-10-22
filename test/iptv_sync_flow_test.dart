@@ -885,10 +885,26 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Status labels
-        expect(find.text('Online'), findsOneWidget);
-        expect(find.text('Offline'), findsOneWidget);
-        expect(find.text('Falha'), findsOneWidget);
+        // No status text on the card: only the indicator (with its label).
+        expect(find.text('Online'), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Online',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Desabilitado',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Falha',
+          ),
+          findsOneWidget,
+        );
 
         // Status indicators
         final indicators = tester
@@ -900,6 +916,10 @@ void main() {
         expect(indicators[0].status, IndicatorStatus.online);
         expect(indicators[1].status, IndicatorStatus.offline);
         expect(indicators[2].status, IndicatorStatus.error);
+        // Green on, grey off, red failure.
+        expect(indicators[0].color, AppColors.statusOn);
+        expect(indicators[1].color, AppColors.disabled);
+        expect(indicators[2].color, AppColors.error);
 
         // Card icon has fixed color
         final icons = tester

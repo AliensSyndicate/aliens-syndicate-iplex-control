@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../manager/widgets/home_welcome_state.dart';
 import '../manager/widgets/account_avatar.dart';
+import '../manager/widgets/iptv_source_status.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
@@ -60,6 +60,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final account = ref.watch(accountProvider);
     return SafeArea(
+      top: false,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppDimensions.maxWidth),
@@ -99,66 +100,130 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
     final source = ready.where((s) => s.id == sourceId).firstOrNull;
     final l = context.l;
-    // App bar: "iPlex", IPTV list picker and the account avatar; then tabs.
-    final header = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.sm,
-            AppSpacing.md,
-            0,
+    final playing = tab == 0 ? ref.watch(nowPlayingProvider) : null;
+    final statusBar = MediaQuery.paddingOf(context).top;
+    final appBar = Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        statusBar + AppSpacing.sm,
+        AppSpacing.md,
+        0,
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'iPlex',
+              key: Key('home-title'),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.6,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'iPlex',
-                  key: Key('home-title'),
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.6,
-                    color: AppColors.textPrimary,
-                  ),
+          _BarButton(
+            key: const Key('home-source-picker'),
+            label: l.selectIptvSource,
+            onTap: sources.isEmpty ? null : () => pickSource(sources, sourceId),
+            child: const AppIcon(AppIcons.iptv),
+          ),
+          _BarButton(
+            key: const Key('home-account'),
+            label: l.account,
+            onTap: () => context.go('/account'),
+            child: const AccountAvatarFace(size: 32),
+          ),
+        ],
+      ),
+    );
+
+    final tabs = Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: AppTabs<int>(
+        key: const Key('home-tabs'),
+        padding: EdgeToEdge.inset,
+        translucent: playing != null,
+        options: [
+          (0, l.myIplex),
+          (1, l.filterChannels),
+          (2, l.filterMovies),
+          (3, l.filterSeries),
+        ],
+        selected: tab,
+        onSelected: (i) => setState(() => tab = i),
+      ),
+    );
+
+    final Widget header;
+    if (playing != null) {
+      header = AspectRatio(
+        aspectRatio: 3 / 4,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Artwork(
+              key: const Key('now-playing-art'),
+              item: playing.item,
+              backdrop: true,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+            ),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment(0, -0.2),
+                  colors: [Color(0xB3000000), Colors.transparent],
                 ),
               ),
-              _BarButton(
-                key: const Key('home-source-picker'),
-                label: l.selectIptvSource,
-                onTap: sources.isEmpty
-                    ? null
-                    : () => pickSource(sources, sourceId),
-                child: const AppIcon(AppIcons.iptv),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: const Alignment(0, 0.1),
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.backgroundPrimary.withValues(alpha: 0.8),
+                    AppColors.backgroundPrimary,
+                  ],
+                  stops: const [0.0, 0.65, 1.0],
+                ),
               ),
-              _BarButton(
-                key: const Key('home-account'),
-                label: l.account,
-                onTap: () => context.go('/account'),
-                child: const AccountAvatarFace(size: 32),
-              ),
-            ],
-          ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                appBar,
+                tabs,
+                const Spacer(),
+                Opacity(
+                  opacity: 0,
+                  child: SizedBox(
+                    width: 1,
+                    height: 1,
+                    child: Text(l.homeNowPlaying),
+                  ),
+                ),
+                NowPlayingBar(playing: playing),
+                const SizedBox(height: AppSpacing.md),
+              ],
+            ),
+          ],
         ),
-        Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.sm),
-          child: AppTabs<int>(
-            key: const Key('home-tabs'),
-            padding: EdgeToEdge.inset,
-            options: [
-              (0, l.myIplex),
-              (1, l.filterChannels),
-              (2, l.filterMovies),
-              (3, l.filterSeries),
-            ],
-            selected: tab,
-            onSelected: (i) => setState(() => tab = i),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-      ],
-    );
+      );
+    } else {
+      header = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          appBar,
+          tabs,
+          const SizedBox(height: AppSpacing.md),
+        ],
+      );
+    }
     if (ready.isEmpty) {
       // Saved titles stay reachable even without a ready source.
       final library = ref.watch(homeProvider(null)).asData?.value;
@@ -193,33 +258,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-          // Item playing, between the tabs and the rows (Meu iPlex).
-          if (tab == 0)
-            if (ref.watch(nowPlayingProvider) case final playing?)
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: AppSpacing.lg),
-                      child: Semantics(
-                        header: true,
-                        child: SectionHeader(l.homeNowPlaying),
-                      ),
-                    ),
-                    Padding(
-                      // Same margins as the device cards.
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        0,
-                        AppSpacing.lg,
-                        AppSpacing.sm,
-                      ),
-                      child: NowPlayingBar(playing: playing),
-                    ),
-                  ],
-                ),
-              ),
           if (tab == 0)
             ..._homeSlivers(context, home, sourceId)
           else if (source != null)
@@ -284,7 +322,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: EmptyState(
                   title: l.homeEmptyTitle,
                   body: l.homeEmptyBody,
-                  icon: AppIcons.search,
+                  icon: AppIcons.iptv,
                   action: AppButton(
                     label: l.exploreCatalog,
                     onPressed: () => context.go('/search'),
@@ -367,60 +405,37 @@ class _SourcePicker extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SheetHeader(
-            icon: AppIcons.iptv,
-            title: l.iptvSources,
-            subtitle: l.selectIptvSource,
-          ),
+          SheetHeader(title: l.iptvSources, subtitle: l.selectIptvSource),
           for (final source in sources)
-            SelectionRow(
-              key: ValueKey('source-option-${source.id}'),
-              title: source.name,
-              subtitle: [
-                switch (_status(source)) {
-                  IndicatorStatus.online => l.online,
-                  IndicatorStatus.offline => l.offline,
-                  IndicatorStatus.error => l.sourceFailure,
-                },
-                ?_lastSync(context, source),
-                if (source.id == current) l.selectedSource,
-              ].join(' · '),
-              highlightSubtitle: _status(source) == IndicatorStatus.online,
-              icon: AppIcons.iptv,
-              selected: source.id == current,
-              onTap: ready.contains(source.id)
-                  ? () => Navigator.pop(context, source.id)
-                  : null,
-            ),
+            () {
+              final isReady = ready.contains(source.id);
+              // The app list card: name, last sync date/time and the state
+              // on the right; the current source has the white border.
+              return NeumorphicListTile(
+                key: ValueKey('source-option-${source.id}'),
+                icon: AppIcons.iptv,
+                title: source.name,
+                subtitle: _syncInfo(context, source),
+                selected: source.id == current,
+                enabled: isReady,
+                trailing: IptvSourceIndicator(source: source),
+                onTap: isReady ? () => Navigator.pop(context, source.id) : null,
+              );
+            }(),
         ],
       ),
     );
   }
 
-  String? _lastSync(BuildContext context, Entry source) {
+  String _syncInfo(BuildContext context, Entry source) {
     final timestamp = source.data['lastSuccessfulSyncAt'] != null
         ? source.number('lastSuccessfulSyncAt')
         : source.number('lastSyncAt');
-    if (timestamp <= 0) return null;
-    final locale = Localizations.localeOf(context).toString();
-    final format = locale.startsWith('pt')
-        ? DateFormat('dd/MM/yyyy HH:mm', locale)
-        : DateFormat.yMd(locale).add_Hm();
-    return format.format(DateTime.fromMillisecondsSinceEpoch(timestamp));
-  }
-
-  IndicatorStatus _status(Entry source) {
-    final status = source.text('status');
-    final retrying = status == 'queued' && source.text('errorCode').isNotEmpty;
-    if (status == 'error' ||
-        (source.text('errorCode').isNotEmpty && !retrying)) {
-      return IndicatorStatus.error;
-    }
-    if ((status == 'ready' || status == 'online') &&
-        source.data['enabled'] != false) {
-      return IndicatorStatus.online;
-    }
-    return IndicatorStatus.offline;
+    if (timestamp <= 0) return context.l.neverSynced;
+    return formatCardDateTime(
+      context,
+      DateTime.fromMillisecondsSinceEpoch(timestamp),
+    );
   }
 }
 

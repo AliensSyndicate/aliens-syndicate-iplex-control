@@ -140,6 +140,7 @@ void main() {
           model: 'Bravia',
           linkedAt: now,
           onlineUntil: now.add(const Duration(minutes: 5)),
+          lastSeenAt: DateTime(2026, 10, 22, 9),
           sessionId: 'sess_live',
         );
 
@@ -150,11 +151,19 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        // Same card as IPTV: name, date/time last on, green dot (no text).
         expect(find.text('Family TV'), findsOneWidget);
-        expect(find.text('Sony • Bravia'), findsOneWidget);
-        // Reference "Card de dispositivo": connected status + status dot.
-        expect(find.text('Conectado'), findsOneWidget);
-        expect(find.byType(NeumorphicStatusIndicator), findsOneWidget);
+        expect(find.text('22/10/2026 às 09:00'), findsOneWidget);
+        expect(find.text('Sony • Bravia'), findsNothing);
+        expect(find.text('Conectado'), findsNothing);
+        expect(
+          tester
+              .widget<NeumorphicStatusIndicator>(
+                find.byType(NeumorphicStatusIndicator),
+              )
+              .color,
+          AppColors.statusOn,
+        );
       },
     );
 

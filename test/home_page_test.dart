@@ -187,7 +187,15 @@ void main() {
       for (final name in ['Fonte A', 'Fonte B', 'Fonte C']) {
         expect(find.text(name), findsOneWidget);
       }
-      expect(find.textContaining('Selected'), findsOneWidget);
+      // The current source is the selected card (white border).
+      expect(
+        tester
+            .widget<NeumorphicListTile>(
+              find.byKey(const ValueKey('source-option-s1')),
+            )
+            .selected,
+        isTrue,
+      );
       await tester.tap(find.text('Fonte C'));
       await tester.pumpAndSettle();
       expect(
@@ -203,6 +211,87 @@ void main() {
         await SharedPreferencesAsync().getString('iplex.home.source.u.family'),
         's2',
       );
+    },
+  );
+
+  testWidgets(
+    'IPTV selector: no icons, 4px circular status dot, 20px padding, inverted colors on selected',
+    (tester) async {
+      final repo = repoWith({})
+        ..sources = [
+          Entry('s1', {
+            'name': 'Fonte Online',
+            'version': 'v1',
+            'status': 'ready',
+          }),
+          Entry('s2', {'name': 'Fonte Offline', 'status': 'error'}),
+          Entry('s3', {
+            'name': 'Fonte Desligada',
+            'status': 'ready',
+            'enabled': false,
+          }),
+        ];
+      await navigation.launch(tester, repo);
+      await tester.tap(find.byKey(const Key('home-source-picker')));
+      await tester.pumpAndSettle();
+
+      final sheet = find.byType(AppModalSheet);
+      // The app list card: one per source, 20 padding, state indicator.
+      final cards = find.descendant(
+        of: sheet,
+        matching: find.byType(NeumorphicListTile),
+      );
+      expect(cards, findsNWidgets(3));
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is Padding &&
+                w.padding == const EdgeInsets.all(AppSpacing.card),
+          ),
+        ),
+        findsNWidgets(3),
+      );
+      final states = tester
+          .widgetList<NeumorphicStatusIndicator>(
+            find.descendant(
+              of: sheet,
+              matching: find.byType(NeumorphicStatusIndicator),
+            ),
+          )
+          .map((d) => d.status)
+          .toList();
+      expect(states, [
+        IndicatorStatus.online,
+        IndicatorStatus.error,
+        IndicatorStatus.offline,
+      ]);
+
+      // Selected (s1): white border; the others: no border.
+      ShapeBorder? shape(String id) => tester
+          .widget<Material>(
+            find
+                .descendant(
+                  of: find.byKey(ValueKey(id)),
+                  matching: find.byType(Material),
+                )
+                .first,
+          )
+          .shape;
+      expect(
+        (shape('source-option-s1')! as RoundedRectangleBorder).side.color,
+        AppColors.textPrimary,
+      );
+      expect(
+        (shape('source-option-s2')! as RoundedRectangleBorder).side,
+        BorderSide.none,
+      );
+      expect(
+        tester.widget<Text>(find.text('Fonte Online')).style?.color,
+        AppColors.textPrimary,
+      );
+      await fixtures.screenshot(tester, 'source-sheet');
     },
   );
 
@@ -423,13 +512,13 @@ void main() {
         (tester.widget<Container>(bar).decoration as BoxDecoration?)?.color,
         isNull,
       );
-      // Progress in the colors of the Continue watching cards.
+      // Progress in solid white with translucent track.
       final track = tester.widget<LinearProgressIndicator>(
         find.byKey(const Key('now-playing-progress')),
       );
       expect(
         [track.color, track.backgroundColor],
-        [AppColors.primary, AppColors.surfaceElevated],
+        [Colors.white, const Color(0x33FFFFFF)],
       );
       // Only on the Home.
       c.read(routerProvider).go('/devices');
@@ -477,7 +566,7 @@ void main() {
   );
 
   testWidgets(
-    'now playing bar: progress under the name, 2:3 poster, track without progress',
+    'now playing header: progress under the name, backdrop background, track without progress',
     (tester) async {
       await navigation.launch(
         tester,
@@ -490,22 +579,16 @@ void main() {
         find.byKey(const Key('now-playing-progress')),
       );
       expect(track.value, 0);
-      // Under the name on the card base, aligned with the poster bottom
-      // (never under the poster); 2:3 poster.
+      // Under the name, track height 3, backdrop covers the header.
       final art = tester.getRect(find.byKey(const Key('now-playing-art')));
       final line = tester.getRect(
         find.byKey(const Key('now-playing-progress')),
       );
       final name = tester.getRect(find.byKey(const Key('now-playing-title')));
-      expect(line.left, greaterThan(art.right));
       expect(line.top, greaterThan(name.bottom));
-      expect(
-        line.bottom,
-        art.bottom,
-        reason: 'on the base, aligned with the poster',
-      );
-      expect(line.height, 3);
-      expect(art.height / art.width, closeTo(1.5, 0.01));
+      expect(line.height, 12);
+      expect(art.top, lessThanOrEqualTo(name.top));
+      expect(art.bottom, greaterThanOrEqualTo(line.bottom));
     },
   );
 

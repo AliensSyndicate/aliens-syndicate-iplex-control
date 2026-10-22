@@ -7,7 +7,6 @@ import '../../core/domain/models.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
-import 'home_widgets.dart';
 import 'library.dart';
 
 /// PREVIEW: the bar is shown even when nothing plays on a TV, with the first
@@ -67,19 +66,12 @@ class NowPlayingBar extends ConsumerWidget {
   const NowPlayingBar({super.key, required this.playing});
   final NowPlaying playing;
 
-  /// Poster in 2:3 (channel logos keep a square) and the item around it.
-  static const posterHeight = 72.0, posterWidth = posterHeight * 2 / 3;
-  static const height = posterHeight + 2 * AppSpacing.md;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l;
     final item = playing.item;
     final channel = item.isChannel;
-    // Movies and series always show the track (empty without progress).
     final progress = channel ? null : (item.progress?.fraction ?? 0);
-    // "Filme · 1h 58min", "Série · T1E2 · 45min", "Ao vivo". The runtime is
-    // the duration of what is being watched (saved with the progress).
     String? episode;
     final episodeId = item.episodeId;
     if (item.kind == 'series' && episodeId != null) {
@@ -115,112 +107,110 @@ class NowPlayingBar extends ConsumerWidget {
       if (!channel && minutes != null && minutes > 0)
         formatRuntime(context, minutes),
     ].join(' · ');
+
+    final devices =
+        ref.watch(entriesProvider('devices')).asData?.value ?? const [];
+    final device =
+        devices.where((d) => d.id == playing.deviceId).firstOrNull ??
+        devices.firstOrNull;
+    final deviceName = device != null && device.name.isNotEmpty
+        ? device.name
+        : 'Sala de Estar';
+
+    String? remainingText;
+    if (item.progress case final p?
+        when p.duration > p.position && p.position > 0) {
+      final remMin = ((p.duration - p.position) / 60).round();
+      if (remMin > 0) remainingText = '$remMin min restantes';
+    }
+
+    const textShadow = [
+      Shadow(offset: Offset(0, 1), blurRadius: 4, color: Color(0x99000000)),
+    ];
+
     return Semantics(
       container: true,
+      button: true,
       label: [item.name, subtitle].join(', '),
-      child: Container(
-        key: const Key('now-playing-bar'),
-        height: height,
-        decoration: const BoxDecoration(),
-        child: Stack(
-          children: [
-            Row(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Container(
+          key: const Key('now-playing-bar'),
+          decoration: const BoxDecoration(),
+          child: InkWell(
+            onTap: () => openTitle(context, item),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => openTitle(context, item),
-                    // Same inner padding as the device cards.
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(AppRadii.xs),
-                            child: SizedBox(
-                              key: const Key('now-playing-art'),
-                              width: channel ? posterHeight : posterWidth,
-                              height: posterHeight,
-                              child: Artwork(
-                                item: item,
-                                fit: channel ? BoxFit.contain : BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: SizedBox(
-                              height: posterHeight,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Name and episode centered in the space
-                                  // above the progress.
-                                  Expanded(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.name,
-                                          key: const Key('now-playing-title'),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: AppTypography.bodyMedium
-                                              .copyWith(
-                                                fontWeight: FontWeight.w500,
-                                                color: AppColors.textPrimary,
-                                              ),
-                                        ),
-                                        if (subtitle.isNotEmpty)
-                                          Text(
-                                            subtitle,
-                                            key: const Key(
-                                              'now-playing-subtitle',
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTypography.bodyMedium
-                                                .copyWith(
-                                                  fontSize: 13,
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Movies and series: progress on the base,
-                                  // aligned with the bottom of the poster.
-                                  if (progress != null)
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(
-                                        AppRadii.xs,
-                                      ),
-                                      child: LinearProgressIndicator(
-                                        key: const Key('now-playing-progress'),
-                                        value: progress,
-                                        minHeight: 3,
-                                        // Same colors as the Continue
-                                        // watching cards.
-                                        color: AppColors.primary,
-                                        backgroundColor:
-                                            AppColors.surfaceElevated,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                Text(
+                  'Reproduzindo em $deviceName',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    shadows: textShadow,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.name,
+                  key: const Key('now-playing-title'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: Colors.white,
+                    height: 1.2,
+                    shadows: textShadow,
                   ),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  key: const Key('now-playing-subtitle'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFFD0D0D0),
+                    shadows: textShadow,
+                  ),
+                ),
+                if (!channel) ...[
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      key: const Key('now-playing-progress'),
+                      value: progress ?? 0,
+                      minHeight: 12,
+                      color: Colors.white,
+                      backgroundColor: const Color(0x33FFFFFF),
+                    ),
+                  ),
+                ],
+                if (remainingText != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    remainingText,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF999999),
+                      fontWeight: FontWeight.w400,
+                      shadows: textShadow,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.lg),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

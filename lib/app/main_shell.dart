@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/payments/subscription_checkout.dart';
 import 'bottom_navigation.dart';
+import 'presence.dart';
 
 class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.shell});
@@ -34,6 +35,7 @@ class MainShell extends StatelessWidget {
         children: [
           shell,
           const _PurchaseUpdates(),
+          const PresenceReporter(),
           if (isRoot)
             Positioned(
               left: 0,

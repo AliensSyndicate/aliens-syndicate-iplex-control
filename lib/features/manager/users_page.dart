@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/design_system/components.dart';
 import '../../core/data/providers.dart';
 import '../../core/domain/models.dart';
+import '../../app/presence.dart';
 import 'profile_manage_page.dart';
 import 'widgets/entries_view.dart';
 
@@ -188,9 +189,11 @@ class _FamilyMembers extends ConsumerWidget {
       error: (e, s) =>
           ErrorState(onRetry: () => ref.invalidate(entriesProvider('members'))),
       data: (items) {
-        final now = DateTime.now().millisecondsSinceEpoch;
+        final now = ref.watch(clockProvider).asData?.value ?? DateTime.now();
         final pending =
-            sent?.asData?.value.where((r) => r.number('expiresAt') > now) ??
+            sent?.asData?.value.where(
+              (r) => r.number('expiresAt') > now.millisecondsSinceEpoch,
+            ) ??
             const <Entry>[];
         return Column(
           children: [
@@ -206,6 +209,27 @@ class _FamilyMembers extends ConsumerWidget {
                 subtitle: entry.text('role') == 'admin'
                     ? l.administrator
                     : l.member,
+                // On / off and the date it was last on (the account using
+                // the app is on now).
+                lines: [
+                  if (entry.id == account?.uid)
+                    formatCardDateTime(context, now)
+                  else if (entry.number('lastActiveAt') > 0)
+                    formatCardDateTime(
+                      context,
+                      DateTime.fromMillisecondsSinceEpoch(
+                        entry.number('lastActiveAt').toInt(),
+                      ),
+                    )
+                  else
+                    l.neverOnline,
+                ],
+                trailing: () {
+                  final on =
+                      entry.id == account?.uid ||
+                      memberOnline(entry.number('lastActiveAt'), now);
+                  return OnOffDot(on: on, label: on ? l.online : l.offline);
+                }(),
                 // Administrators manage members; a member only opens its own entry (to leave).
                 onTap:
                     (admin && entry.text('role') != 'admin') ||

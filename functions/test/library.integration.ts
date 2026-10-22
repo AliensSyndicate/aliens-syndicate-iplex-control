@@ -157,6 +157,11 @@ test('library: editorial titles saved without IPTV, no duplicates across sources
   const stranger = await account('Outro');
   await assert.rejects(execute('removeProgress', {contextFamilyId: fid, profileId: 'admin', contentId: 'outro'}, stranger), /permission|denied|family/i);
 
+  // Presence: only the caller's own member record gets lastActiveAt.
+  assert.equal((await execute('touchPresence', {}, admin) as {ok: boolean}).ok, true);
+  const presence = (await db().doc(`families/${fid}/members/${admin.uid}`).get()).data();
+  assert.equal(typeof presence?.lastActiveAt, 'number');
+
   // 10) Discovery grant: person account yes; TVs never.
   assert.deepEqual(await execute('authorizeDiscovery', ctx, admin), {ok: true});
   await assert.rejects(tvCall('authorizeDiscovery', {}, tv), /permission|unknown|not-allowed|invalid/i);

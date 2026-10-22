@@ -822,5 +822,6 @@
   "selectDevice": "Select a device",
   "connectedStatus": "Connected",
   "availableStatus": "Available",
-  "removeFromContinueWatching": "Remove from Continue watching"
+  "removeFromContinueWatching": "Remove from Continue watching",
+  "neverOnline": "Never on"
 }

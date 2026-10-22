@@ -66,6 +66,10 @@ abstract final class AppColors {
   static const success = primary;
   static const warning = Color(0xFFCCBA96);
   static const error = Color(0xFFE5534B);
+
+  /// IPTV state dots: on (green), no connection / any failure ([error],
+  /// red) and off ([disabled], grey).
+  static const statusOn = Color(0xFF1ED760);
   static const disabled = Color(0xFF535353);
 
   // Flat surfaces only: the former bevel/shadow tokens resolve to the flat
@@ -105,6 +109,9 @@ abstract final class AppSpacing {
   static const lg = 24.0;
   static const xl = 32.0;
   static const xxl = 48.0;
+
+  /// Inner padding of list cards ([NeumorphicListTile]).
+  static const card = 20.0;
 }
 
 abstract final class AppDimensions {

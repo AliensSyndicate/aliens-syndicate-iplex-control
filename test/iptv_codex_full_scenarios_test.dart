@@ -311,10 +311,9 @@ void main() {
         await tester.pumpAndSettle();
 
         // Card with lastSuccessfulSyncAt displays date and time
-        expect(
-          find.textContaining('Última sincronização: 18/10/2026 às 00:00'),
-          findsOneWidget,
-        );
+        // Only the date and time (no label, no status text).
+        expect(find.text('18/10/2026 às 00:00'), findsOneWidget);
+        expect(find.textContaining('Última sincronização'), findsNothing);
         // Card without previous sync displays "Nunca sincronizada"
         expect(find.text('Nunca sincronizada'), findsOneWidget);
       },

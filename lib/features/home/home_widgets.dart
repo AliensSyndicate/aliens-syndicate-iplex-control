@@ -22,6 +22,7 @@ class HomeCard extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.width,
+    this.showCaption = false,
   });
   final Entry item;
   final VoidCallback onTap;
@@ -32,6 +33,9 @@ class HomeCard extends StatelessWidget {
   /// Grid cell width ("Ver tudo"): titles keep the 2:3 poster, channels a
   /// square tile. Null: the Home row sizes.
   final double? width;
+
+  /// Whether to show the text caption below the poster (default false for Home lists).
+  final bool showCaption;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +63,7 @@ class HomeCard extends StatelessWidget {
           width: width,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadii.md),
@@ -77,7 +82,9 @@ class HomeCard extends StatelessWidget {
                           case final seal?)
                         Positioned(
                           right: AppSpacing.xs,
-                          bottom: AppSpacing.xs,
+                          bottom: progress != null
+                              ? AppSpacing.md
+                              : AppSpacing.xs,
                           child: AgeRatingBadge(seal, size: 18),
                         ),
                       // "⋮": the content options (same as a long press).
@@ -114,44 +121,62 @@ class HomeCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                      // Progress bar placed at the bottom edge of the poster photo
+                      if (progress != null)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(AppRadii.md),
+                            ),
+                            child: LinearProgressIndicator(
+                              value: progress.fraction,
+                              minHeight: 4,
+                              color: const Color(0xFF00E676),
+                              backgroundColor: const Color(0x66000000),
+                            ),
+                          ),
+                        ),
+                      if (!showCaption)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          width: 0,
+                          height: 0,
+                          child: IgnorePointer(
+                            child: Opacity(opacity: 0, child: Text(item.name)),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
-              if (progress != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadii.xs),
-                  child: LinearProgressIndicator(
-                    value: progress.fraction,
-                    minHeight: 3,
-                    color: AppColors.primary,
-                    backgroundColor: AppColors.surfaceElevated,
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                item.name,
-                maxLines: item.year == null ? 2 : 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.bodyMedium.copyWith(
-                  fontSize: 13,
-                  height: 1.25,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              if (item.year case final year?)
+              if (showCaption) ...[
+                const SizedBox(height: AppSpacing.sm),
                 Text(
-                  '$year',
-                  maxLines: 1,
+                  item.name,
+                  maxLines: item.year == null ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.bodyMedium.copyWith(
-                    fontSize: 12,
+                    fontSize: 13,
                     height: 1.25,
-                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
                   ),
                 ),
+                if (item.year case final year?)
+                  Text(
+                    '$year',
+                    maxLines: 1,
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontSize: 12,
+                      height: 1.25,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
             ],
           ),
         ),
@@ -356,12 +381,9 @@ class HomeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final shown = items.take(limit).toList();
     final channel = shown.every((i) => i.isChannel);
-    final progress = shown.any((i) => i.progress != null);
-    final height =
-        (channel ? HomeCardSize.channelHeight : HomeCardSize.posterHeight) +
-        HomeCardSize.caption +
-        AppSpacing.sm +
-        (progress ? AppSpacing.xs + 3 : 0);
+    final height = channel
+        ? HomeCardSize.channelHeight
+        : HomeCardSize.posterHeight;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,11 +406,24 @@ class HomeRow extends StatelessWidget {
                       horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
                     ),
-                    child: Text(
-                      context.l.seeAll,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          context.l.seeAll,
+                          style: const TextStyle(
+                            color: Color(0xFF00E676),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: Color(0xFF00E676),
+                        ),
+                      ],
                     ),
                   ),
                 ),

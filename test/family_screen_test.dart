@@ -210,6 +210,56 @@ void main() {
     );
   });
 
+  testWidgets('member cards: on / off and the date it was last on', (
+    tester,
+  ) async {
+    final recent = DateTime.now().subtract(const Duration(minutes: 1));
+    final repo = FamilyRepository()
+      ..members = [
+        ...FamilyRepository().members,
+        Entry('m1', {
+          'name': 'Sam',
+          'role': 'member',
+          'lastActiveAt': recent.millisecondsSinceEpoch,
+        }),
+        Entry('m2', {
+          'name': 'Lia',
+          'role': 'member',
+          'lastActiveAt': DateTime(2026, 1, 2, 10, 30).millisecondsSinceEpoch,
+        }),
+        Entry('m3', {'name': 'Noa', 'role': 'member'}),
+      ];
+    await navigation.launch(tester, repo, location: '/users');
+    Color? dot(String id) => tester
+        .widget<NeumorphicStatusIndicator>(
+          find.descendant(
+            of: find.byKey(ValueKey('member-$id')),
+            matching: find.byType(NeumorphicStatusIndicator),
+          ),
+        )
+        .color;
+    // The account using the app is on; Sam reported a minute ago.
+    expect(dot('u'), AppColors.statusOn);
+    expect(dot('m1'), AppColors.statusOn);
+    // Lia: off, with the last time on; Noa never was.
+    expect(dot('m2'), AppColors.disabled);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('member-m2')),
+        matching: find.text('1/2/2026 10:30'),
+      ),
+      findsOneWidget,
+    );
+    expect(dot('m3'), AppColors.disabled);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('member-m3')),
+        matching: find.text('Never on'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('while loading, the page frame stays and a skeleton shows', (
     tester,
   ) async {

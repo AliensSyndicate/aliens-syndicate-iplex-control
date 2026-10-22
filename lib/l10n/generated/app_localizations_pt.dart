@@ -1855,4 +1855,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get removeFromContinueWatching => 'Remover de Continuar assistindo';
+
+  @override
+  String get neverOnline => 'Nunca ligado';
 }
