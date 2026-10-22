@@ -133,17 +133,18 @@ void main() {
     );
   }
 
-  testWidgets('a new account has its family already: no creation, no subscription', (
-    tester,
-  ) async {
-    final repo = AccessRepository(linked: true);
-    final container = await navigation.launch(tester, repo);
-    await go(tester, container, '/users');
-    expect(find.text('No additional members yet.'), findsOneWidget);
-    expect(find.text('Create a family'), findsNothing);
-    expect(repo.mutations, isNot(contains('createFamily')));
-    expect(repo.subscriptionReads, 0);
-  });
+  testWidgets(
+    'a new account has its family already: no creation, no subscription',
+    (tester) async {
+      final repo = AccessRepository(linked: true);
+      final container = await navigation.launch(tester, repo);
+      await go(tester, container, '/users');
+      expect(find.text('No additional members yet.'), findsOneWidget);
+      expect(find.text('Create a family'), findsNothing);
+      expect(repo.mutations, isNot(contains('createFamily')));
+      expect(repo.subscriptionReads, 0);
+    },
+  );
 
   testWidgets('expired subscription does not prevent requesting an IPTV sync', (
     tester,

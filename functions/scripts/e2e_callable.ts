@@ -62,9 +62,26 @@ async function scenarioA() {
   const recent = await a.call('readHome', {sourceId: source.id, recentSearchIds: [selectedItem.id, selectedItem.id], contextFamilyId: null});
   assert.deepEqual(recent.recentSearches.map((item: any) => item.id), [selectedItem.id]);
   step('search recent items resolve through the real callable without duplicates');
+  // Personal library: titles saved by TMDB identity, without any IPTV availability.
+  const lib = (input: Record<string, unknown>) => a.call('saveLibraryItem', {profileId: recent.profile.id, generation: recent.profile.generations.favorites, contextFamilyId: null, ...input});
+  await lib({list: 'favorites', kind: 'movie', tmdbId: 603, title: 'Matrix', year: 1999});
+  await lib({list: 'wishlist', kind: 'series', tmdbId: 1399, title: 'Game of Thrones', year: 2011});
+  await lib({list: 'favorites', kind: selectedItem.kind, contentId: selectedItem.id, sourceId: source.id, title: selectedItem.title});
+  let library = await a.call('readHome', {sourceId: source.id, contextFamilyId: null});
+  assert.deepEqual(library.library.wishlist.map((i: any) => [i.id, i.available]), [['tmdb-tv-1399', false]]);
+  assert.ok(library.library.favorites.some((i: any) => i.id === 'tmdb-movie-603' && i.available === false));
+  assert.ok(library.library.favorites.some((i: any) => i.id === selectedItem.id && i.available === true));
+  assert.ok(library.saved.favorites.includes('tmdb:movie:603') && !library.saved.favorites.includes('tmdb:tv:603'));
+  assert.deepEqual(await a.call('authorizeDiscovery', {contextFamilyId: null}), {ok: true});
+  assert.equal((await a.call('resolveTitle', {kind: 'series', tmdbId: 1399, title: 'Game of Thrones', contextFamilyId: null})).item, null);
+  step('library: TMDB titles saved to Favoritos/Lista de desejos without IPTV; discovery granted to the account');
   await a.call('deleteDevice', {id: device.id, contextFamilyId: null});
   await a.call('deleteSource', {id: source.id, contextFamilyId: null});
   step('TV unlinked and source deleted by the owner');
+  library = await a.call('readHome', {sourceId: null, contextFamilyId: null});
+  assert.deepEqual(library.library.wishlist.map((i: any) => i.id), ['tmdb-tv-1399']);
+  assert.ok(library.library.favorites.some((i: any) => i.id === 'tmdb-movie-603'));
+  step('library kept after the source was deleted (editorial titles stay, unavailable)');
   return a;
 }
 

@@ -30,6 +30,8 @@ String failureText(BuildContext context, Object error) {
     'clear-in-progress' => l.errorClearInProgress,
     'clear-failed' => l.errorClearFailed,
     'guest-not-persisted' => l.errorGuestNotPersisted,
+    'content-unavailable' => l.errorContentUnavailable,
+    'stale-generation' || 'generation-required' => l.errorStaleLibrary,
     'administrator-protected' => l.errorAdministratorProtected,
     'device-already-linked-elsewhere' => l.deviceLinkedElsewhere,
     'family-limit' => l.familyLimit,

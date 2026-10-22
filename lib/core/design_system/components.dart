@@ -1,6 +1,7 @@
 // Public entry point for the shared design system.
 export 'package:flutter_neumorphism_ui/flutter_neumorphism_ui.dart';
 
+export 'components/age_rating_badge.dart';
 export 'components/app_avatar.dart';
 export 'components/app_modal_sheet.dart';
 export 'components/app_dropdown_field.dart';

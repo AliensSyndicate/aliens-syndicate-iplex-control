@@ -13,6 +13,7 @@ import {lookup} from 'node:dns/promises';
 import {activePlayer,type Identity} from './service';
 import {classifyAudience} from './content_audience';
 import {profileView, ProfileView} from './family_profiles';
+import {TitleResolver, type LibraryList} from './library';
 
 type Kind='channel'|'movie'|'series';
 const fold=(v:string)=>v.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -272,61 +273,100 @@ function itemIndex(version:string,sourceId:string,catalog:Catalog) {
   return index;
 }
 const HOME_ROW=10;
+type Item=Catalog['items'][number];
+type Visible={sourceId:string;sourceName:string;version:string;item:Item};
+const publicItem=(v:Visible,id:string)=>({...v.item,id,catalogItemId:v.item.id,sourceId:v.sourceId,sourceName:v.sourceName,version:v.version});
 
-/** Control Home ("Meu iPlex" of the account's own profile): favorites, progress and
- * the recently added titles of the selected source, resolved to items the profile can
- * still open. Same scope and visibility rules as readSourceCatalog; generations
- * cleared in the Gestor are ignored, as on the TV. */
-export async function readHome(input:Record<string,unknown>,actor:Identity) {
-  if(actor.deviceId)throw new DomainError('permission-denied');
+/** Items of every enabled, unlocked source the actor's profile can see, by public id.
+ * `known` also holds the ids the profile cannot see (a saved link to one hides the entry). */
+async function visibleCatalog(actor:Identity,sources:FirebaseFirestore.QueryDocumentSnapshot[],onSource?:(source:FirebaseFirestore.QueryDocumentSnapshot,access:Awaited<ReturnType<typeof authorize>>,catalog:Catalog,name:string)=>void) {
+  const visible=new Map<string,Visible>(),known=new Set<string>();
+  for(const source of sources){
+    let access;
+    try{access=await authorize(actor,source.id);}
+    catch(e){if(e instanceof DomainError&&['not-found','pin-required'].includes(e.code))continue;throw e;}
+    const version=access.data.version as string,catalog=await load(version),name=String(source.data().name??'');
+    for(const [id,item] of itemIndex(version,source.id,catalog)){known.add(id);if(canSee(access.viewer,source.id,item))visible.set(id,{sourceId:source.id,sourceName:name,version,item});}
+    onSource?.(source,access,catalog,name);
+  }
+  return {visible,known};
+}
+const candidates=(visible:Map<string,Visible>)=>new Map([...visible].map(([id,v])=>[id,{id,sourceId:v.sourceId,kind:v.item.kind,title:v.item.title,year:v.item.year,tmdbId:v.item.tmdbId}]));
+
+async function homeScope(actor:Identity) {
   const db=getFirestore();
-  const selected=input.sourceId===undefined||input.sourceId===null?null:idSchema.parse(input.sourceId);
-  const recentSearchIds=z.array(idSchema).max(HOME_ROW).parse(input.recentSearchIds??[]);
-  const context=await db.runTransaction(async tx=>{
+  return db.runTransaction(async tx=>{
     const scope=await iptvWorkspace(tx,actor,false,false);
     const profileId=(await tx.get(scope.ref.collection('profile_links').doc(actor.uid))).data()?.profileId;
     const snap=typeof profileId==='string'?await tx.get(scope.ref.collection('profiles').doc(profileId)):null;
     const sources=(await tx.get(scope.ref.collection('sources'))).docs.filter(d=>d.data().enabled&&d.data().version);
     return {ref:scope.ref,profile:snap?.exists&&snap.data()?.deleting!==true?profileView(snap.id,snap.data()!):null,sources};
   });
-  type Item=Catalog['items'][number];
-  const visible=new Map<string,{sourceId:string;sourceName:string;version:string;item:Item}>();
+}
+
+/** Control Home ("Meu iPlex" of the account's own profile): favorites, wishlist, progress
+ * and the recently added titles of the selected source. Catalog items are resolved with
+ * the same scope and visibility rules as readSourceCatalog; saved titles that no catalog
+ * offers (yet) are returned as editorial entries (`available: false`) for non-kids
+ * profiles. Generations cleared in the Gestor are ignored, as on the TV.
+ * `favorites`/`myList`/`favoriteIds` keep the previous contract for older builds. */
+export async function readHome(input:Record<string,unknown>,actor:Identity) {
+  if(actor.deviceId)throw new DomainError('permission-denied');
+  const selected=input.sourceId===undefined||input.sourceId===null?null:idSchema.parse(input.sourceId);
+  const recentSearchIds=z.array(idSchema).max(HOME_ROW).parse(input.recentSearchIds??[]);
+  const context=await homeScope(actor);
   const recentMovies:Record<string,unknown>[]=[],recentSeries:Record<string,unknown>[]=[];
-  const publicItem=(sourceId:string,sourceName:string,version:string,i:Item)=>({...i,id:hash(`${sourceId}:${i.id}`),catalogItemId:i.id,sourceId,sourceName,version});
-  for(const source of context.sources){
-    let access;
-    try{access=await authorize(actor,source.id);}
-    catch(e){if(e instanceof DomainError&&['not-found','pin-required'].includes(e.code))continue;throw e;}
-    const version=access.data.version as string,catalog=await load(version),name=String(source.data().name??'');
-    for(const [id,item] of itemIndex(version,source.id,catalog))if(canSee(access.viewer,source.id,item))visible.set(id,{sourceId:source.id,sourceName:name,version,item});
-    if(source.id!==selected)continue;
+  const {visible,known}=await visibleCatalog(actor,context.sources,(source,access,catalog,name)=>{
+    if(source.id!==selected)return;
     // Only providers that publish an "added" date: nothing is guessed for the others.
     const recent=(kind:Kind)=>catalog.items.filter(i=>i.kind===kind&&i.addedAt&&canSee(access.viewer,source.id,i))
-      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,HOME_ROW).map(i=>publicItem(source.id,name,version,i));
+      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,HOME_ROW)
+      .map(i=>publicItem({sourceId:source.id,sourceName:name,version:access.data.version,item:i},hash(`${source.id}:${i.id}`)));
     recentMovies.push(...recent('movie'));recentSeries.push(...recent('series'));
-  }
+  });
   const profile=context.profile;
+  const resolved=(id:string)=>{const v=visible.get(id);return v?publicItem(v,id):null;};
   const recentSearches:Record<string,unknown>[]=[];
-  if(profile?.type!=='guest')for(const id of new Set(recentSearchIds)){
-    const v=visible.get(id);
-    if(v)recentSearches.push(publicItem(v.sourceId,v.sourceName,v.version,v.item));
-  }
-  let favoriteIds:string[]=[],favorites:Record<string,unknown>[]=[],myList:Record<string,unknown>[]=[],continueWatching:Record<string,unknown>[]=[];
+  if(profile?.type!=='guest')for(const id of new Set(recentSearchIds)){const item=resolved(id);if(item)recentSearches.push(item);}
+  const favoriteIds:string[]=[],favorites:Record<string,unknown>[]=[],myList:Record<string,unknown>[]=[],continueWatching:Record<string,unknown>[]=[];
+  const library:Record<LibraryList,Record<string,unknown>[]>={favorites:[],wishlist:[]};
+  const saved:Record<LibraryList,string[]>={favorites:[],wishlist:[]};
   if(profile&&profile.type!=='guest'){
     const ref=context.ref.collection('profiles').doc(profile.id);
-    const [fav,progress]=await Promise.all([
+    const [fav,wish,progress]=await Promise.all([
       ref.collection('favorites').orderBy('updatedAt','desc').limit(100).get(),
+      ref.collection('wishlist').orderBy('updatedAt','desc').limit(100).get(),
       ref.collection('watch_progress').orderBy('updatedAt','desc').limit(50).get(),
     ]);
-    const resolved=(contentId:string)=>{const v=visible.get(contentId);return v?publicItem(v.sourceId,v.sourceName,v.version,v.item):null;};
-    for(const doc of fav.docs){
-      const d=doc.data();
-      if(d.generation!==profile.generations.favorites||typeof d.contentId!=='string')continue;
-      const item=resolved(d.contentId);if(!item)continue;
-      favoriteIds.push(d.contentId);
-      const row=item.kind==='channel'?favorites:myList;
-      if(row.length<HOME_ROW)row.push(item);
+    const resolver=new TitleResolver(candidates(visible),known,selected);
+    const links=getFirestore().batch();let linkWrites=0;
+    for(const [list,rows] of [['favorites',fav],['wishlist',wish]] as const){
+      const seen=new Set<string>();
+      for(const doc of rows.docs){
+        const d=doc.data();
+        if(d.generation!==profile.generations.favorites||typeof d.contentId!=='string')continue;
+        const link=resolver.resolve(d);
+        if(link.hidden)continue;
+        const item=link.id?resolved(link.id):null;
+        const canonical=typeof d.tmdbKey==='string'?`tmdb:${d.tmdbKey}`:item?`item:${item.id}`:`doc:${doc.id}`;
+        if(seen.has(canonical)||(item&&seen.has(`item:${item.id}`)))continue;
+        seen.add(canonical);if(item)seen.add(`item:${item.id}`);
+        saved[list].push(...new Set([doc.id,d.contentId,...(typeof d.catalogContentId==='string'?[d.catalogContentId]:[]),...(item?[item.id as string]:[]),...(typeof d.tmdbKey==='string'?[`tmdb:${d.tmdbKey}`]:[])]));
+        // Associate a saved title with the catalog item found later (same library row).
+        if(item&&link.via!=='link'&&linkWrites<50){links.update(doc.ref,{contentId:item.id,catalogContentId:item.id,sourceId:item.sourceId});linkWrites++;}
+        if(item){
+          const entry={...item,library:{id:doc.id,...(typeof d.tmdbId==='number'?{tmdbId:d.tmdbId}:{})},available:true};
+          if(library[list].length<HOME_ROW)library[list].push(entry);
+          if(list==='favorites'){favoriteIds.push(item.id as string);const row=item.kind==='channel'?favorites:myList;if(row.length<HOME_ROW)row.push(item);}
+        }else if(typeof d.tmdbId==='number'&&(d.kind==='movie'||d.kind==='series')&&profile.type!=='kids'){
+          if(library[list].length<HOME_ROW)library[list].push({id:doc.id,kind:d.kind,title:String(d.title??''),tmdbId:d.tmdbId,
+            ...(typeof d.originalTitle==='string'?{originalTitle:d.originalTitle}:{}),...(typeof d.year==='number'?{year:d.year}:{}),
+            ...(typeof d.poster==='string'?{poster:d.poster}:{}),library:{id:doc.id,tmdbId:d.tmdbId},available:false});
+        }
+      }
     }
+    // Best effort: a row removed or cleared meanwhile makes update fail, never resurrects it.
+    if(linkWrites)await links.commit().catch(()=>{});
     for(const doc of progress.docs){
       const d=doc.data();
       if(continueWatching.length>=HOME_ROW||d.generation!==profile.generations.progress||typeof d.contentId!=='string')continue;
@@ -338,9 +378,31 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
       continueWatching.push({...item,progress:{position:Number(d.position),duration:Number(d.duration),updatedAt:Number(d.updatedAt)||0},...(episode?{episodeId:episode[2]}:{})});
     }
   }
-  return {schemaVersion:1,selectedSourceId:selected,
+  return {schemaVersion:2,selectedSourceId:selected,
     profile:profile?{id:profile.id,name:profile.name,type:profile.type,generations:profile.generations}:null,
-    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries,recentSearches};
+    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries,recentSearches,library,saved};
+}
+
+const titleQuerySchema=z.object({kind:z.enum(['movie','series']),tmdbId:z.number().int().positive().max(999_999_999),
+  title:z.string().trim().max(300).optional(),originalTitle:z.string().trim().max(300).optional(),year:z.number().int().min(1870).max(2100).optional(),sourceId:idSchema.nullish()});
+/** Is an editorial title (TMDB) playable from the catalog this account's profile can see?
+ * Returns the public catalog item only for a confident correspondence (see TitleResolver). */
+export async function resolveTitle(input:Record<string,unknown>,actor:Identity) {
+  if(actor.deviceId)throw new DomainError('permission-denied');
+  const q=titleQuerySchema.parse({kind:input.kind,tmdbId:input.tmdbId,title:input.title,originalTitle:input.originalTitle,year:input.year,sourceId:input.sourceId});
+  const context=await homeScope(actor);
+  const {visible,known}=await visibleCatalog(actor,context.sources);
+  const link=new TitleResolver(candidates(visible),known,q.sourceId??null).resolve(q);
+  const v=link.id?visible.get(link.id):undefined;
+  return {item:v?publicItem(v,link.id!):null,match:v?link.via:null};
+}
+
+/** Catalog item the account's profile can see right now (library writes). */
+export async function libraryItem(actor:Identity,sourceId:string,itemId:string) {
+  const access=await authorize(actor,sourceId),catalog=await load(access.data.version);
+  const item=itemIndex(access.data.version,sourceId,catalog).get(itemId);
+  if(!item||!canSee(access.viewer,sourceId,item))return null;
+  return {kind:item.kind,title:item.title,year:item.year,tmdbId:item.tmdbId};
 }
 
 /** Library reads are now server-authorized; direct Firestore access is closed. */

@@ -65,12 +65,10 @@ class UsersPage extends ConsumerWidget {
                             onTap: () async {
                               Navigator.pop(c);
                               try {
-                                await ref
-                                    .read(repositoryProvider)
-                                    .mutate('setGuestEnabled', {
-                                      'enabled': true,
-                                      'name': l.profileTypeGuest,
-                                    });
+                                await ref.read(repositoryProvider).mutate(
+                                  'setGuestEnabled',
+                                  {'enabled': true, 'name': l.profileTypeGuest},
+                                );
                               } catch (e) {
                                 if (context.mounted) showFailure(context, e);
                               }
@@ -249,9 +247,10 @@ class _FamilyMembers extends ConsumerWidget {
                   title: l.cancelInvitation,
                   body: l.cancelInvitationBody,
                   confirmLabel: l.cancelInvitation,
-                  operation: () => ref
-                      .read(repositoryProvider)
-                      .mutate('cancelMembershipRequest', {'id': request.id}),
+                  operation: () => ref.read(repositoryProvider).mutate(
+                    'cancelMembershipRequest',
+                    {'id': request.id},
+                  ),
                 ),
               ),
           ],

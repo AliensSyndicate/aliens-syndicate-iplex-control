@@ -217,6 +217,8 @@ async function clearProfileData(p: Record<string, unknown>, resolve: ScopeResolv
   if (started.done) return {ok: true, generation: started.generation};
   try {
     let deleted = await deleteOlder(started.profileRef.collection(CATEGORY_COLLECTION[category]), started.generation);
+    // Favoritos and Lista de desejos share the `favorites` generation: one personal library.
+    if (category === 'favorites') deleted += await deleteOlder(started.profileRef.collection('wishlist'), started.generation);
     const legacy = LEGACY_TOP_LEVEL[category];
     if (legacy) deleted += await deleteOlder(db.collection(legacy).where('familyId', '==', started.fid).where('profileId', '==', profileId), started.generation);
     await started.jobRef.update({status: 'completed', completedAt: Date.now(), updatedAt: Date.now(), deleted: FieldValue.increment(deleted)});

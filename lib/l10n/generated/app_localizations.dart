@@ -2877,6 +2877,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Each account belongs to a single family.'**
   String get errorFamilyExclusive;
+
+  /// No description provided for @homeWishlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Wishlist'**
+  String get homeWishlist;
+
+  /// No description provided for @addToWishlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to wishlist'**
+  String get addToWishlist;
+
+  /// No description provided for @removeFromWishlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from wishlist'**
+  String get removeFromWishlist;
+
+  /// No description provided for @notAvailableToWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available to watch in your IPTV catalog. You can still save it.'**
+  String get notAvailableToWatch;
+
+  /// No description provided for @originalTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Original title: {title}'**
+  String originalTitleLabel(String title);
+
+  /// No description provided for @releaseDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Released {date}'**
+  String releaseDateLabel(String date);
+
+  /// No description provided for @ratingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating {score}/10 (TMDB)'**
+  String ratingLabel(String score);
+
+  /// No description provided for @crewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Crew'**
+  String get crewLabel;
+
+  /// No description provided for @seasonsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Seasons'**
+  String get seasonsTitle;
+
+  /// No description provided for @seasonsFromTmdb.
+  ///
+  /// In en, this message translates to:
+  /// **'Editorial information from TMDB. Availability depends on your IPTV source.'**
+  String get seasonsFromTmdb;
+
+  /// No description provided for @availableEpisodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Available on your IPTV'**
+  String get availableEpisodesTitle;
+
+  /// No description provided for @filmography.
+  ///
+  /// In en, this message translates to:
+  /// **'Filmography'**
+  String get filmography;
+
+  /// No description provided for @careerTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Career timeline'**
+  String get careerTimeline;
+
+  /// No description provided for @biography.
+  ///
+  /// In en, this message translates to:
+  /// **'Biography'**
+  String get biography;
+
+  /// No description provided for @bornLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Born {date}'**
+  String bornLabel(String date);
+
+  /// No description provided for @diedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Died {date}'**
+  String diedLabel(String date);
+
+  /// No description provided for @moviesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Movies'**
+  String get moviesLabel;
+
+  /// No description provided for @seriesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get seriesLabel;
+
+  /// No description provided for @movieKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Movie'**
+  String get movieKind;
+
+  /// No description provided for @seriesKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get seriesKind;
+
+  /// No description provided for @asCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'as {character}'**
+  String asCharacter(String character);
+
+  /// No description provided for @undatedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No date'**
+  String get undatedLabel;
+
+  /// No description provided for @metadataUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Information about this title is unavailable right now.'**
+  String get metadataUnavailable;
+
+  /// No description provided for @personUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Information about this person is unavailable right now.'**
+  String get personUnavailable;
+
+  /// No description provided for @discoveryNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'This profile only shows titles from your catalog.'**
+  String get discoveryNotAllowed;
+
+  /// No description provided for @errorContentUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This title is not available for this profile.'**
+  String get errorContentUnavailable;
+
+  /// No description provided for @errorStaleLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Your lists were updated on another device. Try again.'**
+  String get errorStaleLibrary;
+
+  /// No description provided for @directedByLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Directed by {names}'**
+  String directedByLabel(String names);
+
+  /// No description provided for @createdByLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Created by {names}'**
+  String createdByLabel(String names);
+
+  /// No description provided for @andConjunction.
+  ///
+  /// In en, this message translates to:
+  /// **'and'**
+  String get andConjunction;
+
+  /// No description provided for @continueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueLabel;
+
+  /// No description provided for @restartLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start over'**
+  String get restartLabel;
+
+  /// No description provided for @favoriteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite'**
+  String get favoriteAction;
+
+  /// No description provided for @unfavoriteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfavorite'**
+  String get unfavoriteAction;
+
+  /// No description provided for @saveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get saveAction;
+
+  /// No description provided for @unsaveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get unsaveAction;
+
+  /// No description provided for @seasonEpisodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Season {season} - Episode {episode}'**
+  String seasonEpisodeLabel(int season, int episode);
 }
 
 class _AppLocalizationsDelegate

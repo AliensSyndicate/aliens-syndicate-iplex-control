@@ -1,13 +1,6 @@
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
-import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
-import 'package:aliens_syndicate_iplex_control/features/home/content_details_sheet.dart';
-import 'package:aliens_syndicate_iplex_control/features/home/home_data.dart';
-import 'package:aliens_syndicate_iplex_control/features/home/metadata_service.dart';
-import 'package:aliens_syndicate_iplex_control/features/watch_on_tv/watch_on_tv_sheet.dart';
-import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -55,89 +48,6 @@ navigation.SessionRepository repoWith(Map<String, dynamic> home) =>
       ]
       ..home = home;
 
-/// Sheet host with its own overrides (metadata, repository).
-class _SheetRepo extends fixtures.TestRepository {
-  _SheetRepo() : super(signedIn: true);
-  final payloads = <(String, Map<String, dynamic>)>[];
-  @override
-  Future<Map<String, dynamic>> mutate(
-    String action, [
-    Map<String, dynamic> payload = const {},
-  ]) async {
-    payloads.add((action, Map.of(payload)));
-    if (action == 'readSourceEpg') {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      return {
-        'programmes': [
-          {
-            'title': 'Jornal da Manhã',
-            'startAt': now - 600000,
-            'endAt': now + 600000,
-          },
-          {
-            'title': 'Esporte Total',
-            'startAt': now + 600000,
-            'endAt': now + 4200000,
-          },
-        ],
-      };
-    }
-    return {};
-  }
-}
-
-class _Metadata implements MetadataService {
-  _Metadata(this.value);
-  final ContentMetadata? value;
-  @override
-  Future<ContentMetadata?> summary(Entry item) async => value;
-  @override
-  Future<ContentMetadata?> details(Entry item) async => value;
-}
-
-Future<_SheetRepo> _openSheet(
-  WidgetTester tester,
-  Map<String, dynamic> data, {
-  HomeProfile? profile = const HomeProfile('admin', 'Account', 'admin', 2),
-  bool favorite = false,
-  ContentMetadata? metadata,
-}) async {
-  tester.view.physicalSize = const Size(390, 2000);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
-  final repo = _SheetRepo();
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        repositoryProvider.overrideWithValue(repo),
-        metadataServiceProvider.overrideWithValue(_Metadata(metadata)),
-      ],
-      child: MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () => showContentDetails(
-                context,
-                item: Entry(data['id'] as String, data),
-                profile: profile,
-                favorite: favorite,
-                onLibraryChanged: () {},
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-  await tester.tap(find.text('open'));
-  await tester.pumpAndSettle();
-  return repo;
-}
-
 void main() {
   setUpAll(fixtures.loadTestFont);
   setUp(
@@ -159,9 +69,12 @@ void main() {
             progress: {'position': 30, 'duration': 100},
           ),
         ],
-        'myList': [
-          for (var i = 0; i < 12; i++) item('l$i', 'Título $i', 'movie'),
-        ],
+        'library': {
+          'favorites': [item('ch1', 'Canal Notícias', 'channel')],
+          'wishlist': [
+            for (var i = 0; i < 12; i++) item('l$i', 'Título $i', 'movie'),
+          ],
+        },
         'recentMovies': [item('r1', 'Filme Novo', 'movie')],
         'recentSeries': [item('r2', 'Série Nova', 'series')],
       });
@@ -171,14 +84,14 @@ void main() {
       final titles = [
         'Favorites',
         'Continue watching',
-        'My list',
+        'Wishlist',
         'Recently added movies',
         'Recently added series',
       ];
       final ys = [for (final t in titles) tester.getTopLeft(find.text(t)).dy];
       expect(ys, [...ys]..sort(), reason: 'fixed section order');
       final myList = tester.widget<ListView>(
-        find.byKey(const PageStorageKey('home-row-My list')),
+        find.byKey(const PageStorageKey('home-row-Wishlist')),
       );
       expect(
         (myList.childrenDelegate as SliverChildBuilderDelegate).childCount,
@@ -210,7 +123,7 @@ void main() {
     for (final t in [
       'Favorites',
       'Continue watching',
-      'My list',
+      'Wishlist',
       'Recently added series',
     ]) {
       expect(find.text(t), findsNothing);
@@ -323,121 +236,6 @@ void main() {
     container.read(routerProvider).go('/account');
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('account-public-code')), findsOneWidget);
-  });
-
-  testWidgets('movie sheet: TMDB details, synopsis, cast and list actions', (
-    tester,
-  ) async {
-    final repo = await _openSheet(
-      tester,
-      item('m1', 'Missão Fictícia', 'movie', year: '2021'),
-      metadata: const ContentMetadata(
-        overview: 'Uma missão.',
-        genres: ['Ação', 'Drama'],
-        year: 2021,
-        runtimeMinutes: 118,
-        certification: '14',
-        cast: ['Ana', 'Rui'],
-      ),
-    );
-    expect(find.text('Missão Fictícia'), findsOneWidget);
-    expect(find.text('2021 | Ação | 1h 58min'), findsOneWidget);
-    expect(find.byKey(const Key('details-stars')), findsNothing);
-    expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
-    expect(find.text('Rated 14'), findsOneWidget);
-    expect(find.text('Ação, Drama'), findsOneWidget);
-    expect(find.text('Filmes'), findsOneWidget);
-    expect(find.text('Minha IPTV'), findsNothing);
-    expect(find.text('Uma missão.'), findsOneWidget);
-    expect(find.text('Cast: Ana, Rui'), findsOneWidget);
-    expect(find.byKey(const Key('details-continue')), findsNothing);
-    await tester.tap(find.text('Add to My list'));
-    await tester.pumpAndSettle();
-    expect(repo.payloads.last.$1, 'favorite');
-    expect(repo.payloads.last.$2, {
-      'profileId': 'admin',
-      'contentId': 'm1',
-      'title': 'Missão Fictícia',
-      'generation': 2,
-    });
-    expect(find.text('Remove from My list'), findsOneWidget);
-  });
-
-  testWidgets('dragging the full-screen sheet down closes it', (tester) async {
-    await _openSheet(tester, item('m1', 'Missão Fictícia', 'movie'));
-    expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
-    await tester.drag(find.text('Missão Fictícia'), const Offset(0, 400));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('details-watch-on-tv')), findsNothing);
-  });
-
-  testWidgets('movie without a TMDB match keeps source data only', (
-    tester,
-  ) async {
-    await _openSheet(tester, {
-      ...item('m2', 'Filme Raro', 'movie', year: '1999'),
-      'plot': 'Sinopse da fonte.',
-    });
-    expect(find.text('1999 | Filmes'), findsOneWidget);
-    expect(find.text('Sinopse da fonte.'), findsOneWidget);
-    expect(find.textContaining('Cast'), findsNothing);
-    expect(find.textContaining('min'), findsNothing);
-  });
-
-  testWidgets(
-    'series sheet: seasons; "continue" opens Watch on TV with resume and episode',
-    (tester) async {
-      await _openSheet(
-        tester,
-        item(
-          'se1',
-          'Série Exemplo',
-          'series',
-          progress: {'position': 10, 'duration': 100},
-          episodeId: '3011',
-        ),
-        metadata: const ContentMetadata(seasonCount: 2, genres: ['Drama']),
-      );
-      expect(find.textContaining('2 seasons'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('details-continue')));
-      await tester.pumpAndSettle();
-      final sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
-      expect(
-        [sheet.resume, sheet.episodeId, sheet.item.id],
-        [true, '3011', 'se1'],
-      );
-    },
-  );
-
-  testWidgets(
-    'channel sheet: live info and guide, no invented runtime or cast',
-    (tester) async {
-      final repo = await _openSheet(
-        tester,
-        item('ch1', 'Canal Notícias', 'channel', epgId: 'news.br'),
-      );
-      expect(find.textContaining('Live channel'), findsOneWidget);
-      expect(find.textContaining('Now · '), findsOneWidget);
-      expect(find.textContaining('Jornal da Manhã'), findsOneWidget);
-      expect(find.textContaining('Up next · '), findsOneWidget);
-      expect(find.textContaining('min'), findsNothing);
-      expect(find.textContaining('Cast'), findsNothing);
-      expect(repo.payloads.first.$1, 'readSourceEpg');
-      expect(repo.payloads.first.$2, {'id': 's', 'channelId': 'news.br'});
-      expect(find.text('Add to favorites'), findsOneWidget);
-    },
-  );
-
-  testWidgets('guest or missing profile: no list actions, Watch on TV only', (
-    tester,
-  ) async {
-    await _openSheet(
-      tester,
-      item('m1', 'Missão', 'movie'),
-      profile: const HomeProfile('guest', 'Visitante', 'guest', 0),
-    );
-    expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
-    expect(find.text('Add to My list'), findsNothing);
   });
 
   testWidgets(

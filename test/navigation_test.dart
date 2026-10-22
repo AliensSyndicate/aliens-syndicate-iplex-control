@@ -270,10 +270,7 @@ void main() {
   testWidgets(
     '5 and 6: the Family tab shows the empty family and adding members opens the invite form; back preserves the tab',
     (tester) async {
-      final c = await launch(
-        tester,
-        SessionRepository(uid: 'u', linked: true),
-      );
+      final c = await launch(tester, SessionRepository(uid: 'u', linked: true));
       c.read(routerProvider).go('/users');
       await tester.pumpAndSettle();
       expect(find.text('Account family'), findsOneWidget);
@@ -585,7 +582,8 @@ void main() {
         };
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
-      expect(find.text('My list'), findsOneWidget);
+      // Older backend payload: "my list" titles are shown under Favoritos.
+      expect(find.text('Favorites'), findsOneWidget);
       expect(find.text('Available title'), findsOneWidget);
     },
   );
@@ -733,7 +731,7 @@ void main() {
     },
   );
   testWidgets(
-    'details sheet: list actions only with a profile; favorite writes carry its generation',
+    'details page: list actions only with a profile; library writes carry its generation',
     (tester) async {
       final item = {
         'id': 'film',
@@ -753,11 +751,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Watch on TV'), findsOneWidget);
       expect(
-        find.text('Add to My list'),
+        find.byKey(const Key('details-favorite')),
         findsNothing,
         reason: 'no profile, no list write',
       );
-      Navigator.of(tester.element(find.text('Watch on TV'))).pop();
+      await tester.tap(find.byKey(const Key('details-back')));
       await tester.pumpAndSettle();
 
       repo.home = {
@@ -776,22 +774,27 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('home-card-film')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add to My list'));
+      await tester.tap(find.byKey(const Key('details-favorite')));
       await tester.pumpAndSettle();
       final write = repo.mutationPayloads
-          .lastWhere((m) => m.$1 == 'favorite')
+          .lastWhere((m) => m.$1 == 'saveLibraryItem')
           .$2;
       expect(write, {
         'profileId': 'admin',
-        'contentId': 'film',
-        'title': 'Available title',
         'generation': 3,
+        'list': 'favorites',
+        'kind': 'movie',
+        'contentId': 'film',
+        'sourceId': 's',
+        'title': 'Available title',
       });
-      expect(find.text('Remove from My list'), findsOneWidget);
-      await tester.tap(find.text('Remove from My list'));
+      expect(find.bySemanticsLabel('Unfavorite'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('details-favorite')));
       await tester.pumpAndSettle();
       expect(
-        repo.mutationPayloads.lastWhere((m) => m.$1 == 'favorite').$2['remove'],
+        repo.mutationPayloads
+            .lastWhere((m) => m.$1 == 'saveLibraryItem')
+            .$2['remove'],
         true,
       );
       expect(tester.takeException(), null);

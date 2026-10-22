@@ -6,7 +6,7 @@ import ipaddr from 'ipaddr.js';
 import {z} from 'zod';
 import {DomainError,hash} from './domain';
 import {normalizeAgeRating} from './content_audience';
-export const itemSchema=z.object({id:z.string(),title:z.string().min(1).max(300),titleKey:z.string(),kind:z.enum(['channel','movie','series']),category:z.string().max(300),providerRef:z.string(),epgId:z.string().max(300).optional(),categoryId:z.string().optional(),imageRef:z.string().max(1000).optional(),addedAt:z.number().int().positive().optional(),containerExtension:z.string().max(20).optional(),plot:z.string().max(10000).optional(),year:z.union([z.string(),z.number()]).optional(),rating:z.union([z.string(),z.number()]).optional(),ageRating:z.string().max(20).optional()});
+export const itemSchema=z.object({id:z.string(),title:z.string().min(1).max(300),titleKey:z.string(),kind:z.enum(['channel','movie','series']),category:z.string().max(300),providerRef:z.string(),epgId:z.string().max(300).optional(),categoryId:z.string().optional(),imageRef:z.string().max(1000).optional(),addedAt:z.number().int().positive().optional(),containerExtension:z.string().max(20).optional(),plot:z.string().max(10000).optional(),year:z.union([z.string(),z.number()]).optional(),rating:z.union([z.string(),z.number()]).optional(),ageRating:z.string().max(20).optional(),tmdbId:z.number().int().positive().max(999999999).optional()});
 export const catalogSchema=z.object({schemaVersion:z.literal(1),items:z.array(itemSchema).max(100000),categories:z.array(z.object({id:z.string(),name:z.string(),kind:z.enum(['channel','movie','series'])})).optional(),seriesDetails:z.record(z.unknown()).optional()});
 export type Catalog=z.infer<typeof catalogSchema>;
 export function publicAddress(value:string):boolean {
@@ -258,6 +258,14 @@ export function providerAddedAt(value: unknown, now = Date.now()): number | unde
   if (!Number.isInteger(seconds) || seconds < 946684800 || seconds * 1000 > now + 86_400_000) return undefined;
   return seconds * 1000;
 }
+/** TMDB id published by the provider (Xtream `tmdb`/`tmdb_id`): the strongest link between a
+ * catalog item and an editorial title. Anything that is not a plain positive id is ignored. */
+export function providerTmdbId(value: unknown): number | undefined {
+  const raw = String(scalar(value) ?? '').trim();
+  if (!/^\d{1,9}$/.test(raw)) return undefined;
+  const id = Number(raw);
+  return id > 0 ? id : undefined;
+}
 /** Tolerant Xtream rows: a malformed row is skipped, never the whole catalog. */
 export function parseXtream(rows:unknown,kind:'channel'|'movie'|'series',categories:Catalog['categories']=[],stats?:{skipped:number}):Catalog['items'] {
  if(!Array.isArray(rows))return [];
@@ -274,11 +282,12 @@ export function parseXtream(rows:unknown,kind:'channel'|'movie'|'series',categor
    const extension=String(scalar(x.container_extension)??'');
    const year=scalar(x.year)??scalar(x.releaseDate);
    const imageRef=safeImageUrl(kind==='series'?x.cover??x.stream_icon:x.stream_icon??x.cover),addedAt=providerAddedAt(x.added??x.last_modified);
+   const tmdbId=providerTmdbId(x.tmdb??x.tmdb_id);
    items.push(itemSchema.parse({id:hash(`${kind}:${providerRef}`),title,titleKey:title.toLocaleLowerCase('en').normalize('NFKD'),kind,
      category:titleOf(names.get(categoryId)??categoryId),categoryId,providerRef,
      ...(typeof x.epg_channel_id==='string'&&x.epg_channel_id?{epgId:x.epg_channel_id.slice(0,300)}:{}),
      ...(/^\w{1,20}$/.test(extension)?{containerExtension:extension}:{}),...(imageRef?{imageRef}:{}),...(addedAt?{addedAt}:{}),...(typeof x.plot==='string'&&x.plot?{plot:x.plot.slice(0,10000)}:{}),
-     ...(year!==undefined&&year!==''?{year}:{}),...(scalar(x.rating)!==undefined&&x.rating!==''?{rating:scalar(x.rating)}:{}),...(ageRating?{ageRating}:{})}));
+     ...(year!==undefined&&year!==''?{year}:{}),...(scalar(x.rating)!==undefined&&x.rating!==''?{rating:scalar(x.rating)}:{}),...(ageRating?{ageRating}:{}),...(tmdbId&&kind!=='channel'?{tmdbId}:{})}));
  }
  return items;
 }

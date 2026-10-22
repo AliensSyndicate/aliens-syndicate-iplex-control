@@ -19,7 +19,7 @@ Gerações limpas no Gestor são ignoradas, como na TV. O perfil é o vinculado 
 
 ## Backend
 - `manager` → `readHome` (`iptv_catalog_access.ts`): resolve favoritos/progresso em itens que o perfil ainda pode abrir (mesmas regras de `readSourceCatalog`/`canSee`, fontes protegidas bloqueadas são puladas) + recentes da fonte selecionada.
-- Itens do catálogo: `imageRef` (logo/capa da fonte — `http` ou `https` como publicado, sem credenciais/tokens na URL) e `addedAt`. Versão do parser `parser-5`: a próxima sincronização de cada fonte regrava o catálogo com esses campos.
+- Itens do catálogo: `imageRef` (logo/capa da fonte — `http` ou `https` como publicado, sem credenciais/tokens na URL) e `addedAt`. Versão do parser `parser-6` (acrescenta `tmdbId` publicado pelo provedor Xtream): a próxima sincronização de cada fonte regrava o catálogo com esses campos.
 - `manager` → `authorizeMetadata` para contas do Control; `iplexWebTmdb` aceita a conta do Control **com App Check** (autoriza pela `manager`), TVs continuam pela `player`. A chave TMDB fica no servidor.
 - `requestPlayback` aceita `resume`; a TV (`PlayRequestCoordinator`) abre o player com `r=1`.
 
@@ -27,8 +27,17 @@ Gerações limpas no Gestor são ignoradas, como na TV. O perfil é o vinculado 
 Bottom sheet com todas as fontes, estado de sincronização e indicador da selecionada; só fontes com catálogo publicado podem ser escolhidas. A escolha vale por conta+escopo, persiste entre aberturas (`shared_preferences`) e afeta busca e recém-adicionados; as seções pessoais agregam todas as fontes.
 
 ## Publicação necessária (pendente de autorização)
-1. Functions do Control: `manager`, `player`, `processIptvSyncJobTrigger`, `recoverIptvJobs` (readHome, metadados, `resume`, parser-5).
-2. Functions do Web: `iplexWebTmdb` (rota do Control).
+1. Functions do Control: `manager`, `player`, `processIptvSyncJobTrigger`, `recoverIptvJobs` (readHome v2, biblioteca, descoberta, `resume`, parser-6).
+2. Functions do Web: `iplexWebTmdb` (rota do Control + `/api/tmdb/discover/*`).
 3. Hosting do Web (`resume` na TV).
 4. Novo build do Control — **antes do passo 1 a Home do Control em produção mostraria erro**, então o app só deve ser distribuído depois.
 5. Ressincronizar as fontes para gravar `addedAt`/`imageRef`.
+
+## Detalhes em tela completa, pessoas e biblioteca (21/10/2026)
+- O sheet de detalhes foi substituído por páginas completas nas rotas da aba Home: `/home/title` (item do catálogo em `extra`), `/home/title/:kind/:tmdbId` (título editorial) e `/home/person/:id`. A pilha de navegação é preservada (Home → filme → pessoa → outro filme …) e o Voltar percorre a mesma pilha. O visual reaproveita o do sheet (arte fixa com gradiente, título, fatos, estrelas, `AppButton`) e `PageTemplate`/`EntryTile`/`SectionHeader`/`AppAvatar`.
+- Linhas da Home: **Favoritos** (canais e títulos) · Continuar assistindo · **Lista de desejos** · recentes. Títulos salvos que nenhuma fonte oferece aparecem com o pôster do TMDB. Toque longo em qualquer card abre as duas ações.
+- “Assistir na TV” só aparece com item reproduzível autorizado (`resolveTitle` para títulos editoriais); caso contrário, aviso discreto de indisponibilidade, com Favoritos/Lista de desejos funcionando.
+- Séries: temporadas do TMDB (editorial) separadas dos episódios disponíveis na fonte IPTV (únicos enviados à TV).
+- Perfil infantil: sem descoberta editorial (sem página de pessoa, sem títulos fora do catálogo). Visitante: sem ações de lista.
+- Contrato completo: `CONTRACTS.md` §2.2. Capturas (dados de teste dos testes de widget): `docs/screenshots/details/`.
+- Ajustes visuais da página de título: fundo = pôster original do TMDB (`posterOriginal`, `cover`) com transição para o preto na parte inferior; selo de classificação indicativa ClassInd (`AgeRatingBadge`) com os motivos do TMDB (`certificationDescriptors`) logo antes das estrelas; direção (filme) / criação (série) antes da sinopse; elenco só com atores, fotos 3:4 clicáveis; botões sem ícones; sinopse completa.

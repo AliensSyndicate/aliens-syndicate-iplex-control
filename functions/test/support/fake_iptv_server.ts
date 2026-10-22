@@ -75,7 +75,7 @@ export async function startFakeProvider(): Promise<FakeProvider> {
         ]);
         case 'get_vod_categories': return json(res, [{category_id: '10', category_name: 'Filmes'}]);
         case 'get_vod_streams': return json(res, [
-          {stream_id: 201, name: 'Missão Fictícia', category_id: '10', container_extension: 'mkv', year: '2021', rating: '7.1', added: '1700000000', stream_icon: 'https://img.example.com/p/missao.jpg'},
+          {stream_id: 201, name: 'Missão Fictícia', category_id: '10', container_extension: 'mkv', year: '2021', tmdb: '1001', rating: '7.1', added: '1700000000', stream_icon: 'https://img.example.com/p/missao.jpg'},
           {stream_id: 202, name: 'Aventura no Parque', category_id: '10', container_extension: 'mp4', age: 'L', added: '1710000000', stream_icon: 'https://img.example.com/p/aventura.jpg?token=segredo'},
         ]);
         case 'get_series_categories': return json(res, [{category_id: '20', category_name: 'Séries'}]);

@@ -314,7 +314,7 @@ void main() {
       await tester.tap(find.byKey(const Key('parental-save')));
       await tester.pumpAndSettle();
       expect(repo.calls.last.$1, 'setParentalPin');
-    expect(repo.calls.last.$2, {'pin': '2468', 'confirmPin': '2468'});
+      expect(repo.calls.last.$2, {'pin': '2468', 'confirmPin': '2468'});
       expect(find.text('PIN parental salvo.'), findsOneWidget);
     },
   );

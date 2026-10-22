@@ -19,6 +19,9 @@ abstract final class AppIcons {
       add = HugeIcons.strokeRoundedPlusSign,
       qr = HugeIcons.strokeRoundedQrCode,
       favorite = HugeIcons.strokeRoundedFavourite,
+      movie = HugeIcons.strokeRoundedFilm01,
+      series = HugeIcons.strokeRoundedTv02,
+      person = HugeIcons.strokeRoundedUser,
       notification = HugeIcons.strokeRoundedNotification01,
       more = HugeIcons.strokeRoundedMoreHorizontal,
       menu = HugeIcons.strokeRoundedMenu01;

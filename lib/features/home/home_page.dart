@@ -9,10 +9,11 @@ import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../manager/widgets/home_welcome_state.dart';
-import 'content_details_sheet.dart';
+import 'content_details_page.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
 import 'home_widgets.dart';
+import 'library.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -92,21 +93,22 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
   }
 
-  /// Opens the details of [item]; when the same title has saved progress (from
-  /// any row or the search), that entry is used so "continue" is offered.
-  void open(Entry item, HomeData? home, String? sourceId) {
+  /// Opens the full details page of [item]; when the same title has saved
+  /// progress (from any row or the search), that entry is used so "continue"
+  /// is offered.
+  void open(Entry item, HomeData? home) {
     final withProgress = item.progress != null
         ? item
         : home?.continueWatching.where((c) => c.id == item.id).firstOrNull ??
               item;
-    showContentDetails(
-      context,
-      item: withProgress,
-      profile: home?.profile,
-      favorite: home?.isFavorite(item) ?? false,
-      onLibraryChanged: () => ref.invalidate(homeProvider(sourceId)),
-    );
+    openTitle(context, withProgress);
   }
+
+  /// Long press on a card: Favoritos / Lista de desejos without leaving the Home.
+  ValueChanged<Entry>? libraryActions(HomeData? home) =>
+      home?.profile?.persistent == true
+      ? (item) => showLibraryActions(context, item: item, home: home!)
+      : null;
 
   Future<void> pickSource(List<Entry> sources, String? current) async {
     final picked = await showAppModalSheet<String>(
@@ -204,10 +206,19 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
     if (ready.isEmpty) {
+      // Saved titles stay reachable even without a ready source.
+      final library = ref.watch(homeProvider(null)).asData?.value;
       return ListView(
         children: [
           header,
           _Padded(child: _noReadySource(context, sources)),
+          if (library != null)
+            for (final row in _libraryRows(context, library))
+              Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.lg),
+                child: row,
+              ),
+          const SizedBox(height: AppDimensions.bottomNav + AppSpacing.xl),
         ],
       );
     }
@@ -234,7 +245,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           if (query.trim().isNotEmpty)
-            ..._searchSlivers(context, source, home.asData?.value, sourceId)
+            ..._searchSlivers(context, source, home.asData?.value)
           else
             ..._homeSlivers(context, home, sourceId),
           const SliverToBoxAdapter(
@@ -268,11 +279,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ],
       data: (data) {
-        void tap(Entry item) => open(item, data, sourceId);
+        void tap(Entry item) => open(item, data);
         final rows = [
-          (l.homeFavorites, data.favorites),
+          (l.homeFavorites, data.libraryFavorites),
           (l.homeContinueWatching, data.continueWatching),
-          (l.homeMyList, data.myList),
+          (l.homeWishlist, data.wishlist),
           (l.homeRecentMovies, data.recentMovies),
           (l.homeRecentSeries, data.recentSeries),
           (l.homeRecentSearches, data.recentSearches),
@@ -299,7 +310,12 @@ class _HomePageState extends ConsumerState<HomePage> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.only(left: AppSpacing.lg),
-                child: HomeRow(title: row.$1, items: row.$2, onTap: tap),
+                child: HomeRow(
+                  title: row.$1,
+                  items: row.$2,
+                  onTap: tap,
+                  onLongPress: libraryActions(data),
+                ),
               ),
             ),
         ];
@@ -307,11 +323,25 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  /// Favoritos and Lista de desejos (also titles no source offers).
+  List<Widget> _libraryRows(BuildContext context, HomeData home) => [
+    for (final (title, items) in [
+      (context.l.homeFavorites, home.libraryFavorites),
+      (context.l.homeWishlist, home.wishlist),
+    ])
+      if (items.isNotEmpty)
+        HomeRow(
+          title: title,
+          items: items,
+          onTap: (item) => open(item, home),
+          onLongPress: libraryActions(home),
+        ),
+  ];
+
   List<Widget> _searchSlivers(
     BuildContext context,
     Entry? source,
     HomeData? home,
-    String? sourceId,
   ) {
     final l = context.l;
     if (searchError != null) {
@@ -365,6 +395,10 @@ class _HomePageState extends ConsumerState<HomePage> {
           delegate: SliverChildBuilderDelegate(
             (context, index) => _SearchCard(
               item: results[index],
+              onLongPress: switch (libraryActions(home)) {
+                final actions? => () => actions(results[index]),
+                null => null,
+              },
               onTap: () {
                 final item = results[index];
                 if (home?.profile?.type != 'guest') {
@@ -372,7 +406,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ref.read(recentSearchProvider.notifier).record(item.id),
                   );
                 }
-                open(item, home, sourceId);
+                open(item, home);
               },
             ),
             childCount: results.length,
@@ -418,9 +452,14 @@ class _HomePageState extends ConsumerState<HomePage> {
 
 /// Search results mix channels and titles: same poster footprint for a tidy grid.
 class _SearchCard extends StatelessWidget {
-  const _SearchCard({required this.item, required this.onTap});
+  const _SearchCard({
+    required this.item,
+    required this.onTap,
+    this.onLongPress,
+  });
   final Entry item;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -431,6 +470,7 @@ class _SearchCard extends StatelessWidget {
       key: ValueKey('search-card-${item.id}'),
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

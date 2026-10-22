@@ -17,7 +17,7 @@ novo nos documentos afetados e atualização coordenada dos consumidores
 |---|---|---|---|
 | `manager` | **obrigatório** | iPlex Control | conta Firebase (pessoa) + `contextFamilyId` |
 | `player` | não (Tizen 5.5 não suporta reCAPTCHA) | iPlex Web (TV/navegador) | custom token `tv_<deviceId>`, claims `deviceId`, `familyId`, `credentialVersion`, verificado com `checkRevoked` |
-| `iplexWebTmdb` (codebase `iplex-web`, HTTP `/api/tmdb/*`) | não | iPlex Web | Bearer = ID token da TV; delega a autorização a `player.authorizeMetadata` |
+| `iplexWebTmdb` (codebase `iplex-web`, HTTP `/api/tmdb/*`) | não (TV) / **sim** (Control) | iPlex Web e iPlex Control | Item do catálogo: Bearer da TV → `player.authorizeMetadata`; Bearer da conta + `X-Firebase-AppCheck` → `manager.authorizeMetadata`. **Descoberta editorial** `/api/tmdb/discover/{movie,tv,tv/:id/season/:n,person}/:id`: só conta + App Check → `manager.authorizeDiscovery` (nunca TV, nunca perfil infantil, cota de 600/10 min por conta; sem conteúdo adulto) |
 
 `player` aceita só uma **lista fechada** (`functions/src/player.ts`):
 públicas com cota (`beginDevicePair`, `finishDevicePair`) e de dispositivo
@@ -46,7 +46,7 @@ clientes mapeiam o código para mensagens próprias (nunca genéricas).
 | Fonte IPTV | `families/{fid}/sources/{sid}` | `name`, `format`, `status`, `version` (catálogo publicado), `revision`, `enabled`, `isProtected`; credenciais só em `source_secrets` (AES-256-GCM) |
 | Item de catálogo (canal, filme, série) | resposta de `readSourceCatalog` | `id` = sha256(`sourceId:catalogItemId`) (estável, público), `sourceId`, `kind: channel\|movie\|series`, `title` (original da fonte), `category`, `providerRef`, `epgId?`, `year?`, `ageRating?` |
 | Temporada/Episódio | resposta de `readSourceSeries` | `details.seasons[]{seasonNumber,name}`, `details.episodes{<temporada>: [{id, title, season, episodeNum}]}`; episódio é sempre referenciado por `episodeId` |
-| Favorito | `profiles/{pid}/favorites/{contentId}` | `contentId`, `title`, `generation`, `updatedAt` |
+| Favorito / Lista de desejos | `profiles/{pid}/favorites/{docId}`, `profiles/{pid}/wishlist/{docId}` | ver §2.2 |
 | Progresso | `profiles/{pid}/watch_progress/{contentId}` | `contentId` (episódio: `<itemId>_e<episodeId>`), `position`, `duration` (s), `generation`, `updatedAt` |
 | Sessão de reprodução (lease) | `families/{fid}.leases[]` | `id`, `deviceId`, `deviceName`, `profileId`, `expiresAt` (90 s, renovado pelo heartbeat). Máx. **3** por família, **1** por perfil (`acquire` em `domain.ts`) |
 | Solicitação de reprodução | `families/{fid}/devices/{did}/play_requests/{id}` | ver §4 |
@@ -54,6 +54,28 @@ clientes mapeiam o código para mensagens próprias (nunca genéricas).
 Escritas de favoritos/assistidos/progresso exigem a `generation` atual do
 perfil (`stale-generation` caso contrário). Visitante nunca persiste
 (`guest-not-persisted`).
+
+## 2.2 Biblioteca pessoal (Favoritos + Lista de desejos) — `functions/src/library.ts`
+
+Identidade canônica de um título = **TMDB id + tipo** (`tmdbKey`: `movie:603` ≠
+`tv:603`). O vínculo com a IPTV é opcional; a disponibilidade nunca é condição
+para salvar.
+
+| Campo | Significado |
+|---|---|
+| `docId` | id do item do catálogo (legado, canais) ou `tmdb-<movie\|tv>-<id>` |
+| `contentId` | id público do item do catálogo quando vinculado (compatível com a TV); senão `docId` |
+| `catalogContentId`, `sourceId` | último vínculo confiável com o catálogo (opcionais) |
+| `kind` | `channel` \| `movie` \| `series` |
+| `tmdbId`, `tmdbKey` | identidade editorial (opcional para canais/itens legados) |
+| `title`, `originalTitle?`, `year?`, `poster?` | metadados para exibir sem a fonte (`poster` só `https://image.tmdb.org/`) |
+| `generation`, `updatedAt` | ambas as listas usam `generations.favorites`; “Limpar favoritos” limpa as duas |
+
+- `saveLibraryItem {profileId, generation, list, kind, contentId?, sourceId?, tmdbId?, title, originalTitle?, year?, poster?, remove?}` (só `manager`, só o perfil vinculado à conta): mescla linhas do mesmo título (mesmo item, mesmo vínculo ou mesmo `tmdbKey`) — nunca duplica entre fontes. Item do catálogo é verificado contra o que o perfil vê; o `tmdbId` publicado pelo provedor prevalece. Perfil infantil só salva itens do catálogo que vê (`content-unavailable`). Lista de desejos não aceita canais.
+- `readHome` (`schemaVersion: 2`) acrescenta `library {favorites[], wishlist[]}` (itens do catálogo com `available: true` e `library {id, tmdbId?}`; títulos sem catálogo como entrada editorial `available: false`, nunca para perfil infantil) e `saved {favorites[], wishlist[]}` (chaves: ids de item, `docId` e `tmdb:<movie|tv>:<id>`). `favorites`/`myList`/`favoriteIds` mantêm o contrato anterior.
+- Correspondência com o catálogo (`TitleResolver`): vínculo salvo → `tmdbId` do provedor (Xtream `tmdb`/`tmdb_id`, campo `tmdbId` do item, `parser-6`) → título exato + ano exato, só se nenhum item com mesmo título/ano declarar outro `tmdbId`. Ambíguo = não vinculado. Vínculo a item que o perfil não pode mais ver oculta a entrada. Quando a correspondência aparece, `readHome` grava o vínculo na mesma linha (sem nova linha, sem salvar de novo).
+- `resolveTitle {kind, tmdbId, title?, originalTitle?, year?, sourceId?}` → `{item|null, match}`: item reproduzível autorizado do título editorial (habilita “Assistir na TV”).
+- TV: `favorite` (player) passa a reutilizar/remover a linha canônica do mesmo item; `readPlayerLibrary` inalterado (vê os títulos vinculados; a Lista de desejos não é exposta à TV).
 
 ## 2.1 Uma conta, uma família
 

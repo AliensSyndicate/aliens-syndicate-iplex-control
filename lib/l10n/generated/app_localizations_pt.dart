@@ -1593,4 +1593,140 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get errorFamilyExclusive => 'Cada conta pertence a uma única família.';
+
+  @override
+  String get homeWishlist => 'Lista de desejos';
+
+  @override
+  String get addToWishlist => 'Adicionar à Lista de desejos';
+
+  @override
+  String get removeFromWishlist => 'Remover da Lista de desejos';
+
+  @override
+  String get notAvailableToWatch =>
+      'Indisponível para assistir no seu catálogo IPTV. Você ainda pode salvar este título.';
+
+  @override
+  String originalTitleLabel(String title) {
+    return 'Título original: $title';
+  }
+
+  @override
+  String releaseDateLabel(String date) {
+    return 'Lançamento: $date';
+  }
+
+  @override
+  String ratingLabel(String score) {
+    return 'Avaliação $score/10 (TMDB)';
+  }
+
+  @override
+  String get crewLabel => 'Equipe';
+
+  @override
+  String get seasonsTitle => 'Temporadas';
+
+  @override
+  String get seasonsFromTmdb =>
+      'Informações editoriais do TMDB. A disponibilidade depende da sua fonte IPTV.';
+
+  @override
+  String get availableEpisodesTitle => 'Disponíveis na sua IPTV';
+
+  @override
+  String get filmography => 'Filmografia';
+
+  @override
+  String get careerTimeline => 'Linha do tempo da carreira';
+
+  @override
+  String get biography => 'Biografia';
+
+  @override
+  String bornLabel(String date) {
+    return 'Nascimento: $date';
+  }
+
+  @override
+  String diedLabel(String date) {
+    return 'Falecimento: $date';
+  }
+
+  @override
+  String get moviesLabel => 'Filmes';
+
+  @override
+  String get seriesLabel => 'Séries';
+
+  @override
+  String get movieKind => 'Filme';
+
+  @override
+  String get seriesKind => 'Série';
+
+  @override
+  String asCharacter(String character) {
+    return 'como $character';
+  }
+
+  @override
+  String get undatedLabel => 'Sem data';
+
+  @override
+  String get metadataUnavailable =>
+      'As informações deste título estão indisponíveis no momento.';
+
+  @override
+  String get personUnavailable =>
+      'As informações desta pessoa estão indisponíveis no momento.';
+
+  @override
+  String get discoveryNotAllowed =>
+      'Este perfil mostra apenas títulos do seu catálogo.';
+
+  @override
+  String get errorContentUnavailable =>
+      'Este título não está disponível para este perfil.';
+
+  @override
+  String get errorStaleLibrary =>
+      'Suas listas foram atualizadas em outro dispositivo. Tente novamente.';
+
+  @override
+  String directedByLabel(String names) {
+    return 'Direção: $names';
+  }
+
+  @override
+  String createdByLabel(String names) {
+    return 'Criação: $names';
+  }
+
+  @override
+  String get andConjunction => 'e';
+
+  @override
+  String get continueLabel => 'Continuar';
+
+  @override
+  String get restartLabel => 'Recomeçar';
+
+  @override
+  String get favoriteAction => 'Favoritar';
+
+  @override
+  String get unfavoriteAction => 'Desfavoritar';
+
+  @override
+  String get saveAction => 'Salvar';
+
+  @override
+  String get unsaveAction => 'Remover';
+
+  @override
+  String seasonEpisodeLabel(int season, int episode) {
+    return 'Temporada $season - Episódio $episode';
+  }
 }

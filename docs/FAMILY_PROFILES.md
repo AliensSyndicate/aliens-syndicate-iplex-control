@@ -7,7 +7,7 @@ Estado em 19/10/2026. Regras permanentes resumidas em `AGENTS.md` §5 e §14.
 | Caminho | Conteúdo | Escrita |
 |---|---|---|
 | `families/{fid}/profiles/{pid}` | `name`, `type` (`admin`/`regular`/`kids`/`guest`), `linkedUid` (opcional), `enabled`, `permissions {allSpaces, spaces[]}`, `permissionsVersion`, `generations {favorites, watched, progress}` | só backend |
-| `families/{fid}/profiles/{pid}/favorites/{contentId}` | `contentId`, `title`, `generation` | só backend |
+| `families/{fid}/profiles/{pid}/favorites/{docId}` e `.../wishlist/{docId}` | biblioteca pessoal (ver `CONTRACTS.md` §2.2): `contentId`, `title`, `generation`, `kind?`, `tmdbId?`, `tmdbKey?`, `catalogContentId?` | só backend |
 | `families/{fid}/profiles/{pid}/watched/{contentId}` | `contentId`, `title`, `generation`, `completedAt` (novo: "Assistidos") | só backend |
 | `families/{fid}/profiles/{pid}/watch_progress/{contentId}` | `position`, `duration`, `generation` | só backend |
 | `families/{fid}/profile_links/{uid}` | `profileId` — uma conta, no máximo um perfil por família | só backend |

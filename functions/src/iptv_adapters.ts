@@ -246,7 +246,7 @@ export class XtreamAdapter implements IptvSourceAdapter {
     let parsed: ReturnType<typeof xtreamCatalogFromM3uPlus> | undefined;
     const result = () => (parsed ??= xtreamCatalogFromM3uPlus(body, base));
     const snapshot: ProviderSnapshot = {
-      proof: hash(`parser-5:xtream-m3u-plus:${base}:${body}`),
+      proof: hash(`parser-6:xtream-m3u-plus:${base}:${body}`),
       singleStream: false,
       build: async () => {
         const {catalog, stats} = result();
@@ -276,7 +276,7 @@ export class XtreamAdapter implements IptvSourceAdapter {
     // Episodes are fetched on demand (readSourceSeries), like IPTV players do:
     // one get_series_info per series during sync does not scale to large panels.
     const snapshot: ProviderSnapshot = {
-      proof: hash(`parser-5:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}`),
+      proof: hash(`parser-6:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}`),
       singleStream: false,
       build: async () => {
         const categories: NonNullable<Catalog['categories']> = data.flatMap(d =>
@@ -385,7 +385,7 @@ export class M3uPlaylistAdapter implements IptvSourceAdapter {
     const singleStream = /#EXT-X-(?:STREAM-INF|TARGETDURATION|MEDIA-SEQUENCE|VERSION):/i.test(body);
     const origin = source.format === 'file' ? 'file' : source.url!;
     const snapshot: ProviderSnapshot = {
-      proof: hash(`parser-5:${origin}:${singleStream ? source.name : ''}:${body}`),
+      proof: hash(`parser-6:${origin}:${singleStream ? source.name : ''}:${body}`),
       singleStream,
       build: async () => {
         const {catalog, stats} = parseM3uDetailed(body, source.url ?? '', source.name);

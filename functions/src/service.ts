@@ -1,5 +1,7 @@
 import {calculateCanonicalDeviceId, calculateIdentityFingerprint, maskIdentityFingerprint, generatePairingCode, hashPairingCode, PlatformType} from './device_identity';
-import {authorizeMetadata, readHome, readSourceCatalog, readSourceSeries, resolveSourceStream} from './iptv_catalog_access';
+import {authorizeMetadata, libraryItem, readHome, readSourceCatalog, readSourceSeries, resolveSourceStream, resolveTitle} from './iptv_catalog_access';
+import {libraryInputSchema, sameTitleDocs, writeLibraryItem} from './library';
+import {firestoreQuota} from './player';
 import {registerPushToken} from './iptv_notifications';
 import {getFirestore, FieldValue, Transaction, DocumentReference} from 'firebase-admin/firestore';
 import {getStorage} from 'firebase-admin/storage';
@@ -356,6 +358,33 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  if(action==='readHome')return readHome(p,a);
  // TMDB grant for the Control (iplexWebTmdb → manager, with App Check): same item rules as the TV.
  if(action==='authorizeMetadata'){required(!a.deviceId,'permission-denied');return authorizeMetadata(p,a);}
+ // Editorial discovery (TMDB titles, people, filmographies) for the Control only: person
+ // account with App Check (enforced by `manager`), never a TV, never a kids profile, with a quota.
+ if(action==='authorizeDiscovery'){
+  required(a&&!a.deviceId);
+  const view=await db().runTransaction(async tx=>{
+   const f=await family(tx,a!);const pid=(await tx.get(f.ref.collection('profile_links').doc(a!.uid))).data()?.profileId;
+   const snap=typeof pid==='string'?await tx.get(f.ref.collection('profiles').doc(pid)):null;
+   return snap?.exists?profileView(snap.id,snap.data()!):null;
+  });
+  required(view?.type!=='kids','content-unavailable');
+  await firestoreQuota(hash(`discovery:${a!.uid}`).slice(0,32),{bucket:'tmdb_discovery',max:600,windowMs:10*60_000},now);
+  return {ok:true};
+ }
+ if(action==='resolveTitle')return resolveTitle(p,a!);
+ // Favoritos / Lista de desejos of the account's own profile (Control). Titles may be
+ // editorial only (TMDB): availability is never a condition to save.
+ if(action==='saveLibraryItem'){
+  required(a&&!a.deviceId);
+  const input=libraryInputSchema.parse({list:p.list,kind:p.kind,contentId:p.contentId,sourceId:p.sourceId,tmdbId:p.tmdbId,title:p.title,originalTitle:p.originalTitle,year:p.year,poster:p.poster,remove:p.remove});
+  const verified=input.remove!==true&&input.contentId?await libraryItem(a!,input.sourceId!,input.contentId):null;
+  return db().runTransaction(async tx=>{
+   const f=await family(tx,a!),profileId=idSchema.parse(p.profileId);
+   required((await tx.get(f.ref.collection('profile_links').doc(a!.uid))).data()?.profileId===profileId);
+   const profile=f.ref.collection('profiles').doc(profileId),snap=await tx.get(profile);required(snap.exists&&snap.data()?.deleting!==true,'not-found');
+   return writeLibraryItem(tx,profile,profileView(profileId,snap.data()!),input,verified,p.generation,now);
+  });
+ }
  if(action==='readSourceSeries')return readSourceSeries(p,a,key);
  if(action==='resolveSourceStream')return resolveSourceStream(p,a,key);
  if(action==='registerPushToken'||action==='unregisterPushToken')return registerPushToken(p,a,action==='unregisterPushToken');
@@ -372,9 +401,10 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   if(a.deviceId)required(((f.data.leases??[]) as Lease[]).some(x=>x.deviceId===a.deviceId&&x.profileId===profileId&&x.expiresAt>now),'session-expired');
   const view=profileView(profileId,snap.data()!);
   if(action==='favorite') {
-   const ref=profile.collection('favorites').doc(contentId);
-   if(p.remove===true){required(view.type!=='guest','guest-not-persisted');tx.delete(ref);}
-   else {const generation=requireWritableGeneration(view,'favorites',p.generation);tx.set(ref,{contentId,title:nameSchema.parse(p.title),generation,updatedAt:now},{merge:true});}
+   // Same title saved as one library row (possibly editorial, linked later by the Control).
+   const rows=await sameTitleDocs(tx,profile.collection('favorites'),contentId);
+   if(p.remove===true){required(view.type!=='guest','guest-not-persisted');for(const row of rows)tx.delete(row.ref);}
+   else {const generation=requireWritableGeneration(view,'favorites',p.generation);tx.set(rows[0]?.ref??profile.collection('favorites').doc(contentId),{contentId,title:nameSchema.parse(p.title),generation,updatedAt:now},{merge:true});}
   } else if(action==='markWatched') {
    const generation=requireWritableGeneration(view,'watched',p.generation);
    tx.set(profile.collection('watched').doc(contentId),{contentId,title:p.title===undefined?null:nameSchema.parse(p.title),generation,completedAt:now});

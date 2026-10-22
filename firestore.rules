@@ -103,7 +103,7 @@ service cloud.firestore {
         allow write: if false;
         match /{collection}/{id} {
           allow read: if (isFamilyMember(familyId))
-            && collection in ['favorites', 'watch_progress', 'watched'];
+            && collection in ['favorites', 'wishlist', 'watch_progress', 'watched'];
           allow write: if false;
         }
       }

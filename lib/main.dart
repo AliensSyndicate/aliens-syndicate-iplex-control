@@ -15,6 +15,7 @@ Future<void> main() async {
   PaintingBinding.instance.imageCache
     ..maximumSize = 1500
     ..maximumSizeBytes = 256 << 20;
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

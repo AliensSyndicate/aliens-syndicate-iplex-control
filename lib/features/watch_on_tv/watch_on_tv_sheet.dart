@@ -212,7 +212,8 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
                       : AppIcons.devices,
                   onTap: () => setState(() => deviceId = tv.id),
                 ),
-              if (isSeries) ...[
+              // Episode already chosen (season sheet, continue, start over).
+              if (isSeries && widget.episodeId == null) ...[
                 SectionHeader(l.chooseEpisode),
                 FutureBuilder<List<TvEpisode>>(
                   future: episodes,

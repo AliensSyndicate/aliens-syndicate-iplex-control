@@ -47,7 +47,7 @@ export async function hasResources(tx: Transaction, ref: DocumentReference, data
   if (!devices.empty || !sources.empty) return true;
   if (profiles.docs.some(d => !['admin', 'guest'].includes(d.id) && d.data().deleting !== true)) return true;
   const admin = ref.collection('profiles').doc('admin');
-  for (const collection of ['favorites', 'watched', 'watch_progress']) {
+  for (const collection of ['favorites', 'wishlist', 'watched', 'watch_progress']) {
     if (!(await tx.get(admin.collection(collection).limit(1))).empty) return true;
   }
   return false;

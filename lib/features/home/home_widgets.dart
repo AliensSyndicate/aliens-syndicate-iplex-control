@@ -16,9 +16,17 @@ abstract final class HomeCardSize {
 /// One catalog item: artwork + name. Artwork comes from the source (https,
 /// credential-free) or a confident TMDB match; otherwise the item's initials.
 class HomeCard extends StatelessWidget {
-  const HomeCard({super.key, required this.item, required this.onTap});
+  const HomeCard({
+    super.key,
+    required this.item,
+    required this.onTap,
+    this.onLongPress,
+  });
   final Entry item;
   final VoidCallback onTap;
+
+  /// Library actions (Favoritos / Lista de desejos) without opening the page.
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +46,7 @@ class HomeCard extends StatelessWidget {
         key: ValueKey('home-card-${item.id}'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
+        onLongPress: onLongPress,
         child: SizedBox(
           width: width,
           child: Column(
@@ -85,7 +94,8 @@ class HomeCard extends StatelessWidget {
   }
 }
 
-/// Source artwork, then TMDB poster, then initials. Never a placeholder photo.
+/// Source artwork (or the poster of an editorial title), then TMDB poster,
+/// then initials. Never a placeholder photo.
 class Artwork extends ConsumerStatefulWidget {
   const Artwork({
     super.key,
@@ -108,7 +118,9 @@ class Artwork extends ConsumerStatefulWidget {
 class _ArtworkState extends ConsumerState<Artwork> {
   Future<ContentMetadata?>? metadata;
 
-  String? get sourceImage => widget.backdrop ? null : widget.item.sourceImage;
+  String? get sourceImage => widget.backdrop
+      ? null
+      : widget.item.sourceImage ?? widget.item.editorialPoster;
 
   @override
   void initState() {
@@ -119,13 +131,17 @@ class _ArtworkState extends ConsumerState<Artwork> {
   @override
   void didUpdateWidget(Artwork old) {
     super.didUpdateWidget(old);
-    if (old.item.id != widget.item.id || old.backdrop != widget.backdrop) {
+    if (old.item.id != widget.item.id ||
+        old.backdrop != widget.backdrop ||
+        old.item.editorialPoster != widget.item.editorialPoster) {
       _lookup();
     }
   }
 
-  void _lookup() =>
-      metadata = sourceImage == null && widget.item.isPlayableTitle
+  void _lookup() => metadata =
+      sourceImage == null &&
+          widget.item.isPlayableTitle &&
+          !widget.item.isEditorial
       ? ref.read(metadataServiceProvider).summary(widget.item)
       : null;
 
@@ -234,21 +250,25 @@ class _Initials extends StatelessWidget {
   );
 }
 
-/// Section title + independent horizontal list (at most 10 cards).
+/// Section title + independent horizontal list (at most [limit] cards).
 class HomeRow extends StatelessWidget {
   const HomeRow({
     super.key,
     required this.title,
     required this.items,
     required this.onTap,
+    this.onLongPress,
+    this.limit = 10,
   });
   final String title;
   final List<Entry> items;
   final ValueChanged<Entry> onTap;
+  final ValueChanged<Entry>? onLongPress;
+  final int limit;
 
   @override
   Widget build(BuildContext context) {
-    final shown = items.take(10).toList();
+    final shown = items.take(limit).toList();
     final channel = shown.every((i) => i.isChannel);
     final progress = shown.any((i) => i.progress != null);
     final height =
@@ -270,8 +290,13 @@ class HomeRow extends StatelessWidget {
             itemCount: shown.length,
             separatorBuilder: (context, index) =>
                 const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, index) =>
-                HomeCard(item: shown[index], onTap: () => onTap(shown[index])),
+            itemBuilder: (context, index) => HomeCard(
+              item: shown[index],
+              onTap: () => onTap(shown[index]),
+              onLongPress: onLongPress == null
+                  ? null
+                  : () => onLongPress!(shown[index]),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),

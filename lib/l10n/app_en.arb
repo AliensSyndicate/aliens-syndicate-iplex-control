@@ -615,20 +615,59 @@
   "upNext": "Up next",
   "castLabel": "Cast",
   "runtimeMinutes": "{minutes} min",
-  "@runtimeMinutes": {"placeholders": {"minutes": {"type": "int"}}},
+  "@runtimeMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "seasonsCount": "{count, plural, =1{1 season} other{{count} seasons}}",
-  "@seasonsCount": {"placeholders": {"count": {"type": "int"}}},
-    "episodesCount": "{count, plural, =1{1 episode} other{{count} episodes}}",
-  "@episodesCount": {"placeholders": {"count": {"type": "int"}}},
+  "@seasonsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "episodesCount": "{count, plural, =1{1 episode} other{{count} episodes}}",
+  "@episodesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "episodesTitle": "Episodes",
-    "showMore": "Show more",
+  "showMore": "Show more",
   "showLess": "Show less",
-    "seasonEpisodeShort": "S{season}E{episode}",
-  "@seasonEpisodeShort": {"placeholders": {"season": {"type": "int"}, "episode": {"type": "String"}}},
+  "seasonEpisodeShort": "S{season}E{episode}",
+  "@seasonEpisodeShort": {
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
   "ageRatingLabel": "Rated {rating}",
-  "@ageRatingLabel": {"placeholders": {"rating": {"type": "String"}}},
+  "@ageRatingLabel": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
   "familyOfName": "{name} family",
-  "@familyOfName": {"placeholders": {"name": {"type": "String"}}},
+  "@familyOfName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "familyEmptyBody": "No additional members yet.",
   "addMembers": "Add members",
   "invitePending": "Invitation pending",
@@ -638,5 +677,108 @@
   "leaveFamilyBody": "You return to your individual family. Your data is kept.",
   "errorAlreadyInFamily": "This account already belongs to a family.",
   "errorIndividualFamilyHasResources": "To join another family, first remove the IPTV sources, devices and profiles of your individual family.",
-  "errorFamilyExclusive": "Each account belongs to a single family."
+  "errorFamilyExclusive": "Each account belongs to a single family.",
+  "homeWishlist": "Wishlist",
+  "addToWishlist": "Add to wishlist",
+  "removeFromWishlist": "Remove from wishlist",
+  "notAvailableToWatch": "Not available to watch in your IPTV catalog. You can still save it.",
+  "originalTitleLabel": "Original title: {title}",
+  "@originalTitleLabel": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "releaseDateLabel": "Released {date}",
+  "@releaseDateLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ratingLabel": "Rating {score}/10 (TMDB)",
+  "@ratingLabel": {
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "crewLabel": "Crew",
+  "seasonsTitle": "Seasons",
+  "seasonsFromTmdb": "Editorial information from TMDB. Availability depends on your IPTV source.",
+  "availableEpisodesTitle": "Available on your IPTV",
+  "filmography": "Filmography",
+  "careerTimeline": "Career timeline",
+  "biography": "Biography",
+  "bornLabel": "Born {date}",
+  "@bornLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "diedLabel": "Died {date}",
+  "@diedLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "moviesLabel": "Movies",
+  "seriesLabel": "Series",
+  "movieKind": "Movie",
+  "seriesKind": "Series",
+  "asCharacter": "as {character}",
+  "@asCharacter": {
+    "placeholders": {
+      "character": {
+        "type": "String"
+      }
+    }
+  },
+  "undatedLabel": "No date",
+  "metadataUnavailable": "Information about this title is unavailable right now.",
+  "personUnavailable": "Information about this person is unavailable right now.",
+  "discoveryNotAllowed": "This profile only shows titles from your catalog.",
+  "errorContentUnavailable": "This title is not available for this profile.",
+  "errorStaleLibrary": "Your lists were updated on another device. Try again.",
+  "directedByLabel": "Directed by {names}",
+  "@directedByLabel": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "createdByLabel": "Created by {names}",
+  "@createdByLabel": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "andConjunction": "and",
+  "continueLabel": "Continue",
+  "restartLabel": "Start over",
+  "favoriteAction": "Favorite",
+  "unfavoriteAction": "Unfavorite",
+  "saveAction": "Save",
+  "unsaveAction": "Remove",
+  "seasonEpisodeLabel": "Season {season} - Episode {episode}",
+  "@seasonEpisodeLabel": {
+    "placeholders": {
+      "season": {
+        "type": "int"
+      },
+      "episode": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -6,7 +6,10 @@ import '../core/data/providers.dart';
 import '../core/design_system/components.dart';
 import '../features/authentication/login_page.dart';
 import '../features/manager/account_page.dart';
+import '../features/home/content_details_page.dart';
 import '../features/home/home_page.dart';
+import '../features/home/person_page.dart';
+import '../core/domain/models.dart';
 import '../features/manager/detail_page.dart';
 import '../features/manager/profile_link_redeem_page.dart';
 import '../features/manager/profile_manage_page.dart';
@@ -251,6 +254,41 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/home',
                 pageBuilder: (c, s) =>
                     _rootPage(key: s.pageKey, child: const HomePage()),
+                routes: [
+                  // Full details pages (never a sheet). Catalog items travel
+                  // as `extra`; editorial titles are addressed by TMDB id.
+                  GoRoute(
+                    path: 'title',
+                    pageBuilder: (c, s) => _appPage(
+                      key: s.pageKey,
+                      child: ContentDetailsPage(item: s.extra as Entry?),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: ':kind/:tmdbId',
+                        pageBuilder: (c, s) => _appPage(
+                          key: s.pageKey,
+                          child: ContentDetailsPage(
+                            item: s.extra as Entry?,
+                            kind: s.pathParameters['kind'],
+                            tmdbId: int.tryParse(
+                              s.pathParameters['tmdbId'] ?? '',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'person/:id',
+                    pageBuilder: (c, s) => _appPage(
+                      key: s.pageKey,
+                      child: PersonPage(
+                        tmdbId: int.tryParse(s.pathParameters['id'] ?? '') ?? 0,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
