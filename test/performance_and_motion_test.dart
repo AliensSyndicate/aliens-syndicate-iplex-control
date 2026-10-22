@@ -76,7 +76,7 @@ void main() {
 
   group('Button tactile response and local visual feedback', () {
     testWidgets(
-      'NeumorphicCircularButton gives immediate visual feedback on touch',
+      'NeumorphicCircularButton has no press effect (no scale, no ripple) and still taps',
       (tester) async {
         bool tapped = false;
         await tester.pumpWidget(
@@ -91,34 +91,20 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-
-        final buttonFinder = find.byType(NeumorphicCircularButton);
-        expect(buttonFinder, findsOneWidget);
-
-        // Verify elevated state initially
-        final initialScale = tester
-            .widget<AnimatedScale>(find.byType(AnimatedScale))
-            .scale;
-        expect(initialScale, 1.0);
-
-        final center = tester.getCenter(buttonFinder);
-        final gesture = await tester.startGesture(center);
-        await tester.pump();
-
-        final pressedScale = tester
-            .widget<AnimatedScale>(find.byType(AnimatedScale))
-            .scale;
-        expect(pressedScale, 0.96);
-
-        // Release touch
+        final button = find.byType(NeumorphicCircularButton);
+        expect(
+          find.descendant(of: button, matching: find.byType(AnimatedScale)),
+          findsNothing,
+        );
+        final gesture = await tester.startGesture(tester.getCenter(button));
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(
+          find.descendant(of: button, matching: find.byType(AnimatedScale)),
+          findsNothing,
+        );
         await gesture.up();
         await tester.pumpAndSettle();
-
         expect(tapped, true);
-        final finalScale = tester
-            .widget<AnimatedScale>(find.byType(AnimatedScale))
-            .scale;
-        expect(finalScale, 1.0);
       },
     );
 

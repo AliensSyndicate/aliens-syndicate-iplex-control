@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -81,6 +83,9 @@ class HomeCard extends StatelessWidget {
                       Artwork(
                         item: item,
                         fit: channel ? BoxFit.contain : BoxFit.cover,
+                        decodeWidth:
+                            (width * MediaQuery.devicePixelRatioOf(context))
+                                .ceil(),
                       ),
                       // Age rating seal (reference: compact poster cards).
                       if (AgeRatingBadge.normalize(item.text('ageRating'))
@@ -196,10 +201,14 @@ class Artwork extends ConsumerStatefulWidget {
     this.backdrop = false,
     this.alignment = Alignment.center,
     this.background = AppColors.surfaceRecessed,
+    this.decodeWidth,
   });
   final Entry item;
   final BoxFit fit;
   final bool backdrop;
+
+  /// Physical pixels to decode at (null: poster 480, backdrop 1080).
+  final int? decodeWidth;
 
   final Alignment alignment;
   final Color background;
@@ -231,12 +240,33 @@ class _ArtworkState extends ConsumerState<Artwork> {
     }
   }
 
-  void _lookup() => metadata =
-      sourceImage == null &&
-          widget.item.isPlayableTitle &&
-          !widget.item.isEditorial
-      ? ref.read(metadataServiceProvider).summary(widget.item)
-      : null;
+  // The TMDB lookup starts only if the card is still on screen after a short
+  // moment: fast scrolling no longer queues a request for every card it passes.
+  Timer? _delay;
+
+  void _lookup() {
+    _delay?.cancel();
+    if (sourceImage != null ||
+        !widget.item.isPlayableTitle ||
+        widget.item.isEditorial) {
+      metadata = null;
+      return;
+    }
+    final done = Completer<ContentMetadata?>();
+    metadata = done.future;
+    _delay = Timer(const Duration(milliseconds: 200), () {
+      ref
+          .read(metadataServiceProvider)
+          .summary(widget.item)
+          .then(done.complete, onError: done.completeError);
+    });
+  }
+
+  @override
+  void dispose() {
+    _delay?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +278,7 @@ class _ArtworkState extends ConsumerState<Artwork> {
         item: item,
         alignment: widget.alignment,
         background: widget.background,
-        decodeWidth: widget.backdrop ? 1080 : 480,
+        decodeWidth: widget.decodeWidth ?? (widget.backdrop ? 1080 : 480),
       );
     }
     if (metadata == null) return _Initials(item: item);
@@ -266,7 +296,7 @@ class _ArtworkState extends ConsumerState<Artwork> {
             item: item,
             alignment: widget.alignment,
             background: widget.background,
-            decodeWidth: widget.backdrop ? 1080 : 480,
+            decodeWidth: widget.decodeWidth ?? (widget.backdrop ? 1080 : 480),
           );
         }
         // No TMDB cover: the source's own art, cropped, before initials.
@@ -281,7 +311,7 @@ class _ArtworkState extends ConsumerState<Artwork> {
             item: item,
             alignment: widget.alignment,
             background: widget.background,
-            decodeWidth: widget.backdrop ? 1080 : 480,
+            decodeWidth: widget.decodeWidth ?? (widget.backdrop ? 1080 : 480),
           );
         }
         return _Initials(

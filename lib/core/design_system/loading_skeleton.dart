@@ -186,17 +186,51 @@ class PosterRowsSkeleton extends StatelessWidget {
 }
 
 /// Catalog / search results while loading: the same wrapped poster grid as
-/// the real result.
+/// the real result, or (with [columns]) the fixed-column feed grid of the
+/// Home catalog tabs ([square] for channels).
 class PosterGridSkeleton extends StatelessWidget {
-  const PosterGridSkeleton({super.key, this.count = 9});
+  const PosterGridSkeleton({
+    super.key,
+    this.count = 9,
+    this.columns,
+    this.square = false,
+  });
   final int count;
+  final int? columns;
+  final bool square;
   @override
-  Widget build(BuildContext context) => _announced(
-    context,
-    Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.md,
-      children: [for (var i = 0; i < count; i++) const _PosterSkeleton()],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final columns = this.columns;
+    if (columns == null) {
+      return _announced(
+        context,
+        Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          children: [for (var i = 0; i < count; i++) const _PosterSkeleton()],
+        ),
+      );
+    }
+    return _announced(
+      context,
+      LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = AppSpacing.sm;
+          final cell = (constraints.maxWidth - gap * (columns - 1)) / columns;
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: [
+              for (var i = 0; i < count; i++)
+                AppSkeletonBlock(
+                  width: cell,
+                  height: square ? cell : cell * 3 / 2,
+                  radius: AppRadii.md,
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }

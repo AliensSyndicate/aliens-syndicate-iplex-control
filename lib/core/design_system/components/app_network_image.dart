@@ -105,8 +105,11 @@ class CachedNetworkImage extends ImageProvider<NetworkImage>
     if (directory != null) {
       file = File('${directory.path}/${sha1.convert(url.codeUnits)}');
       try {
-        if (file.existsSync() &&
-            DateTime.now().difference(file.lastModifiedSync()) < maxAge) {
+        // Async I/O only: the sync variants block the UI thread for every
+        // card of a page.
+        final stat = await file.stat();
+        if (stat.type == FileSystemEntityType.file &&
+            DateTime.now().difference(stat.modified) < maxAge) {
           final cached = await file.readAsBytes();
           if (cached.isNotEmpty) return cached;
         }

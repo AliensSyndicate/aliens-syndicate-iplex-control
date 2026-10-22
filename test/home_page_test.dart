@@ -53,6 +53,8 @@ navigation.SessionRepository repoWith(Map<String, dynamic> home) =>
 
 void main() {
   setUpAll(fixtures.loadTestFont);
+  catalogFeedTests();
+  floatingBarTests();
   setUp(
     () => SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty(),
@@ -174,6 +176,9 @@ void main() {
         ],
       }),
     );
+    // The TMDB lookup of a card starts after a short moment on screen.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('home-card-a')),
@@ -671,4 +676,129 @@ void main() {
     await tester.pumpAndSettle();
     await fixtures.screenshot(tester, 'see-all');
   });
+}
+
+class _FeedRepo extends navigation.SessionRepository {
+  _FeedRepo(this.kind) : super(uid: 'u', linked: true) {
+    sources = [
+      Entry('s', {'name': 'Minha IPTV', 'version': 'v', 'status': 'ready'}),
+    ];
+    home = {'profile': profile};
+  }
+  final String kind;
+  static const total = 100;
+  final pages = <Map<String, dynamic>>[];
+
+  @override
+  Future<Map<String, dynamic>> mutate(
+    String action, [
+    Map<String, dynamic> payload = const {},
+  ]) async {
+    if (action != 'readSourceCatalog') return super.mutate(action, payload);
+    pages.add(Map.of(payload));
+    final offset = payload['cursor'] as int? ?? 0;
+    final limit = payload['limit'] as int? ?? 30;
+    return {
+      'items': [
+        for (var i = offset; i < offset + limit && i < total; i++)
+          {'id': 'i$i', 'title': 'Item $i', 'kind': kind, 'sourceId': 's'},
+      ],
+      'cursor': offset + limit,
+      'hasMore': offset + limit < total,
+    };
+  }
+}
+
+/// The feed's loading row pulses forever: pump a few frames instead of settling.
+Future<void> settleFeed(WidgetTester tester) async {
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+void catalogFeedTests() {
+  for (final (tab, kind) in [(1, 'channel'), (2, 'movie'), (3, 'series')]) {
+    testWidgets(
+      '$kind tab: three per row feed, 40 per page, loads by scrolling, no "More" button',
+      (tester) async {
+        final repo = _FeedRepo(kind);
+        await navigation.launch(tester, repo);
+        await tester.tap(find.byKey(ValueKey('tab-$tab')));
+        await settleFeed(tester);
+        expect(repo.pages.first['limit'], 40);
+        expect(find.widgetWithText(AppButton, 'More'), findsNothing);
+        // Three cards share the first row; channels are square, titles 2:3.
+        final first = tester.getRect(
+          find.byKey(const ValueKey('home-card-i0')),
+        );
+        final third = tester.getRect(
+          find.byKey(const ValueKey('home-card-i2')),
+        );
+        final fourth = tester.getRect(
+          find.byKey(const ValueKey('home-card-i3')),
+        );
+        expect(third.top, first.top);
+        expect(fourth.top, greaterThan(first.top));
+        expect(
+          first.height / first.width,
+          closeTo(kind == 'channel' ? 1 : 1.5, 0.01),
+        );
+        // Scrolling to the end loads the next pages by itself, until the end.
+        final scroll = find.byKey(const PageStorageKey('home-scroll'));
+        for (var i = 0; i < 40 && repo.pages.length < 3; i++) {
+          await tester.drag(scroll, const Offset(0, -1500));
+          await settleFeed(tester);
+        }
+        expect(repo.pages.map((p) => p['cursor']), [0, 40, 80]);
+        for (var i = 0; i < 20; i++) {
+          await tester.drag(scroll, const Offset(0, -3000));
+          await settleFeed(tester);
+        }
+        expect(repo.pages.length, 3, reason: 'nothing left to load');
+        expect(find.widgetWithText(AppButton, 'More'), findsNothing);
+      },
+    );
+  }
+}
+
+void floatingBarTests() {
+  testWidgets(
+    'app bar and tabs leave with the content when scrolling down and return at once on any scroll back',
+    (tester) async {
+      final repo = _FeedRepo('movie');
+      await navigation.launch(tester, repo);
+      await tester.tap(find.byKey(const ValueKey('tab-2')));
+      await settleFeed(tester);
+      final title = find.byKey(const Key('home-title'));
+      final tabs = find.byKey(const Key('home-tabs'));
+      final top0 = tester.getTopLeft(title).dy;
+      final scroll = find.byKey(const PageStorageKey('home-scroll'));
+      // Scrolling the list: the bar moves up with the content and disappears.
+      await tester.drag(scroll, const Offset(0, -600));
+      await settleFeed(tester);
+      expect(tester.getBottomLeft(tabs).dy, lessThanOrEqualTo(0));
+      // Far from the top, a small scroll back brings it down right away.
+      await tester.drag(scroll, const Offset(0, 120));
+      await settleFeed(tester);
+      expect(tester.getTopLeft(title).dy, greaterThan(top0 - 130));
+      expect(tester.getBottomLeft(tabs).dy, greaterThan(0));
+      // The bar has no background of its own (transparent).
+      final filled = find.ancestor(
+        of: tabs,
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is ColoredBox &&
+              w.color != Colors.transparent &&
+              w.color.a > 0 &&
+              w.color == AppColors.backgroundPrimary &&
+              tester.getSize(find.byWidget(w)).height < 200,
+        ),
+      );
+      expect(filled, findsNothing);
+      // Back at the top: in place again.
+      await tester.drag(scroll, const Offset(0, 3000));
+      await settleFeed(tester);
+      expect(tester.getTopLeft(title).dy, top0);
+    },
+  );
 }

@@ -36,10 +36,10 @@ class NeumorphicCircularButton extends StatefulWidget {
 }
 
 class _NeumorphicCircularButtonState extends State<NeumorphicCircularButton> {
-  bool pressed = false;
   @override
   Widget build(BuildContext context) {
-    final isInset = pressed || widget.selected;
+    // Only the chosen state changes the surface: a tap has no press effect.
+    final isInset = widget.selected;
     final enabled = widget.onPressed != null;
     final size = widget.size < AppDimensions.touch
         ? AppDimensions.touch
@@ -57,13 +57,8 @@ class _NeumorphicCircularButtonState extends State<NeumorphicCircularButton> {
                           : AppColors.textSecondary)
                     : AppColors.textDisabled,
               ));
-    final motionDuration = AppMotion.duration(
-      context,
-      pressed
-          ? AppMotion.pressIn
-          : (widget.selected ? AppMotion.selection : AppMotion.pressOut),
-    );
-    final motionCurve = pressed ? AppMotion.pressCurve : AppMotion.releaseCurve;
+    final motionDuration = AppMotion.duration(context, AppMotion.selection);
+    const motionCurve = AppMotion.releaseCurve;
 
     Widget surface = widget.onPad
         ? AnimatedContainer(
@@ -96,73 +91,30 @@ class _NeumorphicCircularButtonState extends State<NeumorphicCircularButton> {
       );
     }
 
-    final visual = AnimatedScale(
-      scale: pressed ? 0.96 : 1,
-      duration: motionDuration,
-      curve: motionCurve,
-      child: surface,
-    );
-
     final interactive = Material(
       type: MaterialType.transparency,
-      child: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: enabled
-            ? (_) {
-                if (!pressed) setState(() => pressed = true);
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        splashFactory: NoSplash.splashFactory,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        focusColor: AppColors.borderLight,
+        onTap: enabled
+            ? () {
+                HapticFeedback.selectionClick();
+                widget.onPressed!();
               }
             : null,
-        onPointerUp: enabled
-            ? (_) {
-                if (pressed) setState(() => pressed = false);
+        onLongPress: enabled
+            ? () {
+                HapticFeedback.selectionClick();
+                widget.onPressed!();
               }
             : null,
-        onPointerCancel: enabled
-            ? (_) {
-                if (pressed) setState(() => pressed = false);
-              }
-            : null,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          focusColor: AppColors.borderLight,
-          highlightColor: Colors.transparent,
-          splashColor: AppColors.borderLight,
-          onTapDown: enabled
-              ? (_) {
-                  if (!pressed) setState(() => pressed = true);
-                }
-              : null,
-          onTapUp: enabled
-              ? (_) {
-                  if (pressed) setState(() => pressed = false);
-                }
-              : null,
-          onTapCancel: enabled
-              ? () {
-                  if (pressed) setState(() => pressed = false);
-                }
-              : null,
-          onHighlightChanged: (value) {
-            if (enabled && pressed != value) {
-              setState(() => pressed = value);
-            }
-          },
-          onTap: enabled
-              ? () {
-                  HapticFeedback.selectionClick();
-                  widget.onPressed!();
-                }
-              : null,
-          onLongPress: enabled
-              ? () {
-                  HapticFeedback.selectionClick();
-                  widget.onPressed!();
-                }
-              : null,
-          child: SizedBox.square(
-            dimension: size,
-            child: Center(child: visual),
-          ),
+        child: SizedBox.square(
+          dimension: size,
+          child: Center(child: surface),
         ),
       ),
     );

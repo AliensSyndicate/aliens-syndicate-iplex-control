@@ -1,3 +1,5 @@
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -29,6 +31,41 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   /// Room below the content for the main menu.
   static const _bottomSpace = AppDimensions.bottomNav + AppSpacing.xl;
+
+  // Floating app bar (name, IPTV, avatar and tabs): it leaves with the content
+  // when scrolling down the list and comes back at once on any scroll back.
+  final scroll = ScrollController();
+  final barKey = GlobalKey();
+  final bar = ValueNotifier<double>(0);
+  double barHeight = 0;
+
+  @override
+  void dispose() {
+    scroll.dispose();
+    bar.dispose();
+    super.dispose();
+  }
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical || n.depth != 0) return false;
+    if (n is ScrollUpdateNotification) {
+      final measured = barKey.currentContext?.size?.height ?? barHeight;
+      final height = measured > 0 ? measured : barHeight;
+      final pixels = n.metrics.pixels;
+      var offset = bar.value - (n.scrollDelta ?? 0);
+      if (pixels <= 0) offset = 0;
+      offset = offset.clamp(-height, 0.0);
+      if (offset != bar.value) bar.value = offset;
+    }
+    return false;
+  }
+
+  void _measureBar() {
+    final height = barKey.currentContext?.size?.height ?? 0;
+    if (height > 0 && (height - barHeight).abs() > 0.5 && mounted) {
+      setState(() => barHeight = height);
+    }
+  }
 
   /// Opens the full details page of [item]; when the same title has saved
   /// progress (from any row or the search), that entry is used so "continue"
@@ -156,6 +193,13 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
     );
 
+    final floating = ready.isNotEmpty;
+    // Reserved where the floating bar sits at the top of the page.
+    final barSpace = SizedBox(
+      height: barHeight > 0
+          ? barHeight
+          : statusBar + AppSpacing.sm * 2 + AppDimensions.touch * 2,
+    );
     final Widget header;
     if (playing != null) {
       header = AspectRatio(
@@ -196,8 +240,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                appBar,
-                tabs,
+                if (floating) barSpace else ...[appBar, tabs],
                 const Spacer(),
                 Opacity(
                   opacity: 0,
@@ -218,8 +261,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       header = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          appBar,
-          tabs,
+          if (floating) barSpace else ...[appBar, tabs],
           const SizedBox(height: AppSpacing.md),
         ],
       );
@@ -237,7 +279,16 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
     final home = ref.watch(homeProvider(sourceId));
-    return RefreshIndicator(
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
+    final barContent = KeyedSubtree(
+      key: barKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [appBar, tabs],
+      ),
+    );
+    final feed = RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(homeProvider(sourceId));
         await ref
@@ -246,7 +297,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       },
       child: CustomScrollView(
         key: const PageStorageKey('home-scroll'),
+        controller: scroll,
         physics: const AlwaysScrollableScrollPhysics(),
+        scrollCacheExtent: const ScrollCacheExtent.pixels(800),
         slivers: [
           SliverToBoxAdapter(child: header),
           if (source != null && source.text('status') == 'error')
@@ -261,17 +314,35 @@ class _HomePageState extends ConsumerState<HomePage> {
           if (tab == 0)
             ..._homeSlivers(context, home, sourceId)
           else if (source != null)
-            SliverToBoxAdapter(
-              child: CatalogTab(
-                key: ValueKey('catalog-${source.id}-$tab'),
-                source: source,
-                kind: const ['channel', 'movie', 'series'][tab - 1],
-                home: home.asData?.value,
-              ),
+            CatalogTab(
+              key: ValueKey('catalog-${source.id}-$tab'),
+              source: source,
+              kind: const ['channel', 'movie', 'series'][tab - 1],
+              home: home.asData?.value,
             ),
           SliverToBoxAdapter(child: SizedBox(height: _bottomSpace)),
         ],
       ),
+    );
+    return Stack(
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: feed,
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: ValueListenableBuilder(
+            valueListenable: bar,
+            // Transparent background: only the content of the bar moves.
+            builder: (context, offset, child) =>
+                Transform.translate(offset: Offset(0, offset), child: child),
+            child: barContent,
+          ),
+        ),
+      ],
     );
   }
 
@@ -478,7 +549,10 @@ class _BarButton extends StatelessWidget {
 }
 
 /// Canais / Filmes / Séries tab: the selected source's catalog of one kind
-/// (readSourceCatalog `kind`), 30 at a time, same cards as the Home rows.
+/// (readSourceCatalog `kind`) as a feed: [catalogColumns] cards per row (square for
+/// channels, 2:3 posters for titles), [catalogPageSize] at a time, the next
+/// page loads by itself while the user scrolls. It is a sliver of the Home
+/// scroll view.
 class CatalogTab extends ConsumerStatefulWidget {
   const CatalogTab({
     super.key,
@@ -494,6 +568,15 @@ class CatalogTab extends ConsumerStatefulWidget {
   ConsumerState<CatalogTab> createState() => _CatalogTabState();
 }
 
+/// Items per page of the catalog feed.
+const catalogPageSize = 40;
+
+/// Cards per row of the catalog feed.
+const catalogColumns = 3;
+
+/// How many cards before the end the next page is requested.
+const _prefetchAhead = 12;
+
 class _CatalogTabState extends ConsumerState<CatalogTab> {
   final items = <Entry>[];
   Object? cursor = 0, error;
@@ -507,10 +590,10 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
 
   Future<void> load() async {
     if (loading || !more) return;
-    setState(() {
-      loading = true;
-      error = null;
-    });
+    // `loading` is set without a rebuild: the feed shows its loading row
+    // already (more == true), so only the page arriving repaints.
+    loading = true;
+    error = null;
     try {
       final result = await ref.read(repositoryProvider).mutate(
         'readSourceCatalog',
@@ -519,13 +602,15 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
           'version': widget.source.text('version'),
           'kind': widget.kind,
           'cursor': cursor,
+          'limit': catalogPageSize,
         },
       );
       if (!mounted) return;
       setState(() {
+        final known = {for (final i in items) i.id};
         items.addAll([
           for (final raw in (result['items'] as List? ?? const []))
-            if (raw is Map && raw['id'] is String)
+            if (raw is Map && raw['id'] is String && !known.contains(raw['id']))
               Entry(raw['id'] as String, Map<String, dynamic>.from(raw)),
         ]);
         cursor = result['cursor'];
@@ -534,16 +619,18 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
     } catch (e) {
       if (mounted) setState(() => error = e);
     } finally {
-      if (mounted) setState(() => loading = false);
+      loading = false;
     }
   }
+
+  Widget _box(Widget child) => SliverToBoxAdapter(child: _Padded(child: child));
 
   @override
   Widget build(BuildContext context) {
     final l = context.l;
     if (error != null && items.isEmpty) {
-      return _Padded(
-        child: ErrorState(
+      return _box(
+        ErrorState(
           onRetry: () {
             more = true;
             load();
@@ -552,11 +639,17 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
       );
     }
     if (loading && items.isEmpty) {
-      return const _Padded(child: PosterGridSkeleton());
+      return _box(
+        PosterGridSkeleton(
+          count: catalogColumns * 4,
+          columns: catalogColumns,
+          square: widget.kind == 'channel',
+        ),
+      );
     }
     if (items.isEmpty) {
-      return _Padded(
-        child: EmptyState(
+      return _box(
+        EmptyState(
           title: l.noResults,
           body: l.noResultsBody,
           icon: AppIcons.search,
@@ -564,34 +657,107 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
       );
     }
     final home = widget.home;
-    return _Padded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            key: ValueKey('catalog-grid-${widget.kind}'),
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: [
-              for (final item in items)
-                HomeCard(
-                  item: item,
-                  onTap: () => openTitle(context, item),
-                  onLongPress: home == null
-                      ? null
-                      : () =>
-                            showLibraryActions(context, item: item, home: home),
+    final square = widget.kind == 'channel';
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverLayoutBuilder(
+            builder: (context, constraints) {
+              const gap = AppSpacing.sm;
+              final cell =
+                  (constraints.crossAxisExtent - gap * (catalogColumns - 1)) /
+                  catalogColumns;
+              return SliverGrid(
+                key: ValueKey('catalog-grid-${widget.kind}'),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: catalogColumns,
+                  mainAxisSpacing: gap,
+                  crossAxisSpacing: gap,
+                  childAspectRatio: square ? 1 : 2 / 3,
                 ),
-            ],
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  // Near the end of what is loaded: fetch the next page.
+                  if (more &&
+                      !loading &&
+                      error == null &&
+                      index >= items.length - _prefetchAhead) {
+                    // Marked now so the many cards built in one frame ask once.
+                    loading = true;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      loading = false;
+                      if (mounted) load();
+                    });
+                  }
+                  final item = items[index];
+                  return HomeCard(
+                    item: item,
+                    width: cell,
+                    onTap: () => openTitle(context, item),
+                    onLongPress: home == null
+                        ? null
+                        : () => showLibraryActions(
+                            context,
+                            item: item,
+                            home: home,
+                          ),
+                  );
+                }, childCount: items.length),
+              );
+            },
           ),
-          if (more) ...[
-            const SizedBox(height: AppSpacing.lg),
-            loading
-                ? const AppLoadingSkeleton(rows: 1)
-                : AppButton(label: l.more, onPressed: load),
-          ],
+          if (more && error == null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: _FeedLoadingRow(square: square),
+              ),
+            ),
+          if (error != null)
+            _box(
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.md),
+                child: ErrorState(onRetry: load),
+              ),
+            ),
         ],
       ),
     );
   }
+}
+
+/// One row of placeholder cards under the feed while the next page loads
+/// (same [catalogColumns] columns and card shape as the feed).
+class _FeedLoadingRow extends StatelessWidget {
+  const _FeedLoadingRow({required this.square});
+  final bool square;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: context.l.loading,
+    liveRegion: true,
+    child: ExcludeSemantics(
+      child: AppSkeletonPulse(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = AppSpacing.sm;
+            final cell =
+                (constraints.maxWidth - gap * (catalogColumns - 1)) /
+                catalogColumns;
+            return Row(
+              children: [
+                for (var i = 0; i < catalogColumns; i++) ...[
+                  if (i > 0) const SizedBox(width: gap),
+                  AppSkeletonBlock(
+                    width: cell,
+                    height: square ? cell : cell * 3 / 2,
+                    radius: AppRadii.md,
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    ),
+  );
 }

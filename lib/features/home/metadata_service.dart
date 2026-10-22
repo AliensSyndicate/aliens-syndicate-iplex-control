@@ -512,13 +512,7 @@ class TmdbMetadataService implements MetadataService {
   }) async {
     await _acquire();
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw const MetadataUnavailable(401);
-      final idToken = await user.getIdToken();
-      final appCheck = await FirebaseAppCheck.instance.getToken();
-      if (idToken == null || appCheck == null) {
-        throw const MetadataUnavailable(401);
-      }
+      final (idToken, appCheck) = await _tokens();
       final context = _contextFamilyId();
       final uri = Uri.parse('$baseUrl$path').replace(
         queryParameters: {
@@ -551,9 +545,40 @@ class TmdbMetadataService implements MetadataService {
     }
   }
 
-  // At most 4 requests at a time: a Home has up to 50 cards.
+  // At most 6 requests at a time: a Home has up to 50 cards.
+  // Tokens are reused for a short while: a page of 40 cards would otherwise
+  // cross the platform channel twice per card.
+  Future<(String, String)>? _tokenCache;
+  DateTime _tokenAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  Future<(String, String)> _tokens() {
+    final fresh =
+        DateTime.now().difference(_tokenAt) < const Duration(seconds: 30);
+    final cached = _tokenCache;
+    if (cached != null && fresh) return cached;
+    _tokenAt = DateTime.now();
+    final future = () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw const MetadataUnavailable(401);
+      final idToken = await user.getIdToken();
+      final appCheck = await FirebaseAppCheck.instance.getToken();
+      if (idToken == null || appCheck == null) {
+        throw const MetadataUnavailable(401);
+      }
+      return (idToken, appCheck);
+    }();
+    _tokenCache = future;
+    // A failed attempt is not kept.
+    future.catchError((Object _) {
+      _tokenCache = null;
+      _tokenAt = DateTime.fromMillisecondsSinceEpoch(0);
+      return ('', '');
+    }).ignore();
+    return future;
+  }
+
   Future<void> _acquire() async {
-    if (_running < 4) {
+    if (_running < 6) {
       _running++;
       return;
     }
@@ -564,7 +589,9 @@ class TmdbMetadataService implements MetadataService {
 
   void _release() {
     if (_waiting.isNotEmpty) {
-      _waiting.removeAt(0).complete();
+      // Newest first: the cards on screen now are the last ones built, the
+      // ones already scrolled past can wait.
+      _waiting.removeLast().complete();
     } else {
       _running--;
     }
