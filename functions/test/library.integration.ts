@@ -133,6 +133,14 @@ test('library: editorial titles saved without IPTV, no duplicates across sources
   assert.equal((await db().collection(`families/${fid}/profiles/admin/wishlist`).get()).size, 0);
   await assert.rejects(lib({list: 'wishlist', kind: 'movie', tmdbId: 1, title: 'Velho'}), /stale-generation/);
 
+  // "Ver tudo": the Home shows 10 per section; the section request returns all.
+  for (let id = 2001; id <= 2012; id++) await lib({list: 'favorites', kind: 'movie', tmdbId: id, title: `Título ${id}`, generation: 1});
+  assert.equal((await home()).library.favorites.length, 10);
+  const whole = await execute('readHome', {...ctx, sourceId: null, section: 'favorites'}, admin) as any;
+  assert.equal(whole.library.favorites.length, 12);
+  assert.equal(whole.library.wishlist.length <= 10, true, 'other sections keep the Home size');
+  await assert.rejects(execute('readHome', {...ctx, section: 'everything'}, admin), /invalid|enum/i);
+
   // 10) Discovery grant: person account yes; TVs never.
   assert.deepEqual(await execute('authorizeDiscovery', ctx, admin), {ok: true});
   await assert.rejects(tvCall('authorizeDiscovery', {}, tv), /permission|unknown|not-allowed|invalid/i);

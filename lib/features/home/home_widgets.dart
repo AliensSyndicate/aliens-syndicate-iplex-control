@@ -108,6 +108,7 @@ class Artwork extends ConsumerStatefulWidget {
   final Entry item;
   final BoxFit fit;
   final bool backdrop;
+
   final Alignment alignment;
   final Color background;
 
@@ -161,12 +162,27 @@ class _ArtworkState extends ConsumerState<Artwork> {
     return FutureBuilder<ContentMetadata?>(
       future: metadata,
       builder: (context, snapshot) {
-        final url = widget.backdrop
+        final tmdb = widget.backdrop
             ? snapshot.data?.backdrop
             : snapshot.data?.poster;
+        final url = tmdb;
         if (url != null) {
           return _NetworkImage(
             url: url,
+            fit: widget.fit,
+            item: item,
+            alignment: widget.alignment,
+            background: widget.background,
+          );
+        }
+        // No TMDB cover: the source's own art, cropped, before initials.
+        final fallback = widget.backdrop
+            ? item.sourceImage ?? item.editorialPoster
+            : null;
+        if (fallback != null &&
+            snapshot.connectionState == ConnectionState.done) {
+          return _NetworkImage(
+            url: fallback,
             fit: widget.fit,
             item: item,
             alignment: widget.alignment,
@@ -259,7 +275,11 @@ class HomeRow extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.limit = 10,
+    this.onSeeAll,
   });
+
+  /// "Ver tudo": opens the screen with every item of the section.
+  final VoidCallback? onSeeAll;
   final String title;
   final List<Entry> items;
   final ValueChanged<Entry> onTap;
@@ -279,7 +299,33 @@ class HomeRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(header: true, child: SectionHeader(title)),
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(header: true, child: SectionHeader(title)),
+            ),
+            if (onSeeAll != null)
+              Semantics(
+                button: true,
+                child: InkResponse(
+                  key: ValueKey('home-see-all-$title'),
+                  onTap: onSeeAll,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    child: Text(
+                      context.l.seeAll,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
         SizedBox(
           height: height,
           child: ListView.separated(

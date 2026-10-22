@@ -584,7 +584,13 @@ void main() {
       await tester.pumpAndSettle();
       // Older backend payload: "my list" titles are shown under Favoritos.
       expect(find.text('Favorites'), findsOneWidget);
-      expect(find.text('Available title'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('home-card-film')),
+          matching: find.text('Available title'),
+        ),
+        findsOneWidget,
+      );
     },
   );
   testWidgets(

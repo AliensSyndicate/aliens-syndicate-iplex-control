@@ -1732,4 +1732,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get socialNetworks => 'Redes sociais';
+
+  @override
+  String get seeAll => 'Ver tudo';
 }

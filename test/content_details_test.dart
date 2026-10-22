@@ -32,7 +32,9 @@ class LibraryRepo extends navigation.SessionRepository {
     ];
   }
   Map<String, dynamic> profileJson = profile;
-  List<Map<String, dynamic>> recentMovies = [], recentSeries = [];
+  List<Map<String, dynamic>> recentMovies = [],
+      recentSeries = [],
+      continueWatching = [];
 
   /// tmdb key → catalog item the backend would resolve (confident match).
   final catalogByTmdb = <String, Map<String, dynamic>>{};
@@ -51,6 +53,7 @@ class LibraryRepo extends navigation.SessionRepository {
     'profile': profileJson,
     'recentMovies': recentMovies,
     'recentSeries': recentSeries,
+    'continueWatching': continueWatching,
     'library': {
       for (final list in library.keys)
         list: [
@@ -940,7 +943,7 @@ void main() {
       await launchWith(tester, repo, metadataFixture());
       await tapKey(tester, const ValueKey('home-card-se1'));
       expect(find.text('Continue'), findsOneWidget);
-      expect(find.bySemanticsLabel('Start over'), findsOneWidget);
+      expect(find.text('Start over'), findsOneWidget);
       expect(find.byKey(const Key('details-watch-on-tv')), findsNothing);
       await tapKey(tester, const Key('details-restart'));
       var sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
@@ -955,14 +958,20 @@ void main() {
       final cont = tester.getRect(find.byKey(const Key('details-continue')));
       final restart = tester.getRect(find.byKey(const Key('details-restart')));
       expect(cont.top, restart.top, reason: 'same row');
-      expect(restart.width, 48, reason: 'icon only, fit width');
-      expect(cont.width, greaterThan(200));
+      // Text, fit width; Continue fills the rest of the row.
+      expect(find.text('Start over'), findsOneWidget);
       expect(
-        tester
-            .widget<DetailsButton>(find.byKey(const Key('details-restart')))
-            .icon,
-        isNotNull,
+        find.descendant(
+          of: find.byKey(const Key('details-restart')),
+          matching: find.byType(AppIcon),
+        ),
+        findsNothing,
       );
+      final label = tester.getSize(find.text('Start over'));
+      expect(restart.width, closeTo(label.width + 2 * 24, 1));
+      expect(cont.left, 24);
+      expect(restart.right, 390 - 24);
+      expect(restart.left - cont.right, closeTo(16, 0.5));
       expect(
         tester
             .widget<DetailsButton>(find.byKey(const Key('details-continue')))
@@ -1126,6 +1135,33 @@ void main() {
       tester.getTopLeft(find.text('Rio de Janeiro')).dy,
       lessThan(tester.getTopLeft(find.textContaining('1980')).dy),
     );
+  });
+
+  testWidgets('now playing bar: series shows season and episode', (
+    tester,
+  ) async {
+    final repo = LibraryRepo()
+      ..continueWatching = [
+        {
+          ...item('se1', 'Série Exemplo', 'series'),
+          'progress': {'position': 10, 'duration': 100},
+          'episodeId': '3012',
+        },
+      ];
+    await launchWith(tester, repo, metadataFixture());
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('now-playing-bar')),
+        matching: find.text('Série Exemplo'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Season 1 - Episode 2'), findsOneWidget);
+    expect(find.byKey(const Key('now-playing-progress')), findsOneWidget);
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    await fixtures.screenshot(tester, 'details/now-playing');
+    tester.view.physicalSize = const Size(390, 2400);
   });
 }
 

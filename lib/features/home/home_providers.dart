@@ -142,3 +142,21 @@ final homeProvider = FutureProvider.autoDispose.family<HomeData, String?>((
       .timeout(const Duration(seconds: 30));
   return HomeData.fromJson(result);
 }, retry: (retryCount, error) => null);
+
+/// "Ver tudo": one Home section returned whole by readHome (same source,
+/// scope and visibility rules as the Home itself).
+final homeSectionProvider = FutureProvider.autoDispose
+    .family<HomeData, (HomeSection, String?)>((ref, key) async {
+      final (section, sourceId) = key;
+      ref.watch(accountProvider.select((a) => a.asData?.value?.iptvScopeId));
+      final recentSearchIds = ref.watch(recentSearchProvider);
+      final result = await ref
+          .watch(repositoryProvider)
+          .mutate('readHome', {
+            'sourceId': sourceId,
+            'section': section.name,
+            if (recentSearchIds.isNotEmpty) 'recentSearchIds': recentSearchIds,
+          })
+          .timeout(const Duration(seconds: 30));
+      return HomeData.fromJson(result);
+    }, retry: (retryCount, error) => null);

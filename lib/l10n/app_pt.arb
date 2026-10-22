@@ -556,5 +556,6 @@
   "saveAction": "Salvar",
   "unsaveAction": "Remover",
   "seasonEpisodeLabel": "Temporada {season} - Episódio {episode}",
-  "socialNetworks": "Redes sociais"
+  "socialNetworks": "Redes sociais",
+  "seeAll": "Ver tudo"
 }

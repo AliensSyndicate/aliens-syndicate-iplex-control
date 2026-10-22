@@ -1739,4 +1739,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get socialNetworks => 'Redes sociales';
+
+  @override
+  String get seeAll => 'Ver todo';
 }

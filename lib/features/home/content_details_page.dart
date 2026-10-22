@@ -443,11 +443,10 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            // Icon only, fit width.
+            // Text only, fit width (label + padding); Continue takes the rest.
             DetailsButton(
               key: const Key('details-restart'),
               label: l.restartLabel,
-              icon: AppIcons.refresh,
               onPressed: () =>
                   watchOnTv(target, episodeId: target.episodeId ?? episode?.id),
             ),

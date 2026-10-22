@@ -90,6 +90,16 @@ Entry editorialEntry({
   'available': false,
 });
 
+/// Home sections; the name is the backend `readHome.section` value.
+enum HomeSection {
+  favorites,
+  continueWatching,
+  wishlist,
+  recentMovies,
+  recentSeries,
+  recentSearches,
+}
+
 /// Favoritos and Lista de desejos: independent lists of the same profile.
 enum LibraryList { favorites, wishlist }
 
@@ -211,6 +221,16 @@ class HomeData {
       recentMovies.isEmpty &&
       recentSeries.isEmpty &&
       recentSearches.isEmpty;
+
+  /// Items of one section (the Home shows 10; "Ver tudo" the whole list).
+  List<Entry> section(HomeSection section) => switch (section) {
+    HomeSection.favorites => libraryFavorites,
+    HomeSection.continueWatching => continueWatching,
+    HomeSection.wishlist => wishlist,
+    HomeSection.recentMovies => recentMovies,
+    HomeSection.recentSeries => recentSeries,
+    HomeSection.recentSearches => recentSearches,
+  };
 
   bool isFavorite(Entry item) => isSaved(LibraryList.favorites, item);
 

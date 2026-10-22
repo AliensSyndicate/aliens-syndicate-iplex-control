@@ -3105,6 +3105,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Social media'**
   String get socialNetworks;
+
+  /// No description provided for @seeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all'**
+  String get seeAll;
 }
 
 class _AppLocalizationsDelegate

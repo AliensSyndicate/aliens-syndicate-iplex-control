@@ -273,6 +273,9 @@ function itemIndex(version:string,sourceId:string,catalog:Catalog) {
   return index;
 }
 const HOME_ROW=10;
+/** Sections of the Control Home that "Ver tudo" can open whole. */
+export const HOME_SECTIONS=['favorites','continueWatching','wishlist','recentMovies','recentSeries','recentSearches'] as const;
+const SECTION_MAX=100;
 type Item=Catalog['items'][number];
 type Visible={sourceId:string;sourceName:string;version:string;item:Item};
 const publicItem=(v:Visible,id:string)=>({...v.item,id,catalogItemId:v.item.id,sourceId:v.sourceId,sourceName:v.sourceName,version:v.version});
@@ -314,13 +317,16 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
   if(actor.deviceId)throw new DomainError('permission-denied');
   const selected=input.sourceId===undefined||input.sourceId===null?null:idSchema.parse(input.sourceId);
   const recentSearchIds=z.array(idSchema).max(HOME_ROW).parse(input.recentSearchIds??[]);
+  // "Ver tudo": one section returned whole (bounded); the others keep the Home size.
+  const full=input.section===undefined||input.section===null?null:z.enum(HOME_SECTIONS).parse(input.section);
+  const rowLimit=(section:typeof HOME_SECTIONS[number])=>full===section?SECTION_MAX:HOME_ROW;
   const context=await homeScope(actor);
   const recentMovies:Record<string,unknown>[]=[],recentSeries:Record<string,unknown>[]=[];
   const {visible,known}=await visibleCatalog(actor,context.sources,(source,access,catalog,name)=>{
     if(source.id!==selected)return;
     // Only providers that publish an "added" date: nothing is guessed for the others.
     const recent=(kind:Kind)=>catalog.items.filter(i=>i.kind===kind&&i.addedAt&&canSee(access.viewer,source.id,i))
-      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,HOME_ROW)
+      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,rowLimit(kind==='movie'?'recentMovies':'recentSeries'))
       .map(i=>publicItem({sourceId:source.id,sourceName:name,version:access.data.version,item:i},hash(`${source.id}:${i.id}`)));
     recentMovies.push(...recent('movie'));recentSeries.push(...recent('series'));
   });
@@ -336,7 +342,7 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
     const [fav,wish,progress]=await Promise.all([
       ref.collection('favorites').orderBy('updatedAt','desc').limit(100).get(),
       ref.collection('wishlist').orderBy('updatedAt','desc').limit(100).get(),
-      ref.collection('watch_progress').orderBy('updatedAt','desc').limit(50).get(),
+      ref.collection('watch_progress').orderBy('updatedAt','desc').limit(full==='continueWatching'?SECTION_MAX:50).get(),
     ]);
     const resolver=new TitleResolver(candidates(visible),known,selected);
     const links=getFirestore().batch();let linkWrites=0;
@@ -356,10 +362,10 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
         if(item&&link.via!=='link'&&linkWrites<50){links.update(doc.ref,{contentId:item.id,catalogContentId:item.id,sourceId:item.sourceId});linkWrites++;}
         if(item){
           const entry={...item,library:{id:doc.id,...(typeof d.tmdbId==='number'?{tmdbId:d.tmdbId}:{})},available:true};
-          if(library[list].length<HOME_ROW)library[list].push(entry);
+          if(library[list].length<rowLimit(list))library[list].push(entry);
           if(list==='favorites'){favoriteIds.push(item.id as string);const row=item.kind==='channel'?favorites:myList;if(row.length<HOME_ROW)row.push(item);}
         }else if(typeof d.tmdbId==='number'&&(d.kind==='movie'||d.kind==='series')&&profile.type!=='kids'){
-          if(library[list].length<HOME_ROW)library[list].push({id:doc.id,kind:d.kind,title:String(d.title??''),tmdbId:d.tmdbId,
+          if(library[list].length<rowLimit(list))library[list].push({id:doc.id,kind:d.kind,title:String(d.title??''),tmdbId:d.tmdbId,
             ...(typeof d.originalTitle==='string'?{originalTitle:d.originalTitle}:{}),...(typeof d.year==='number'?{year:d.year}:{}),
             ...(typeof d.poster==='string'?{poster:d.poster}:{}),library:{id:doc.id,tmdbId:d.tmdbId},available:false});
         }
@@ -369,7 +375,7 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
     if(linkWrites)await links.commit().catch(()=>{});
     for(const doc of progress.docs){
       const d=doc.data();
-      if(continueWatching.length>=HOME_ROW||d.generation!==profile.generations.progress||typeof d.contentId!=='string')continue;
+      if(continueWatching.length>=rowLimit('continueWatching')||d.generation!==profile.generations.progress||typeof d.contentId!=='string')continue;
       if(!(Number(d.duration)>0)||Number(d.position)/Number(d.duration)>=0.95)continue;
       // Episodes are saved as `<seriesItemId>_e<episodeId>` (same contract as the TV).
       const episode=/^([A-Za-z0-9-]+)_e([A-Za-z0-9_-]+)$/.exec(d.contentId);

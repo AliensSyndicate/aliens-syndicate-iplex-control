@@ -1,5 +1,8 @@
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
+import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
+import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/home_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -98,7 +101,13 @@ void main() {
         19,
         reason: '10 cards + 9 separators',
       );
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('home-card-m1')),
+          matching: find.byType(LinearProgressIndicator),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Your Home is still empty'), findsNothing);
       expect(
         repo.mutationPayloads
@@ -261,6 +270,192 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('home-card-se1')).last);
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('details-continue')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Continue watching uses the same poster cards as the other rows',
+    (tester) async {
+      await navigation.launch(
+        tester,
+        repoWith({
+          'profile': profile,
+          'continueWatching': [
+            item(
+              'm1',
+              'Missão Fictícia',
+              'movie',
+              progress: {'position': 30, 'duration': 100},
+            ),
+          ],
+          'recentMovies': [item('r1', 'Filme Novo', 'movie')],
+        }),
+      );
+      tester.view.physicalSize = const Size(390, 2400);
+      await tester.pumpAndSettle();
+      Size art(String id) => tester.getSize(
+        find.descendant(
+          of: find.byKey(ValueKey('home-card-$id')).first,
+          matching: find.byType(Artwork),
+        ),
+      );
+      expect(art('m1'), art('r1'));
+      expect(art('m1').height / art('m1').width, closeTo(1.5, 0.01));
+    },
+  );
+
+  testWidgets('"See all" on every section opens the whole list', (
+    tester,
+  ) async {
+    final repo = repoWith({
+      'profile': profile,
+      'library': {
+        'favorites': [
+          for (var i = 0; i < 12; i++) item('f$i', 'Favorito $i', 'movie'),
+        ],
+        'wishlist': [item('w1', 'Desejo', 'movie')],
+      },
+      'recentMovies': [item('r1', 'Filme Novo', 'movie')],
+    });
+    final c = await navigation.launch(tester, repo);
+    tester.view.physicalSize = const Size(390, 2400);
+    await tester.pumpAndSettle();
+    for (final title in ['Favorites', 'Wishlist', 'Recently added movies']) {
+      final link = find.byKey(ValueKey('home-see-all-$title'));
+      expect(link, findsOneWidget);
+      expect(
+        tester.getTopRight(link).dx,
+        greaterThan(tester.getTopRight(find.text(title)).dx),
+        reason: 'at the end of the section title row',
+      );
+    }
+    final row = tester.widget<ListView>(
+      find.byKey(const PageStorageKey('home-row-Favorites')),
+    );
+    expect(
+      (row.childrenDelegate as SliverChildBuilderDelegate).childCount,
+      19,
+      reason: 'the Home shows the first 10',
+    );
+    await tester.tap(find.byKey(const ValueKey('home-see-all-Favorites')));
+    await tester.pumpAndSettle();
+    expect(c.read(routerProvider).state.uri.path, '/home/section/favorites');
+    expect(
+      repo.mutationPayloads.lastWhere((m) => m.$1 == 'readHome').$2['section'],
+      'favorites',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('home-section-grid')),
+        matching: find.byType(HomeCard),
+      ),
+      findsNWidgets(12),
+    );
+    await tester.tap(find.byKey(const ValueKey('home-card-f11')));
+    await tester.pumpAndSettle();
+    expect(c.read(routerProvider).state.uri.path, '/home/title');
+  });
+
+  testWidgets(
+    'now playing bar: floating above the menu, Home only, opens the title',
+    (tester) async {
+      final repo = repoWith({
+        'profile': profile,
+        'continueWatching': [
+          item(
+            'm1',
+            'Missão Fictícia',
+            'movie',
+            progress: {'position': 30, 'duration': 100},
+          ),
+        ],
+      });
+      final c = await navigation.launch(tester, repo);
+      final bar = find.byKey(const Key('now-playing-bar'));
+      expect(bar, findsOneWidget);
+      expect(
+        find.descendant(of: bar, matching: find.text('Missão Fictícia')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('now-playing-progress')), findsOneWidget);
+      expect(find.byKey(const Key('now-playing-subtitle')), findsNothing);
+      // Floating: side margins and above the main menu.
+      final rect = tester.getRect(bar);
+      expect(rect.left, 16);
+      expect(rect.right, 390 - 16);
+      expect(
+        rect.bottom,
+        lessThanOrEqualTo(tester.getTopLeft(find.byType(BottomNavigation)).dy),
+      );
+      // Only on the Home.
+      c.read(routerProvider).go('/devices');
+      await tester.pumpAndSettle();
+      expect(bar, findsNothing);
+      c.read(routerProvider).go('/home');
+      await tester.pumpAndSettle();
+      // No icon on the right; tapping the bar opens the title.
+      expect(find.byKey(const Key('now-playing-tv')), findsNothing);
+      expect(
+        find.descendant(of: bar, matching: find.byType(AppIcon)),
+        findsNothing,
+      );
+      await tester.tap(bar);
+      await tester.pumpAndSettle();
+      expect(c.read(routerProvider).state.uri.path, '/home/title');
+    },
+  );
+
+  testWidgets('now playing bar: channel shows the name only, no progress', (
+    tester,
+  ) async {
+    await navigation.launch(
+      tester,
+      repoWith({
+        'profile': profile,
+        'library': {
+          'favorites': [item('ch1', 'Canal Notícias', 'channel')],
+        },
+      }),
+    );
+    final bar = find.byKey(const Key('now-playing-bar'));
+    expect(
+      find.descendant(of: bar, matching: find.text('Canal Notícias')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('now-playing-progress')), findsNothing);
+    expect(find.byKey(const Key('now-playing-subtitle')), findsNothing);
+  });
+
+  testWidgets(
+    'now playing bar: progress under the name, 2:3 poster, track without progress',
+    (tester) async {
+      await navigation.launch(
+        tester,
+        repoWith({
+          'profile': profile,
+          'recentMovies': [item('r1', 'Filme Novo', 'movie')],
+        }),
+      );
+      final track = tester.widget<LinearProgressIndicator>(
+        find.byKey(const Key('now-playing-progress')),
+      );
+      expect(track.value, 0);
+      // Under the name on the card base, aligned with the poster bottom
+      // (never under the poster); 2:3 poster.
+      final art = tester.getRect(find.byKey(const Key('now-playing-art')));
+      final line = tester.getRect(
+        find.byKey(const Key('now-playing-progress')),
+      );
+      final name = tester.getRect(find.byKey(const Key('now-playing-title')));
+      expect(line.left, greaterThan(art.right));
+      expect(line.top, greaterThan(name.bottom));
+      expect(
+        line.bottom,
+        art.bottom,
+        reason: 'on the base, aligned with the poster',
+      );
+      expect(line.height, 3);
+      expect(art.height / art.width, closeTo(1.5, 0.01));
     },
   );
 }

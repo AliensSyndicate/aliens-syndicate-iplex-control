@@ -7,7 +7,9 @@ import '../core/design_system/components.dart';
 import '../features/authentication/login_page.dart';
 import '../features/manager/account_page.dart';
 import '../features/home/content_details_page.dart';
+import '../features/home/home_data.dart';
 import '../features/home/home_page.dart';
+import '../features/home/home_section_page.dart';
 import '../features/home/person_page.dart';
 import '../core/domain/models.dart';
 import '../features/manager/detail_page.dart';
@@ -278,6 +280,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                       ),
                     ],
+                  ),
+                  GoRoute(
+                    path: 'section/:id',
+                    pageBuilder: (c, s) => _appPage(
+                      key: s.pageKey,
+                      child: HomeSectionPage(
+                        section: HomeSection.values.firstWhere(
+                          (v) => v.name == s.pathParameters['id'],
+                          orElse: () => HomeSection.favorites,
+                        ),
+                      ),
+                    ),
                   ),
                   GoRoute(
                     path: 'person/:id',

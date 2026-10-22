@@ -21,10 +21,8 @@ String? _text(Object? v) =>
 /// TMDB serves every size from the same path.
 String? tmdbSized(String? url, [String size = 'original']) {
   if (url == null) return null;
-  return url.replaceFirst(
-    RegExp(r'/t/p/[a-z]?\d+|/t/p/original'),
-    '/t/p/$size',
-  );
+  // Any TMDB size segment (w342, original, w1066_and_h600_face…).
+  return url.replaceFirst(RegExp(r'/t/p/[^/]+/'), '/t/p/$size/');
 }
 
 /// One episode of a TMDB season (editorial information only).

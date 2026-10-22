@@ -13,6 +13,12 @@ import 'metadata_service.dart';
 /// detail and person pages know the profile and what is already saved.
 /// Without any ready source the library still loads (`sourceId: null`).
 final currentHomeProvider = Provider.autoDispose<AsyncValue<HomeData>>((ref) {
+  // No family scope (left or removed): no Home data at all, so a late reply
+  // of the previous family can never be shown anywhere.
+  final scope = ref.watch(
+    accountProvider.select((a) => a.asData?.value?.iptvScopeId),
+  );
+  if (scope == null) return const AsyncData(HomeData());
   final sources = ref.watch(entriesProvider('sources')).asData?.value;
   if (sources == null) return const AsyncLoading();
   final ready = readySources(sources, ref.watch(unlockedSourcesProvider));

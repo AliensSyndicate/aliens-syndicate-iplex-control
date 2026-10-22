@@ -14,6 +14,7 @@ import 'home_data.dart';
 import 'home_providers.dart';
 import 'home_widgets.dart';
 import 'library.dart';
+import 'now_playing.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -30,6 +31,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   List<Entry> results = [];
   Object? cursor, searchError;
   bool searching = false, more = false;
+
+  /// Room below the content: the menu, plus the floating bar when shown.
+  double get _bottomSpace =>
+      AppDimensions.bottomNav +
+      AppSpacing.xl +
+      (ref.read(nowPlayingProvider) == null
+          ? 0
+          : NowPlayingBar.height + NowPlayingBar.gap);
 
   @override
   void dispose() {
@@ -132,7 +141,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (previous != next) clearSearch();
     });
     final account = ref.watch(accountProvider);
-    return SafeArea(
+    final playing = ref.watch(nowPlayingProvider);
+    final page = SafeArea(
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppDimensions.maxWidth),
@@ -161,6 +171,22 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ),
       ),
+    );
+    if (playing == null) return page;
+    // Floating "now playing" bar right above the main menu (Home only).
+    return Stack(
+      children: [
+        page,
+        Positioned(
+          left: AppSpacing.md,
+          right: AppSpacing.md,
+          bottom:
+              MediaQuery.viewPaddingOf(context).bottom +
+              AppDimensions.bottomNav +
+              NowPlayingBar.gap,
+          child: NowPlayingBar(playing: playing),
+        ),
+      ],
     );
   }
 
@@ -218,7 +244,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 padding: const EdgeInsets.only(left: AppSpacing.lg),
                 child: row,
               ),
-          const SizedBox(height: AppDimensions.bottomNav + AppSpacing.xl),
+          SizedBox(height: _bottomSpace),
         ],
       );
     }
@@ -248,9 +274,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ..._searchSlivers(context, source, home.asData?.value)
           else
             ..._homeSlivers(context, home, sourceId),
-          const SliverToBoxAdapter(
-            child: SizedBox(height: AppDimensions.bottomNav + AppSpacing.xl),
-          ),
+          SliverToBoxAdapter(child: SizedBox(height: _bottomSpace)),
         ],
       ),
     );
@@ -281,12 +305,20 @@ class _HomePageState extends ConsumerState<HomePage> {
       data: (data) {
         void tap(Entry item) => open(item, data);
         final rows = [
-          (l.homeFavorites, data.libraryFavorites),
-          (l.homeContinueWatching, data.continueWatching),
-          (l.homeWishlist, data.wishlist),
-          (l.homeRecentMovies, data.recentMovies),
-          (l.homeRecentSeries, data.recentSeries),
-          (l.homeRecentSearches, data.recentSearches),
+          (l.homeFavorites, data.libraryFavorites, HomeSection.favorites),
+          (
+            l.homeContinueWatching,
+            data.continueWatching,
+            HomeSection.continueWatching,
+          ),
+          (l.homeWishlist, data.wishlist, HomeSection.wishlist),
+          (l.homeRecentMovies, data.recentMovies, HomeSection.recentMovies),
+          (l.homeRecentSeries, data.recentSeries, HomeSection.recentSeries),
+          (
+            l.homeRecentSearches,
+            data.recentSearches,
+            HomeSection.recentSearches,
+          ),
         ].where((row) => row.$2.isNotEmpty);
         if (rows.isEmpty) {
           return [
@@ -315,6 +347,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   items: row.$2,
                   onTap: tap,
                   onLongPress: libraryActions(data),
+                  onSeeAll: () => context.push('/home/section/${row.$3.name}'),
                 ),
               ),
             ),
@@ -325,9 +358,9 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   /// Favoritos and Lista de desejos (also titles no source offers).
   List<Widget> _libraryRows(BuildContext context, HomeData home) => [
-    for (final (title, items) in [
-      (context.l.homeFavorites, home.libraryFavorites),
-      (context.l.homeWishlist, home.wishlist),
+    for (final (title, items, section) in [
+      (context.l.homeFavorites, home.libraryFavorites, HomeSection.favorites),
+      (context.l.homeWishlist, home.wishlist, HomeSection.wishlist),
     ])
       if (items.isNotEmpty)
         HomeRow(
@@ -335,6 +368,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           items: items,
           onTap: (item) => open(item, home),
           onLongPress: libraryActions(home),
+          onSeeAll: () => context.push('/home/section/${section.name}'),
         ),
   ];
 
