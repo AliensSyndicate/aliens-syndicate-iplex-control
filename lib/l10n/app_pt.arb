@@ -476,6 +476,7 @@
   "selectIptvSource": "Selecionar fonte IPTV",
   "iptvSources": "Fontes IPTV",
   "selectedSource": "Selecionada",
+  "homeNowPlaying": "Reproduzindo",
   "homeFavorites": "Favoritos",
   "homeContinueWatching": "Continuar assistindo",
   "homeMyList": "Minha lista",

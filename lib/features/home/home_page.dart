@@ -197,15 +197,27 @@ class _HomePageState extends ConsumerState<HomePage> {
           if (tab == 0)
             if (ref.watch(nowPlayingProvider) case final playing?)
               SliverToBoxAdapter(
-                child: Padding(
-                  // Same margins as the device cards.
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    0,
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                  ),
-                  child: NowPlayingBar(playing: playing),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: AppSpacing.lg),
+                      child: Semantics(
+                        header: true,
+                        child: SectionHeader(l.homeNowPlaying),
+                      ),
+                    ),
+                    Padding(
+                      // Same margins as the device cards.
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                      ),
+                      child: NowPlayingBar(playing: playing),
+                    ),
+                  ],
                 ),
               ),
           if (tab == 0)

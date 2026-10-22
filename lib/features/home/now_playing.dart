@@ -121,12 +121,7 @@ class NowPlayingBar extends ConsumerWidget {
       child: Container(
         key: const Key('now-playing-bar'),
         height: height,
-        // Card surface: slightly lighter than the screen to stand out.
-        decoration: BoxDecoration(
-          color: AppColors.surfaceDefault,
-          borderRadius: BorderRadius.circular(AppRadii.card),
-        ),
-        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(),
         child: Stack(
           children: [
             Row(

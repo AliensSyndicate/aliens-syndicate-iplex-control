@@ -1459,6 +1459,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get selectedSource => 'Selecionada';
 
   @override
+  String get homeNowPlaying => 'Reproduzindo';
+
+  @override
   String get homeFavorites => 'Favoritos';
 
   @override

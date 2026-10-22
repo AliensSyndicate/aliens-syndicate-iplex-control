@@ -1446,6 +1446,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectedSource => 'Selected';
 
   @override
+  String get homeNowPlaying => 'Now playing';
+
+  @override
   String get homeFavorites => 'Favorites';
 
   @override

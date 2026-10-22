@@ -597,6 +597,7 @@
   "selectIptvSource": "Select IPTV source",
   "iptvSources": "IPTV sources",
   "selectedSource": "Selected",
+  "homeNowPlaying": "Now playing",
   "homeFavorites": "Favorites",
   "homeContinueWatching": "Continue watching",
   "homeMyList": "My list",

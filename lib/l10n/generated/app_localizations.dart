@@ -2662,6 +2662,12 @@ abstract class AppLocalizations {
   /// **'Selected'**
   String get selectedSource;
 
+  /// No description provided for @homeNowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing'**
+  String get homeNowPlaying;
+
   /// No description provided for @homeFavorites.
   ///
   /// In en, this message translates to:

@@ -384,7 +384,7 @@ void main() {
   });
 
   testWidgets(
-    'now playing item: top of the Home, card background, opens the title',
+    'now playing item: top of the Home, standard background, opens the title',
     (tester) async {
       final repo = repoWith({
         'profile': profile,
@@ -418,9 +418,10 @@ void main() {
         rect.bottom,
         lessThan(tester.getTopLeft(find.text('Continue watching')).dy),
       );
+      expect(find.text('Now playing'), findsOneWidget);
       expect(
-        (tester.widget<Container>(bar).decoration as BoxDecoration).color,
-        AppColors.surfaceDefault,
+        (tester.widget<Container>(bar).decoration as BoxDecoration?)?.color,
+        isNull,
       );
       // Progress in the colors of the Continue watching cards.
       final track = tester.widget<LinearProgressIndicator>(
