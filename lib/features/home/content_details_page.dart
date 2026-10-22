@@ -8,6 +8,7 @@ import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'details_button.dart';
+import 'details_layout.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
 import 'home_widgets.dart';
@@ -59,15 +60,6 @@ class ContentDetailsPage extends ConsumerStatefulWidget {
 class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
   Future<ContentMetadata?>? metadata;
   Future<List<_Programme>>? guide;
-
-  /// Drives the cover darkening while the content scrolls over it.
-  final scroll = ScrollController();
-
-  @override
-  void dispose() {
-    scroll.dispose();
-    super.dispose();
-  }
 
   List<TvEpisode> episodes = const [];
 
@@ -246,10 +238,7 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
                 ref.watch(currentHomeProvider).isLoading &&
                 !ref.watch(currentHomeProvider).hasValue;
             if (loading || resolving || loadingEpisodes || homeLoading) {
-              return _DetailsSkeleton(
-                height: box.maxHeight,
-                back: _backButton(context),
-              );
+              return DetailsSkeleton(height: box.maxHeight);
             }
             if (editorial && meta == null) {
               return _unavailable(context, context.l.metadataUnavailable);
@@ -306,112 +295,31 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     bool loading,
     HomeData? home,
   ) {
-    final padding = MediaQuery.paddingOf(context);
     final channel = shown.isChannel;
-    return Stack(
-      fit: StackFit.expand,
+    return DetailsLayout(
+      height: box.maxHeight,
+      coverFraction: channel ? 0.6 : 0.75,
+      // Titles use the original TMDB poster as a full-bleed cover; channels
+      // keep their logo.
+      cover: channel
+          ? Artwork(
+              item: shown,
+              fit: BoxFit.contain,
+              alignment: Alignment.topCenter,
+              background: Colors.black,
+            )
+          : DetailsCover(
+              item: shown,
+              url: tmdbSized(meta?.posterOriginal ?? meta?.poster),
+              loading: loading,
+            ),
+      actions: _libraryBar(shown, meta, home),
       children: [
-        // Fixed artwork; only the content scrolls over it. Titles use the
-        // original TMDB poster as a full-bleed cover whose lower part fades
-        // into the page background.
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: box.maxHeight * (channel ? 0.6 : 0.75),
-          child: channel
-              ? Artwork(
-                  item: shown,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.topCenter,
-                  background: Colors.black,
-                )
-              : _Cover(
-                  item: shown,
-                  url: tmdbSized(meta?.posterOriginal ?? meta?.poster),
-                  loading: loading,
-                ),
-        ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: box.maxHeight * (channel ? 0.6 : 0.75) + 1,
-          child: const DecoratedBox(
-            key: Key('details-cover-fade'),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0x59000000),
-                  Color(0x00000000),
-                  Color(0x00000000),
-                  Color(0x99000000),
-                  Color(0xE6000000),
-                  Colors.black,
-                ],
-                stops: [0, 0.18, 0.5, 0.7, 0.86, 1],
-              ),
-            ),
-          ),
-        ),
-        // Scrolling up darkens the cover until it reaches the page black.
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: box.maxHeight * (channel ? 0.6 : 0.75) + 1,
-          child: IgnorePointer(
-            child: ListenableBuilder(
-              listenable: scroll,
-              builder: (context, _) => ColoredBox(
-                key: const Key('details-cover-dim'),
-                color: Colors.black.withValues(
-                  alpha: _dim(scroll, box.maxHeight * 0.5),
-                ),
-              ),
-            ),
-          ),
-        ),
-        SingleChildScrollView(
-          key: const Key('details-scroll'),
-          controller: scroll,
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            box.maxHeight * 0.55,
-            AppSpacing.lg,
-            AppSpacing.xl + padding.bottom,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppDimensions.maxWidth,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ..._summary(context, shown, meta, home),
-                  ..._details(context, shown, meta),
-                  ..._people(context, meta, home),
-                  ..._seasons(context, shown, meta),
-                  ..._guide(context),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: padding.top + AppSpacing.sm,
-          left: AppSpacing.lg,
-          child: _backButton(context),
-        ),
-        if (_libraryBar(shown, meta, home) case final bar?)
-          Positioned(
-            top: padding.top + AppSpacing.sm,
-            right: AppSpacing.sm,
-            child: bar,
-          ),
+        ..._summary(context, shown, meta, home),
+        ..._details(context, shown, meta),
+        ..._people(context, meta, home),
+        ..._seasons(context, shown, meta),
+        ..._guide(context),
       ],
     );
   }
@@ -562,33 +470,6 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
         ),
       const SizedBox(height: AppSpacing.lg),
     ];
-  }
-
-  /// Icon only, white, no box (48 dp touch target).
-  Widget _backButton(BuildContext context) => Semantics(
-    button: true,
-    label: context.l.back,
-    excludeSemantics: true,
-    child: InkResponse(
-      key: const Key('details-back'),
-      radius: AppDimensions.touch / 2,
-      onTap: () => Navigator.of(context).maybePop(),
-      child: const SizedBox.square(
-        dimension: AppDimensions.touch,
-        child: Center(
-          child: AppIcon(AppIcons.left, color: Colors.white, size: 28),
-        ),
-      ),
-    ),
-  );
-
-  /// 0 at the top, black once the content scrolled [distance] (or reached
-  /// the end of a shorter page).
-  static double _dim(ScrollController scroll, double distance) {
-    if (!scroll.hasClients || !scroll.position.hasContentDimensions) return 0;
-    final max = scroll.position.maxScrollExtent;
-    final span = max > 0 && max < distance ? max : distance;
-    return (scroll.offset / span).clamp(0, 1).toDouble();
   }
 
   /// Favoritar / Salvar as icons on the right of the top bar.
@@ -844,76 +725,107 @@ class PeopleRow extends StatelessWidget {
   final List<Credit> people;
   final ValueChanged<int>? onTap;
 
-  /// Portrait photo, 3:4.
-  static const _width = 96.0, _height = _width * 4 / 3;
+  @override
+  Widget build(BuildContext context) => PortraitRow(
+    children: [
+      for (final person in people)
+        PortraitCard(
+          key: ValueKey('person-${person.id ?? person.name}'),
+          image: _PersonPhoto(person: person),
+          title: person.name,
+          subtitle: person.role,
+          onTap: person.id != null && onTap != null
+              ? () => onTap!(person.id!)
+              : null,
+        ),
+    ],
+  );
+}
+
+/// Horizontal list of [PortraitCard]s (cast on the title page, filmography on
+/// the person page).
+class PortraitRow extends StatelessWidget {
+  const PortraitRow({super.key, required this.children});
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: _height + 64,
+    // Image + gap + two title lines and one subtitle line, following the
+    // system text size (no overflow with larger fonts).
+    height:
+        PortraitCard.height +
+        AppSpacing.sm +
+        MediaQuery.textScalerOf(context).scale(52),
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       clipBehavior: Clip.none,
-      itemCount: people.length,
+      itemCount: children.length,
       separatorBuilder: (context, index) =>
           const SizedBox(width: AppSpacing.md),
-      itemBuilder: (context, index) {
-        final person = people[index];
-        final tap = person.id != null && onTap != null
-            ? () => onTap!(person.id!)
-            : null;
-        return Semantics(
-          button: tap != null,
-          label: [
-            person.name,
-            person.role,
-          ].where((s) => s.isNotEmpty).join(', '),
-          excludeSemantics: true,
-          child: GestureDetector(
-            key: ValueKey('person-${person.id ?? person.name}'),
-            behavior: HitTestBehavior.opaque,
-            onTap: tap,
-            child: SizedBox(
-              width: _width,
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadii.md),
-                    child: SizedBox(
-                      width: _width,
-                      height: _height,
-                      child: _PersonPhoto(person: person),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    person.name,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.bodyMedium.copyWith(
-                      fontSize: 13,
-                      height: 1.25,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  if (person.role.isNotEmpty)
-                    Text(
-                      person.role,
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                ],
+      itemBuilder: (context, index) => children[index],
+    ),
+  );
+}
+
+/// Portrait card: 3:4 image with rounded corners, name below and a secondary
+/// line (role, character).
+class PortraitCard extends StatelessWidget {
+  const PortraitCard({
+    super.key,
+    required this.image,
+    required this.title,
+    this.subtitle = '',
+    this.onTap,
+  });
+  final Widget image;
+  final String title, subtitle;
+  final VoidCallback? onTap;
+
+  static const width = 96.0, height = width * 4 / 3;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: onTap != null,
+    label: [title, subtitle].where((s) => s.isNotEmpty).join(', '),
+    excludeSemantics: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: width,
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadii.md),
+              child: SizedBox(width: width, height: height, child: image),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              title,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodyMedium.copyWith(
+                fontSize: 13,
+                height: 1.25,
+                color: AppColors.textPrimary,
               ),
             ),
-          ),
-        );
-      },
+            if (subtitle.isNotEmpty)
+              Text(
+                subtitle,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+          ],
+        ),
+      ),
     ),
   );
 }
@@ -954,182 +866,8 @@ class _PersonPhoto extends StatelessWidget {
   }
 }
 
-/// Full-bleed cover: the original TMDB poster, over the source artwork while
-/// it loads (or when TMDB has no poster).
-class _Cover extends StatelessWidget {
-  const _Cover({required this.item, required this.url, required this.loading});
-  final Entry item;
-  final String? url;
-
-  /// TMDB still loading: nothing yet (the source art never flashes first).
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    final fallback = Artwork(
-      item: item,
-      fit: BoxFit.cover,
-      alignment: Alignment.topCenter,
-      background: Colors.black,
-    );
-    final cover = url;
-    if (cover == null) {
-      return loading ? const ColoredBox(color: Colors.black) : fallback;
-    }
-    // TMDB poster first; the source art only if it fails to load.
-    return ColoredBox(
-      color: Colors.black,
-      child: Image.network(
-        cover,
-        key: const Key('details-cover'),
-        fit: BoxFit.cover,
-        alignment: Alignment.topCenter,
-        gaplessPlayback: true,
-        excludeFromSemantics: true,
-        frameBuilder: (context, child, frame, sync) => AnimatedOpacity(
-          opacity: sync || frame != null ? 1 : 0,
-          duration: AppMotion.pageEnter,
-          child: child,
-        ),
-        errorBuilder: (context, error, stack) => fallback,
-      ),
-    );
-  }
-}
-
 class _Programme {
   const _Programme(this.title, this.start, this.end);
   final String title;
   final DateTime start, end;
-}
-
-/// Loading placeholder shaped like this page (cover, title, year line, play
-/// button, text and cast portraits): flat blocks, no shadow or neumorphism,
-/// gently pulsing. Shown until every piece of the page is known.
-class _DetailsSkeleton extends StatefulWidget {
-  const _DetailsSkeleton({required this.height, required this.back});
-  final double height;
-  final Widget back;
-  @override
-  State<_DetailsSkeleton> createState() => _DetailsSkeletonState();
-}
-
-class _DetailsSkeletonState extends State<_DetailsSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  static const _block = AppColors.surfaceRecessed;
-
-  Widget _bar(double widthFactor, double height, {bool center = false}) =>
-      FractionallySizedBox(
-        alignment: center ? Alignment.center : Alignment.centerLeft,
-        widthFactor: widthFactor,
-        child: Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: _block,
-            borderRadius: BorderRadius.circular(AppRadii.xs),
-          ),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    final padding = MediaQuery.paddingOf(context);
-    final cover = widget.height * 0.75;
-    return Stack(
-      key: const Key('details-skeleton'),
-      fit: StackFit.expand,
-      children: [
-        FadeTransition(
-          opacity: Tween<double>(begin: 0.45, end: 1).animate(controller),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Cover area fading into the page, like the loaded artwork.
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: cover,
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [_block, _block, Colors.black],
-                      stops: [0, 0.5, 1],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: widget.height * 0.55,
-                left: AppSpacing.lg,
-                right: AppSpacing.lg,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _bar(0.6, 26, center: true),
-                    const SizedBox(height: AppSpacing.md),
-                    _bar(0.45, 14, center: true),
-                    const SizedBox(height: AppSpacing.sm),
-                    _bar(0.3, 14, center: true),
-                    const SizedBox(height: AppSpacing.lg),
-                    Container(
-                      height: AppDimensions.touch,
-                      decoration: BoxDecoration(
-                        color: _block,
-                        borderRadius: BorderRadius.circular(AppRadii.full),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    _bar(0.35, 12),
-                    const SizedBox(height: AppSpacing.sm),
-                    _bar(0.5, 12),
-                    const SizedBox(height: AppSpacing.lg),
-                    _bar(1, 12),
-                    const SizedBox(height: AppSpacing.xs),
-                    _bar(1, 12),
-                    const SizedBox(height: AppSpacing.xs),
-                    _bar(0.7, 12),
-                    const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      children: [
-                        for (var i = 0; i < 3; i++) ...[
-                          if (i > 0) const SizedBox(width: AppSpacing.md),
-                          Container(
-                            width: 96,
-                            height: 128,
-                            decoration: BoxDecoration(
-                              color: _block,
-                              borderRadius: BorderRadius.circular(AppRadii.md),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          top: padding.top + AppSpacing.sm,
-          left: AppSpacing.lg,
-          child: widget.back,
-        ),
-      ],
-    );
-  }
 }

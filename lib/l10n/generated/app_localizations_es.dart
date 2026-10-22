@@ -1736,4 +1736,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String seasonEpisodeLabel(int season, int episode) {
     return 'Temporada $season - Episodio $episode';
   }
+
+  @override
+  String get socialNetworks => 'Redes sociales';
 }

@@ -186,6 +186,47 @@ class PersonCredit {
   );
 }
 
+/// Official profile of a person (TMDB external ids; URL built server-side).
+@immutable
+class SocialLink {
+  const SocialLink(this.network, this.url);
+  final String network;
+  final Uri url;
+
+  static const _hosts = {
+    'instagram': 'www.instagram.com',
+    'x': 'x.com',
+    'facebook': 'www.facebook.com',
+    'tiktok': 'www.tiktok.com',
+    'youtube': 'www.youtube.com',
+    'imdb': 'www.imdb.com',
+  };
+
+  /// Brand name (not translated).
+  String get label => const {
+    'instagram': 'Instagram',
+    'x': 'X',
+    'facebook': 'Facebook',
+    'tiktok': 'TikTok',
+    'youtube': 'YouTube',
+    'imdb': 'IMDb',
+  }[network]!;
+
+  /// Only https links to the expected host of each network.
+  static SocialLink? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final network = '${raw['network']}';
+    final url = Uri.tryParse('${raw['url']}');
+    if (url == null ||
+        url.scheme != 'https' ||
+        _hosts[network] == null ||
+        url.host != _hosts[network]) {
+      return null;
+    }
+    return SocialLink(network, url);
+  }
+}
+
 @immutable
 class PersonDetails {
   const PersonDetails({
@@ -196,6 +237,7 @@ class PersonDetails {
     this.deathday,
     this.placeOfBirth,
     this.photo,
+    this.social = const [],
     this.credits = const [],
   });
 
@@ -207,6 +249,10 @@ class PersonDetails {
     deathday: DateTime.tryParse('${json['deathday'] ?? ''}'),
     placeOfBirth: _text(json['placeOfBirth']),
     photo: _tmdbImage(json['photo']),
+    social: [
+      for (final raw in (json['social'] as List? ?? const []))
+        ?SocialLink.fromJson(raw),
+    ],
     credits: [
       for (final c in (json['credits'] as List? ?? const []))
         if (c is Map &&
@@ -232,6 +278,7 @@ class PersonDetails {
   final String name, biography;
   final DateTime? birthday, deathday;
   final String? placeOfBirth, photo;
+  final List<SocialLink> social;
   final List<PersonCredit> credits;
 }
 

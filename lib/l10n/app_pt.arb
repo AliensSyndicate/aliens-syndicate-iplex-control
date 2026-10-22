@@ -555,5 +555,6 @@
   "unfavoriteAction": "Desfavoritar",
   "saveAction": "Salvar",
   "unsaveAction": "Remover",
-  "seasonEpisodeLabel": "Temporada {season} - Episódio {episode}"
+  "seasonEpisodeLabel": "Temporada {season} - Episódio {episode}",
+  "socialNetworks": "Redes sociais"
 }

@@ -253,7 +253,7 @@ class _EpisodeSkeletonState extends State<_EpisodeSkeleton>
     child: Container(
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.surfaceRecessed,
+        color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(AppRadii.xs),
       ),
     ),
@@ -276,7 +276,7 @@ class _EpisodeSkeletonState extends State<_EpisodeSkeleton>
                   aspectRatio: 16 / 9,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceRecessed,
+                      color: AppColors.surfaceElevated,
                       borderRadius: BorderRadius.circular(AppRadii.md),
                     ),
                   ),

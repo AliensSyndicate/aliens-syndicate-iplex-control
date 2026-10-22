@@ -6,8 +6,10 @@ import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/details_button.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/details_layout.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_data.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_providers.dart';
+import 'package:aliens_syndicate_iplex_control/features/home/home_widgets.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/metadata_service.dart';
 import 'package:aliens_syndicate_iplex_control/features/watch_on_tv/watch_on_tv_sheet.dart';
 import 'package:flutter/material.dart';
@@ -167,11 +169,16 @@ class FakeMetadata implements MetadataService {
   ) async => seasons['$tmdbId/$number'] ?? const [];
 }
 
-const keanu = PersonDetails(
+final keanu = PersonDetails(
   tmdbId: 6384,
   name: 'Keanu Reeves',
   biography: 'Ator canadense.',
   placeOfBirth: 'Beirute',
+  photo: 'https://image.tmdb.org/t/p/h632/keanu.jpg',
+  social: [
+    SocialLink('instagram', Uri.parse('https://www.instagram.com/keanu/')),
+    SocialLink('imdb', Uri.parse('https://www.imdb.com/name/nm0000206/')),
+  ],
   credits: [
     PersonCredit(
       tmdbId: 777,
@@ -451,14 +458,85 @@ void main() {
       expect(location(c), '/home/person/6384');
       expect(find.text('Keanu Reeves'), findsWidgets);
       expect(find.text('Ator canadense.'), findsOneWidget);
-      expect(find.text('Filmography'), findsOneWidget);
-      expect(find.text('Career timeline'), findsOneWidget);
-      // Timeline: newest first, grouped by year, with the character.
+      // Birth as a column (place, then date); social icons right below it.
+      expect(find.text('Beirute'), findsOneWidget);
+      final insta = tester.getRect(
+        find.byKey(const ValueKey('social-instagram')),
+      );
+      expect(
+        insta.top,
+        greaterThan(
+          tester.getRect(find.byKey(const Key('person-facts'))).bottom,
+        ),
+      );
+      expect(
+        insta.bottom,
+        lessThan(tester.getTopLeft(find.text('Ator canadense.')).dy),
+      );
+      expect(find.byKey(const ValueKey('social-imdb')), findsOneWidget);
+      expect(find.bySemanticsLabel('Instagram'), findsOneWidget);
+      // Same look as the title page: black page, the photo as the cover,
+      // white back icon, centered name and facts without labels.
+      // The actor's own photo (original size) is the cover, not a title's.
+      expect(
+        ((tester.widget<Image>(find.byKey(const Key('person-cover')))).image
+                as NetworkImage)
+            .url,
+        'https://image.tmdb.org/t/p/original/keanu.jpg',
+      );
+      expect(find.byKey(const Key('details-cover-fade')), findsOneWidget);
+      expect(find.byKey(const Key('details-back')), findsOneWidget);
+      final name = tester.getRect(find.byKey(const Key('person-name')));
+      expect(name.center.dx, closeTo(195, 1));
+      final facts = tester.getRect(find.byKey(const Key('person-facts')));
+      expect(facts.top, greaterThanOrEqualTo(name.bottom));
+      expect(tester.getCenter(find.text('Beirute')).dx, closeTo(195, 1));
+      expect(find.textContaining('Born'), findsNothing);
+      expect(
+        tester.getCenter(find.byKey(const Key('person-social'))).dx,
+        closeTo(195, 1),
+      );
+      // No separate Movies / Series rows: the timeline is the filmography.
+      for (final removed in ['Movies', 'Series']) {
+        expect(find.text(removed), findsNothing);
+      }
+      expect(find.byType(HomeCard), findsNothing);
+      // Filmography: vertical list; each card horizontal — the 3:4 cover of
+      // the cast card on the left, the text on the right, centered.
+      final row = find.byKey(const ValueKey('timeline-movie-777'));
+      final cover = tester.getRect(
+        find.descendant(of: row, matching: find.byType(Artwork)),
+      );
+      expect(cover.height / cover.width, closeTo(4 / 3, 0.01));
+      final title = tester.getRect(find.text('Filme Externo'));
+      expect(title.left, greaterThan(cover.right));
+      final text = tester.getRect(
+        find.descendant(of: row, matching: find.byType(Column)).first,
+      );
+      expect(text.center.dy, closeTo(cover.center.dy, 1));
       final ys = [
-        for (final y in ['2024', '2021', '2019'])
-          tester.getTopLeft(find.text(y)).dy,
+        for (final k in [
+          'timeline-movie-777',
+          'timeline-movie-1001',
+          'timeline-series-55',
+        ])
+          tester.getTopLeft(find.byKey(ValueKey(k))).dy,
       ];
-      expect(ys, [...ys]..sort());
+      expect(ys, [...ys]..sort(), reason: 'vertical, newest first');
+      expect(find.text('Career timeline'), findsNothing);
+      // No "Biography"/"Social media" labels; the filmography keeps its title.
+      for (final absent in ['Biography', 'Social media']) {
+        expect(find.text(absent), findsNothing);
+      }
+      for (final title in ['Filmography (3)']) {
+        expect(
+          find.ancestor(
+            of: find.text(title),
+            matching: find.byType(SectionHeader),
+          ),
+          findsOneWidget,
+        );
+      }
       expect(find.text('Movie · as Herói'), findsOneWidget);
       expect(find.text('Series · as Ele mesmo · 3 episodes'), findsOneWidget);
       await fixtures.screenshot(tester, 'details/person');
@@ -480,7 +558,7 @@ void main() {
 
       await tapKey(tester, const Key('details-back'));
       expect(location(c), '/home/person/6384');
-      await tester.tap(find.byType(CircularButton).first);
+      await tester.tap(find.byKey(const Key('details-back')));
       await tester.pumpAndSettle();
       expect(location(c), '/home/title');
       await tapKey(tester, const Key('details-back'));
@@ -959,4 +1037,106 @@ void main() {
     expect(find.text('Fora do IPTV.'), findsOneWidget);
     expect(find.byKey(const Key('details-unavailable')), findsOneWidget);
   });
+
+  testWidgets('person: skeleton while loading; the whole biography', (
+    tester,
+  ) async {
+    final metadata = metadataFixture();
+    final long = List.filled(40, 'Uma frase longa da biografia.').join(' ');
+    final gate = Completer<void>();
+    final person = _GatedPerson(
+      metadata,
+      gate,
+      PersonDetails(tmdbId: 1, name: 'Ana', biography: long),
+    );
+    final repo = LibraryRepo();
+    final c = await launchWith(tester, repo, person);
+    c.read(routerProvider).push('/home/person/1');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('details-skeleton')), findsOneWidget);
+    expect(
+      tester.widget<DetailsSkeleton>(find.byType(DetailsSkeleton)).person,
+      isTrue,
+      reason: 'person-shaped skeleton (no play button, no cast portraits)',
+    );
+    // Blocks contrast with the page background (were invisible before).
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('details-skeleton')),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is Container &&
+              (w.decoration as BoxDecoration?)?.color ==
+                  AppColors.surfaceElevated,
+        ),
+      ),
+      findsWidgets,
+    );
+    expect(find.byType(AppLoadingSkeleton), findsNothing);
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pump();
+    await fixtures.screenshot(tester, 'details/person-skeleton');
+    tester.view.physicalSize = const Size(390, 2400);
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('details-skeleton')), findsNothing);
+    final bio = tester.widget<Text>(find.byKey(const Key('person-biography')));
+    expect(bio.maxLines, isNull);
+    expect(find.text('Show more'), findsNothing);
+  });
+
+  testWidgets('timeline card never overflows with long titles and large text', (
+    tester,
+  ) async {
+    final long = PersonDetails(
+      tmdbId: 2,
+      name: 'Bia',
+      placeOfBirth: 'Rio de Janeiro',
+      birthday: DateTime(1980, 1, 2),
+      credits: [
+        PersonCredit(
+          tmdbId: 9,
+          kind: 'series',
+          title: List.filled(12, 'Título muito comprido').join(' '),
+          character: List.filled(10, 'Personagem com nome longo').join(' '),
+          episodeCount: 120,
+          year: 2020,
+        ),
+        // Crew only: listed, not counted as acting.
+        PersonCredit(
+          tmdbId: 10,
+          kind: 'movie',
+          title: 'Produção',
+          job: 'Producer',
+          year: 2018,
+        ),
+      ],
+    );
+    final metadata = metadataFixture()..people[2] = long;
+    final c = await launchWith(tester, LibraryRepo(), metadata);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    c.read(routerProvider).push('/home/person/2');
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Filmography (1)'), findsOneWidget);
+    // Place first, then the birth date.
+    expect(
+      tester.getTopLeft(find.text('Rio de Janeiro')).dy,
+      lessThan(tester.getTopLeft(find.textContaining('1980')).dy),
+    );
+  });
+}
+
+class _GatedPerson extends FakeMetadata {
+  _GatedPerson(this.base, this.gate, this.result);
+  final FakeMetadata base;
+  final Completer<void> gate;
+  final PersonDetails result;
+  @override
+  Future<PersonDetails?> person(int tmdbId) async {
+    await gate.future;
+    return result;
+  }
 }

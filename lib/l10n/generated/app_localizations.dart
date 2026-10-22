@@ -3099,6 +3099,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Season {season} - Episode {episode}'**
   String seasonEpisodeLabel(int season, int episode);
+
+  /// No description provided for @socialNetworks.
+  ///
+  /// In en, this message translates to:
+  /// **'Social media'**
+  String get socialNetworks;
 }
 
 class _AppLocalizationsDelegate

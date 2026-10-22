@@ -1729,4 +1729,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String seasonEpisodeLabel(int season, int episode) {
     return 'Temporada $season - Episódio $episode';
   }
+
+  @override
+  String get socialNetworks => 'Redes sociais';
 }
