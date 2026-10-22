@@ -268,15 +268,20 @@ void main() {
     expect(repo.initialized, ['u']);
   });
   testWidgets(
-    '5 and 6: the Family tab shows the empty family and adding members opens the invite form; back preserves the tab',
+    '5 and 6: the Family tab lists the members and "+" → Invite opens the form; back preserves the tab',
     (tester) async {
       final c = await launch(tester, SessionRepository(uid: 'u', linked: true));
       c.read(routerProvider).go('/users');
       await tester.pumpAndSettle();
-      expect(find.text('Account family'), findsOneWidget);
-      expect(find.text('No additional members yet.'), findsOneWidget);
+      expect(find.text('No additional members yet.'), findsNothing);
       expect(find.text('Create a family'), findsNothing);
-      await tester.tap(find.widgetWithText(AppButton, 'Add members'));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is CircularButton && w.icon == AppIcons.add,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('add-member')));
       await tester.pumpAndSettle();
       expect(path(c), '/users/invite');
       c.read(routerProvider).pop();

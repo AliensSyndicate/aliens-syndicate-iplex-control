@@ -147,12 +147,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           child: ListView(
             key: const Key('search-page'),
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
+              0,
               AppSpacing.md,
-              AppSpacing.lg,
+              0,
               AppDimensions.bottomNav + AppSpacing.xl,
             ),
-            children: [
+            children: EdgeToEdge.padded([
               Text(l.searchTitle, style: AppTypography.headlineMedium),
               const SizedBox(height: AppSpacing.md),
               NeumorphicSearchField(
@@ -162,27 +162,31 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 onChanged: onChanged,
               ),
               const SizedBox(height: AppSpacing.md),
-              AppTabs<SearchFilter>(
-                options: [
-                  (SearchFilter.all, l.filterAll),
-                  (SearchFilter.channel, l.filterChannels),
-                  (SearchFilter.movie, l.filterMovies),
-                  (SearchFilter.series, l.filterSeries),
-                  (SearchFilter.actor, l.filterActors),
-                ],
-                selected: filter,
-                onSelected: (f) {
-                  final needsPeople =
-                      (f == SearchFilter.actor || f == SearchFilter.all) &&
-                      people.isEmpty;
-                  final needsTitles = f != SearchFilter.actor && titles.isEmpty;
-                  setState(() => filter = f);
-                  if (query.isNotEmpty && (needsPeople || needsTitles)) run();
-                },
+              EdgeToEdge(
+                child: AppTabs<SearchFilter>(
+                  padding: EdgeToEdge.inset,
+                  options: [
+                    (SearchFilter.all, l.filterAll),
+                    (SearchFilter.channel, l.filterChannels),
+                    (SearchFilter.movie, l.filterMovies),
+                    (SearchFilter.series, l.filterSeries),
+                    (SearchFilter.actor, l.filterActors),
+                  ],
+                  selected: filter,
+                  onSelected: (f) {
+                    final needsPeople =
+                        (f == SearchFilter.actor || f == SearchFilter.all) &&
+                        people.isEmpty;
+                    final needsTitles =
+                        f != SearchFilter.actor && titles.isEmpty;
+                    setState(() => filter = f);
+                    if (query.isNotEmpty && (needsPeople || needsTitles)) run();
+                  },
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               ..._body(context, home),
-            ],
+            ]),
           ),
         ),
       ),

@@ -352,6 +352,32 @@ void main() {
       ),
       findsNWidgets(12),
     );
+    // One screen for every category: tabs, opening on the tapped one.
+    expect(find.byKey(const Key('home-section-tabs')), findsOneWidget);
+    for (final t in ['Favorites', 'Wishlist', 'Recently added movies']) {
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('home-section-tabs')),
+          matching: find.text(t),
+        ),
+        findsOneWidget,
+      );
+    }
+    // Two per row; titles in the 2:3 poster aspect.
+    final a = tester.getRect(find.byKey(const ValueKey('home-card-f0')));
+    final b = tester.getRect(find.byKey(const ValueKey('home-card-f1')));
+    final c2 = tester.getRect(find.byKey(const ValueKey('home-card-f2')));
+    expect(a.top, b.top);
+    expect(c2.top, greaterThan(a.bottom));
+    expect(a.left, 24);
+    expect(b.right, closeTo(390 - 24, 0.5));
+    final poster = tester.getSize(
+      find.descendant(
+        of: find.byKey(const ValueKey('home-card-f0')),
+        matching: find.byType(Artwork),
+      ),
+    );
+    expect(poster.height / poster.width, closeTo(1.5, 0.01));
     await tester.tap(find.byKey(const ValueKey('home-card-f11')));
     await tester.pumpAndSettle();
     expect(c.read(routerProvider).state.uri.path, '/home/title');
@@ -481,4 +507,44 @@ void main() {
       expect(art.height / art.width, closeTo(1.5, 0.01));
     },
   );
+
+  testWidgets('"See all": channels square, switching categories in place', (
+    tester,
+  ) async {
+    final repo = repoWith({
+      'profile': profile,
+      'library': {
+        'favorites': [item('ch1', 'Canal Notícias', 'channel')],
+        'wishlist': [item('w1', 'Desejo', 'movie')],
+      },
+    });
+    final c = await navigation.launch(tester, repo);
+    tester.view.physicalSize = const Size(390, 2400);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('home-see-all-Favorites')));
+    await tester.pumpAndSettle();
+    final tile = tester.getSize(
+      find.descendant(
+        of: find.byKey(const ValueKey('home-card-ch1')),
+        matching: find.byType(Artwork),
+      ),
+    );
+    expect(tile.width, tile.height, reason: 'channels: square');
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('home-section-tabs')),
+        matching: find.text('Wishlist'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(c.read(routerProvider).state.uri.path, '/home/section/favorites');
+    expect(
+      repo.mutationPayloads.lastWhere((m) => m.$1 == 'readHome').$2['section'],
+      'wishlist',
+    );
+    expect(find.byKey(const ValueKey('home-card-w1')), findsWidgets);
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    await fixtures.screenshot(tester, 'see-all');
+  });
 }

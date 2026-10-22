@@ -35,47 +35,48 @@ class UsersPage extends ConsumerWidget {
               size: AppDimensions.touch,
               onPressed: () => showAppModalSheet<void>(
                 context: context,
-                builder: (c) => SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppTokens.lg),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        EntryTile(
-                          title: l.invite,
-                          icon: AppIcons.qr,
-                          onTap: () {
+                builder: (c) => AppModalSheet(
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SheetHeader(icon: AppIcons.users, title: l.add),
+                      SheetActionRow(
+                        key: const Key('add-member'),
+                        icon: AppIcons.qr,
+                        label: l.invite,
+                        onTap: () {
+                          Navigator.pop(c);
+                          context.push('/users/invite');
+                        },
+                      ),
+                      SheetActionRow(
+                        key: const Key('add-profile'),
+                        icon: AppIcons.add,
+                        label: l.newProfile,
+                        onTap: () {
+                          Navigator.pop(c);
+                          context.push('/users/add');
+                        },
+                      ),
+                      if (hasFamily && !hasGuest)
+                        SheetActionRow(
+                          key: const Key('add-guest'),
+                          icon: AppIcons.account,
+                          label: l.addGuest,
+                          onTap: () async {
                             Navigator.pop(c);
-                            context.push('/users/invite');
+                            try {
+                              await ref.read(repositoryProvider).mutate(
+                                'setGuestEnabled',
+                                {'enabled': true, 'name': l.profileTypeGuest},
+                              );
+                            } catch (e) {
+                              if (context.mounted) showFailure(context, e);
+                            }
                           },
                         ),
-                        EntryTile(
-                          title: l.newProfile,
-                          icon: AppIcons.add,
-                          onTap: () {
-                            Navigator.pop(c);
-                            context.push('/users/add');
-                          },
-                        ),
-                        if (hasFamily && !hasGuest)
-                          EntryTile(
-                            key: const Key('add-guest'),
-                            title: l.addGuest,
-                            icon: AppIcons.account,
-                            onTap: () async {
-                              Navigator.pop(c);
-                              try {
-                                await ref.read(repositoryProvider).mutate(
-                                  'setGuestEnabled',
-                                  {'enabled': true, 'name': l.profileTypeGuest},
-                                );
-                              } catch (e) {
-                                if (context.mounted) showFailure(context, e);
-                              }
-                            },
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -135,13 +136,6 @@ class UsersPage extends ConsumerWidget {
   }
 }
 
-/// Name shown for the family: individual families carry the account holder's name.
-String _familyName(BuildContext context, Family? family) {
-  final l = context.l;
-  if (family == null || family.name.isEmpty) return l.familyTitle;
-  return family.individual ? l.familyOfName(family.name) : family.name;
-}
-
 /// Invitations addressed to this account (the person decides; nothing is automatic).
 class _ReceivedInvitations extends StatelessWidget {
   const _ReceivedInvitations();
@@ -174,8 +168,9 @@ class _ReceivedInvitations extends StatelessWidget {
   );
 }
 
-/// Empty state (same pattern as IPTV without sources) while the family has only its
-/// administrator; otherwise one tile per member, then the invitations still pending.
+/// The family always has a member (the account that created it): one tile per
+/// member, the administrator included, then the invitations still pending.
+/// Adding members is the "+" of the top bar, as on Devices and IPTV.
 class _FamilyMembers extends ConsumerWidget {
   const _FamilyMembers();
   @override
@@ -183,7 +178,6 @@ class _FamilyMembers extends ConsumerWidget {
     final l = context.l;
     final account = ref.watch(accountProvider).asData?.value;
     final admin = ref.watch(adminProvider);
-    final family = ref.watch(familyProvider).asData?.value;
     if (account?.familyId == null) return const AppLoadingSkeleton();
     final members = ref.watch(entriesProvider('members'));
     final sent = admin ? ref.watch(entriesProvider('sentInvitations')) : null;
@@ -198,17 +192,6 @@ class _FamilyMembers extends ConsumerWidget {
         final pending =
             sent?.asData?.value.where((r) => r.number('expiresAt') > now) ??
             const <Entry>[];
-        if (admin && items.length <= 1 && pending.isEmpty) {
-          return EmptyState(
-            title: _familyName(context, family),
-            body: l.familyEmptyBody,
-            action: AppButton(
-              label: l.addMembers,
-              icon: AppIcons.add,
-              onPressed: () => context.push('/users/invite'),
-            ),
-          );
-        }
         return Column(
           children: [
             for (final entry in items)

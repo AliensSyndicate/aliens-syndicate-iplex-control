@@ -141,7 +141,8 @@ void main() {
       final repo = AccessRepository(linked: true);
       final container = await navigation.launch(tester, repo);
       await go(tester, container, '/users');
-      expect(find.text('No additional members yet.'), findsOneWidget);
+      // The account is already a member of its own family.
+      expect(find.text('Account'), findsWidgets);
       expect(find.text('Create a family'), findsNothing);
       expect(repo.mutations, isNot(contains('createFamily')));
       expect(repo.subscriptionReads, 0);

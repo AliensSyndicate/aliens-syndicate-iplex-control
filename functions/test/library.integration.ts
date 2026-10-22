@@ -146,6 +146,17 @@ test('library: editorial titles saved without IPTV, no duplicates across sources
   assert.ok(onlyMovies.items.length > 0 && onlyMovies.items.every((i: any) => i.kind === 'movie'));
   await assert.rejects(execute('readSourceCatalog', {...ctx, id: a.id, kind: 'radio'}, admin), /invalid|enum/i);
 
+  // "Remover de Continuar assistindo": the title and all its episodes, own profile only.
+  const progressCol = db().collection(`families/${fid}/profiles/admin/watch_progress`);
+  await progressCol.doc('serieX').set({contentId: 'serieX', position: 5, duration: 100, generation: 0, updatedAt: Date.now()});
+  await progressCol.doc('serieX_e1').set({contentId: 'serieX_e1', position: 5, duration: 100, generation: 0, updatedAt: Date.now()});
+  await progressCol.doc('serieX_e2').set({contentId: 'serieX_e2', position: 5, duration: 100, generation: 0, updatedAt: Date.now()});
+  await progressCol.doc('outro').set({contentId: 'outro', position: 5, duration: 100, generation: 0, updatedAt: Date.now()});
+  assert.deepEqual(await execute('removeProgress', {...ctx, profileId: 'admin', contentId: 'serieX'}, admin), {ok: true, removed: 2});
+  assert.deepEqual((await progressCol.get()).docs.map(d => d.id), ['outro']);
+  const stranger = await account('Outro');
+  await assert.rejects(execute('removeProgress', {contextFamilyId: fid, profileId: 'admin', contentId: 'outro'}, stranger), /permission|denied|family/i);
+
   // 10) Discovery grant: person account yes; TVs never.
   assert.deepEqual(await execute('authorizeDiscovery', ctx, admin), {ok: true});
   await assert.rejects(tvCall('authorizeDiscovery', {}, tv), /permission|unknown|not-allowed|invalid/i);

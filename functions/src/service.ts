@@ -3,7 +3,7 @@ import {authorizeMetadata, libraryItem, readHome, readSourceCatalog, readSourceS
 import {libraryInputSchema, sameTitleDocs, writeLibraryItem} from './library';
 import {firestoreQuota} from './player';
 import {registerPushToken} from './iptv_notifications';
-import {getFirestore, FieldValue, Transaction, DocumentReference} from 'firebase-admin/firestore';
+import {getFirestore, FieldValue, FieldPath, Transaction, DocumentReference} from 'firebase-admin/firestore';
 import {getStorage} from 'firebase-admin/storage';
 import {getAuth} from 'firebase-admin/auth';
 import {randomUUID} from 'node:crypto';
@@ -383,6 +383,24 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
    required((await tx.get(f.ref.collection('profile_links').doc(a!.uid))).data()?.profileId===profileId);
    const profile=f.ref.collection('profiles').doc(profileId),snap=await tx.get(profile);required(snap.exists&&snap.data()?.deleting!==true,'not-found');
    return writeLibraryItem(tx,profile,profileView(profileId,snap.data()!),input,verified,p.generation,now);
+  });
+ }
+ // "Remover de Continuar assistindo" (Control): deletes the progress of one title of
+ // the account's own profile — the title itself and, for series, every episode
+ // (`<itemId>_e<episodeId>`). History ("watched") and the lists are untouched.
+ if(action==='removeProgress'){
+  required(a&&!a.deviceId);
+  const contentId=idSchema.parse(p.contentId);
+  return db().runTransaction(async tx=>{
+   const f=await family(tx,a!),profileId=idSchema.parse(p.profileId);
+   required((await tx.get(f.ref.collection('profile_links').doc(a!.uid))).data()?.profileId===profileId);
+   const profile=f.ref.collection('profiles').doc(profileId),snap=await tx.get(profile);required(snap.exists&&snap.data()?.deleting!==true,'not-found');
+   required(profileView(profileId,snap.data()!).type!=='guest','guest-not-persisted');
+   const progress=profile.collection('watch_progress');
+   const episodes=await tx.get(progress.orderBy(FieldPath.documentId()).startAt(`${contentId}_e`).endAt(`${contentId}_e\uf8ff`).limit(500));
+   tx.delete(progress.doc(contentId));
+   for(const d of episodes.docs)tx.delete(d.ref);
+   return {ok:true,removed:episodes.size};
   });
  }
  if(action==='readSourceSeries')return readSourceSeries(p,a,key);

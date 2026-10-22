@@ -142,13 +142,10 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(
-            left: AppSpacing.sm,
-            top: AppSpacing.sm,
-          ),
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
           child: AppTabs<int>(
             key: const Key('home-tabs'),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            padding: EdgeToEdge.inset,
             options: [
               (0, l.myIplex),
               (1, l.filterChannels),
@@ -169,12 +166,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         children: [
           header,
           _Padded(child: _noReadySource(context, sources)),
-          if (library != null)
-            for (final row in _libraryRows(context, library))
-              Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.lg),
-                child: row,
-              ),
+          if (library != null) ..._libraryRows(context, library),
           SizedBox(height: _bottomSpace),
         ],
       );
@@ -206,10 +198,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             if (ref.watch(nowPlayingProvider) case final playing?)
               SliverToBoxAdapter(
                 child: Padding(
+                  // Same margins as the device cards.
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
+                    AppSpacing.lg,
                     0,
-                    AppSpacing.md,
+                    AppSpacing.lg,
                     AppSpacing.sm,
                   ),
                   child: NowPlayingBar(playing: playing),
@@ -292,15 +285,12 @@ class _HomePageState extends ConsumerState<HomePage> {
         return [
           for (final row in rows)
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.lg),
-                child: HomeRow(
-                  title: row.$1,
-                  items: row.$2,
-                  onTap: tap,
-                  onLongPress: libraryActions(data),
-                  onSeeAll: () => context.push('/home/section/${row.$3.name}'),
-                ),
+              child: HomeRow(
+                title: row.$1,
+                items: row.$2,
+                onTap: tap,
+                onLongPress: libraryActions(data),
+                onSeeAll: () => context.push('/home/section/${row.$3.name}'),
               ),
             ),
         ];

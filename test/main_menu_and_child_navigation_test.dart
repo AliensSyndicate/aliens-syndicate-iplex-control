@@ -190,7 +190,7 @@ void main() {
     );
 
     testWidgets(
-      'All 5 main screens have identical top alignment for their title',
+      'Home starts at the top; management screens retain title alignment',
       (tester) async {
         final container = await navigation.launch(
           tester,
@@ -203,11 +203,11 @@ void main() {
         );
         final router = container.read(routerProvider);
         final l10n = AppLocalizations.of(
-          tester.element(find.byKey(const Key('home-search'))),
+          tester.element(find.byKey(const Key('home-title'))),
         );
 
         // Top of each main screen's header row: the title row of PageTemplate;
-        // on Home, the search row that replaces the title.
+        // on Home, the compact app bar.
         double headerTop(Finder inHeader) {
           expect(inHeader, findsAtLeastNWidgets(1));
           return tester
@@ -226,27 +226,27 @@ void main() {
           ),
         );
 
-        final homeY = headerTop(find.byKey(const Key('home-search')));
+        final homeY = headerTop(find.byKey(const Key('home-title')));
 
         router.go('/users');
         await tester.pumpAndSettle();
         final usersY = titleY(l10n.familyTitle);
-        expect(usersY, equals(homeY));
+        expect(usersY, greaterThan(homeY));
 
         router.go('/devices');
         await tester.pumpAndSettle();
         final devicesY = titleY(l10n.devices);
-        expect(devicesY, equals(homeY));
+        expect(devicesY, equals(usersY));
 
         router.go('/iptv');
         await tester.pumpAndSettle();
         final iptvY = titleY(l10n.iptv);
-        expect(iptvY, equals(homeY));
+        expect(iptvY, equals(usersY));
 
         router.go('/account');
         await tester.pumpAndSettle();
         final accountY = titleY(l10n.account);
-        expect(accountY, equals(homeY));
+        expect(accountY, equals(usersY));
       },
     );
   });

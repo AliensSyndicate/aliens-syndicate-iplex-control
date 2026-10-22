@@ -4,7 +4,7 @@ abstract final class AppIcons {
   static const home = HugeIcons.strokeRoundedHome01,
       users = HugeIcons.strokeRoundedUserGroup,
       devices = HugeIcons.strokeRoundedTv01,
-      iptv = HugeIcons.strokeRoundedAntenna,
+      iptv = HugeIcons.strokeRoundedSatellite,
       account = HugeIcons.strokeRoundedUserCircle;
   static const up = HugeIcons.strokeRoundedArrowUp01,
       down = HugeIcons.strokeRoundedArrowDown01,

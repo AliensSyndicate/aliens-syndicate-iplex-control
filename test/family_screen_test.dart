@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:flutter/material.dart';
@@ -52,54 +51,29 @@ void main() {
   tearDown(() => HttpOverrides.global = null);
 
   testWidgets(
-    'administrator alone: the empty state of the IPTV screen, nothing technical',
+    'administrator alone: the member list directly, like Devices and IPTV',
     (tester) async {
       final repo = FamilyRepository();
       final c = await navigation.launch(tester, repo, location: '/users');
-      expect(find.text('Account family'), findsOneWidget);
-      expect(find.text('No additional members yet.'), findsOneWidget);
-      expect(find.byType(EmptyState), findsOneWidget);
-      expect(find.widgetWithText(AppButton, 'Add members'), findsOneWidget);
+      // The account that created the family is a member: no empty state.
+      expect(find.byKey(const ValueKey('member-u')), findsOneWidget);
+      expect(find.text('No additional members yet.'), findsNothing);
+      expect(find.widgetWithText(AppButton, 'Add members'), findsNothing);
       expect(find.text('Create a family'), findsNothing);
-      // No identifiers, roles tables or administrative blocks.
-      expect(
-        find.textContaining('family'),
-        findsOneWidget,
-      ); // only "Account family"
-      expect(
-        find.byKey(const ValueKey('member-u')),
-        findsNothing,
-        reason: 'no member list yet',
-      );
       await loadImages(tester);
-      await fixtures.screenshot(tester, 'family-empty');
-      await tester.tap(find.widgetWithText(AppButton, 'Add members'));
+      await fixtures.screenshot(tester, 'family-alone');
+      // Adding: the "+" of the top bar → Invite.
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is CircularButton && w.icon == AppIcons.add,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('add-member')));
       await tester.pumpAndSettle();
       expect(navigation.path(c), '/users/invite');
     },
   );
-
-  testWidgets('empty state and IPTV empty state share the same layout', (
-    tester,
-  ) async {
-    final c = await navigation.launch(
-      tester,
-      FamilyRepository(),
-      location: '/users',
-    );
-    final family = tester.getTopLeft(find.byType(EmptyState)).dy;
-    final familyButton = tester.getSize(
-      find.widgetWithText(AppButton, 'Add members'),
-    );
-    c.read(routerProvider).go('/iptv');
-    await tester.pumpAndSettle();
-    final iptv = tester.getTopLeft(find.byType(EmptyState)).dy;
-    final iptvButton = tester.getSize(
-      find.widgetWithText(AppButton, 'Add source'),
-    );
-    expect(family, iptv);
-    expect(familyButton, iptvButton);
-  });
 
   testWidgets(
     'administrator with members: avatar, name, role and pending invitations',
@@ -249,7 +223,7 @@ void main() {
     expect(find.text('Family'), findsWidgets);
     pending.complete(loading.members);
     await tester.pumpAndSettle();
-    expect(find.byType(EmptyState), findsOneWidget);
+    expect(find.byKey(const ValueKey('member-u')), findsOneWidget);
   });
 
   testWidgets('a failing member stream shows the error state with retry', (

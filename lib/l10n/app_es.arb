@@ -595,5 +595,6 @@
   "seeDetails": "Ver detalles",
   "selectDevice": "Selecciona un dispositivo",
   "connectedStatus": "Conectado",
-  "availableStatus": "Disponible"
+  "availableStatus": "Disponible",
+  "removeFromContinueWatching": "Quitar de Seguir viendo"
 }

@@ -104,9 +104,9 @@ class _DetailsLayoutState extends State<DetailsLayout> {
           key: const Key('details-scroll'),
           controller: scroll,
           padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
+            0,
             widget.height * widget.contentStart,
-            AppSpacing.lg,
+            0,
             AppSpacing.xl + padding.bottom,
           ),
           child: Center(
@@ -116,7 +116,7 @@ class _DetailsLayoutState extends State<DetailsLayout> {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: widget.children,
+                children: EdgeToEdge.padded(widget.children),
               ),
             ),
           ),
@@ -337,14 +337,18 @@ class _DetailsSkeletonState extends State<DetailsSkeleton> {
                           const SizedBox(height: AppSpacing.sm),
                           _bar(0.3, 14),
                           const SizedBox(height: AppSpacing.lg),
-                          // Action row: four round actions.
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              for (var i = 0; i < 4; i++)
-                                _block2(56, 56, AppRadii.full),
-                            ],
+                          // Playback action: pill button spanning the content width.
+                          Container(
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: _block,
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.full,
+                              ),
+                            ),
                           ),
+                          const SizedBox(height: AppSpacing.xs),
+                          _bar(0.25, 11, center: true),
                           const SizedBox(height: AppSpacing.lg),
                           _bar(0.35, 12),
                           const SizedBox(height: AppSpacing.sm),
@@ -384,6 +388,20 @@ class _DetailsSkeletonState extends State<DetailsSkeleton> {
           left: AppSpacing.lg,
           child: const DetailsBackButton(),
         ),
+        if (!widget.person)
+          Positioned(
+            top: padding.top + AppSpacing.sm,
+            right: AppSpacing.sm,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < 3; i++) ...[
+                  if (i > 0) const SizedBox(width: AppSpacing.xs),
+                  _block2(28, 28, AppRadii.full),
+                ],
+              ],
+            ),
+          ),
       ],
     );
   }

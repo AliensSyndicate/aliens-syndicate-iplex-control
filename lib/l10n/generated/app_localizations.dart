@@ -3339,6 +3339,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Available'**
   String get availableStatus;
+
+  /// No description provided for @removeFromContinueWatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Continue watching'**
+  String get removeFromContinueWatching;
 }
 
 class _AppLocalizationsDelegate

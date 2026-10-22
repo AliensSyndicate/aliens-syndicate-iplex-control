@@ -7,6 +7,7 @@ export 'components/app_modal_sheet.dart';
 export 'components/app_dropdown_field.dart';
 export 'components/app_icon.dart';
 export 'components/dual_lock_emblem.dart';
+export 'components/edge_to_edge.dart';
 export 'components/empty_state.dart';
 export 'components/error_state.dart';
 export 'components/google_brand_icon.dart';

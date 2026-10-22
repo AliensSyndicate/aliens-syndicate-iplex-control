@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
-import 'details_button.dart';
 import '../../core/data/app_sharing.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'content_details_page.dart';
@@ -78,7 +77,7 @@ class LibraryButtons extends ConsumerStatefulWidget {
     this.pageStyle = false,
   });
 
-  /// Title details page: actions of the details action row.
+  /// Title details page: icon-only actions in the header.
   final bool pageStyle;
   final Entry item;
   final HomeProfile profile;
@@ -130,33 +129,36 @@ class _LibraryButtonsState extends ConsumerState<LibraryButtons> {
     final favorite = saved[LibraryList.favorites] ?? false;
     final wished = saved[LibraryList.wishlist] ?? false;
     if (widget.pageStyle) {
-      // Details action row: Favorito / Lista de desejos, equal widths.
       return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: DetailsAction(
-              key: const Key('details-favorite'),
-              busy: busy == LibraryList.favorites,
-              label: l.favoriteLabel,
-              active: favorite,
-              material: favorite
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              onPressed: () => toggle(LibraryList.favorites),
+          CircularButton(
+            key: const Key('details-favorite'),
+            onPad: true,
+            label: l.favoriteLabel,
+            selected: favorite,
+            onPressed: busy != null
+                ? null
+                : () => toggle(LibraryList.favorites),
+            child: _icon(
+              LibraryList.favorites,
+              favorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              favorite,
             ),
           ),
           if (!widget.item.isChannel)
-            Expanded(
-              child: DetailsAction(
-                key: const Key('details-wishlist'),
-                busy: busy == LibraryList.wishlist,
-                label: l.wishlistLabel,
-                active: wished,
-                material: wished
-                    ? Icons.bookmark_rounded
-                    : Icons.bookmark_border_rounded,
-                onPressed: () => toggle(LibraryList.wishlist),
+            CircularButton(
+              key: const Key('details-wishlist'),
+              onPad: true,
+              label: l.wishlistLabel,
+              selected: wished,
+              onPressed: busy != null
+                  ? null
+                  : () => toggle(LibraryList.wishlist),
+              child: _icon(
+                LibraryList.wishlist,
+                wished ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                wished,
               ),
             ),
         ],
@@ -164,6 +166,16 @@ class _LibraryButtonsState extends ConsumerState<LibraryButtons> {
     }
     return const SizedBox.shrink();
   }
+
+  Widget _icon(LibraryList list, IconData icon, bool active) => busy == list
+      ? const SizedBox.square(
+          dimension: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.textPrimary,
+          ),
+        )
+      : Icon(icon, color: active ? AppColors.primary : AppColors.textPrimary);
 }
 
 /// Content options (reference: "Modal Sheet – Opções de conteúdo"), from
@@ -203,6 +215,28 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
       list: widget.home.isSaved(list, widget.item),
   };
   LibraryList? busy;
+  bool removingProgress = false;
+
+  Future<void> removeProgress() async {
+    final profile = widget.home.profile;
+    if (profile == null) return;
+    setState(() => removingProgress = true);
+    try {
+      await ref.read(repositoryProvider).mutate('removeProgress', {
+        'profileId': profile.id,
+        'contentId': widget.item.id,
+      });
+      ref
+        ..invalidate(homeProvider)
+        ..invalidate(homeSectionProvider);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => removingProgress = false);
+        showFailure(context, e);
+      }
+    }
+  }
 
   Future<void> toggle(LibraryList list) async {
     final profile = widget.home.profile;
@@ -289,6 +323,17 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
               onTap: busy == null ? () => toggle(LibraryList.wishlist) : null,
             ),
         ],
+        // Only for titles in "Continuar assistindo": forgets the progress so
+        // the title leaves that row.
+        if (persistent &&
+            (item.progress != null ||
+                widget.home.continueWatching.any((c) => c.id == item.id)))
+          SheetActionRow(
+            key: const Key('option-remove-progress'),
+            material: Icons.remove_circle_outline_rounded,
+            label: l.removeFromContinueWatching,
+            onTap: removingProgress ? null : removeProgress,
+          ),
         SheetActionRow(
           key: const Key('option-share'),
           material: Icons.ios_share_rounded,

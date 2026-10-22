@@ -1849,4 +1849,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get availableStatus => 'Disponível';
+
+  @override
+  String get removeFromContinueWatching => 'Remover de Continuar assistindo';
 }

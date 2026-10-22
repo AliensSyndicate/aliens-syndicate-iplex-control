@@ -1856,4 +1856,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get availableStatus => 'Disponible';
+
+  @override
+  String get removeFromContinueWatching => 'Quitar de Seguir viendo';
 }

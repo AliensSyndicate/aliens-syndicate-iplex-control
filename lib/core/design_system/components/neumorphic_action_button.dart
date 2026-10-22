@@ -9,7 +9,8 @@ import 'app_icon.dart';
 class NeumorphicActionButton extends StatefulWidget {
   const NeumorphicActionButton({
     super.key,
-    required this.label,
+    this.label = '',
+    this.semanticsLabel,
     this.onPressed,
     this.icon,
     this.leading,
@@ -17,46 +18,58 @@ class NeumorphicActionButton extends StatefulWidget {
     this.destructive = false,
     this.radius = AppRadii.full,
     this.textColor,
+    this.height,
+    this.width,
   }) : primary = false;
 
   /// Main action of a screen or sheet: green fill, black text.
   const NeumorphicActionButton.primary({
     super.key,
-    required this.label,
+    this.label = '',
+    this.semanticsLabel,
     this.onPressed,
     this.icon,
     this.leading,
     this.busy = false,
     this.radius = AppRadii.full,
     this.textColor,
+    this.height,
+    this.width,
   }) : destructive = false,
        primary = true;
 
   const NeumorphicActionButton.destructive({
     super.key,
-    required this.label,
+    this.label = '',
+    this.semanticsLabel,
     this.onPressed,
     this.icon,
     this.leading,
     this.busy = false,
     this.radius = AppRadii.full,
     this.textColor,
+    this.height,
+    this.width,
   }) : destructive = true,
        primary = false;
 
   const NeumorphicActionButton.red({
     super.key,
-    required this.label,
+    this.label = '',
+    this.semanticsLabel,
     this.onPressed,
     this.icon,
     this.leading,
     this.busy = false,
     this.radius = AppRadii.full,
     this.textColor,
+    this.height,
+    this.width,
   }) : destructive = true,
        primary = false;
 
   final String label;
+  final String? semanticsLabel;
   final bool primary;
   final VoidCallback? onPressed;
   final List<List<dynamic>>? icon;
@@ -65,6 +78,8 @@ class NeumorphicActionButton extends StatefulWidget {
   final bool destructive;
   final double radius;
   final Color? textColor;
+  final double? height;
+  final double? width;
 
   @override
   State<NeumorphicActionButton> createState() => _ActionButtonState();
@@ -103,9 +118,16 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
                 color: enabled ? defaultColor : AppColors.textDisabled,
               ));
 
+    final hasLabel = widget.label.isNotEmpty;
+    final minH = widget.height ?? AppDimensions.button;
+    final minW = widget.width ?? (hasLabel ? double.infinity : minH);
+    final maxW = widget.width ?? double.infinity;
+    final maxH = widget.height ?? double.infinity;
+
     return Semantics(
       button: true,
       enabled: enabled,
+      label: widget.semanticsLabel ?? (hasLabel ? widget.label : null),
       child: AnimatedScale(
         scale: pressed ? 0.985 : 1,
         duration: motionDuration,
@@ -163,44 +185,52 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
                       }
                     : null,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: AppDimensions.button,
-                    minWidth: double.infinity,
+                  constraints: BoxConstraints(
+                    minHeight: minH,
+                    maxHeight: maxH,
+                    minWidth: minW,
+                    maxWidth: maxW,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.md,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: hasLabel ? AppSpacing.lg : AppSpacing.sm,
+                      vertical: widget.height != null ? 0 : AppSpacing.md,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (widget.busy)
-                          SizedBox.square(
-                            dimension: AppDimensions.icon,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: defaultColor,
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: hasLabel && widget.width == null
+                            ? MainAxisSize.max
+                            : MainAxisSize.min,
+                        children: [
+                          if (widget.busy)
+                            SizedBox.square(
+                              dimension: AppDimensions.icon,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: defaultColor,
+                              ),
+                            )
+                          else
+                            ?leading,
+                          if (hasLabel && (widget.busy || leading != null))
+                            const SizedBox(width: AppSpacing.md),
+                          if (hasLabel)
+                            Flexible(
+                              child: Text(
+                                widget.label,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: effectiveTextColor,
+                                  fontSize: 16,
+                                  fontWeight: filled
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                              ),
                             ),
-                          )
-                        else
-                          ?leading,
-                        if (widget.busy || leading != null)
-                          const SizedBox(width: AppSpacing.md),
-                        Flexible(
-                          child: Text(
-                            widget.label,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: effectiveTextColor,
-                              fontSize: 16,
-                              fontWeight: filled
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

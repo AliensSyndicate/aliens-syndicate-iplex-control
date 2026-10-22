@@ -5,7 +5,6 @@ import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
-import 'package:aliens_syndicate_iplex_control/features/home/details_button.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/details_layout.dart';
 import 'package:aliens_syndicate_iplex_control/core/data/app_sharing.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/search_page.dart';
@@ -115,6 +114,14 @@ class LibraryRepo extends navigation.SessionRepository {
                 r['contentId'] == payload['contentId']),
       );
       if (payload['remove'] != true) rows.insert(0, {...payload, 'key': key});
+      return {'ok': true};
+    }
+    if (action == 'removeProgress') {
+      mutationPayloads.add((action, Map.of(payload)));
+      continueWatching = [
+        for (final c in continueWatching)
+          if (c['id'] != payload['contentId']) c,
+      ];
       return {'ok': true};
     }
     if (action == 'readSourceCatalog') {
@@ -334,11 +341,10 @@ void main() {
       );
       expect(find.textContaining('2021', findRichText: true), findsWidgets);
       expect(find.text('Violência and conteúdo sexual'), findsOneWidget);
-      // Action row: Assistir na TV (green, TV name below), Favorito, Lista
-      // de desejos, Compartilhar — same row.
+      // Icon-only library/share actions stay in the header; playback fills
+      // the content width below the title.
       final actions = [
         for (final k in [
-          'details-watch-on-tv',
           'details-favorite',
           'details-wishlist',
           'details-share',
@@ -346,9 +352,24 @@ void main() {
           tester.getRect(find.byKey(Key(k))),
       ];
       expect(actions.map((r) => r.top).toSet().length, 1);
+      final header = find.byKey(const Key('details-header-actions'));
+      expect(
+        find.descendant(of: header, matching: find.byType(Text)),
+        findsNothing,
+      );
+      expect(
+        actions.first.top,
+        tester.getTopLeft(find.byKey(const Key('details-back'))).dy,
+      );
+      final watch = tester.getRect(
+        find.byKey(const Key('details-watch-on-tv')),
+      );
+      final playback = tester.getRect(find.byKey(const Key('details-actions')));
+      expect(watch.width, playback.width);
+      expect(watch.top, greaterThan(actions.first.bottom));
       expect(
         tester
-            .widget<DetailsAction>(find.byKey(const Key('details-watch-on-tv')))
+            .widget<AppButton>(find.byKey(const Key('details-watch-on-tv')))
             .primary,
         isTrue,
       );
@@ -494,7 +515,7 @@ void main() {
       await fixtures.screenshot(tester, 'details/movie-external-unavailable');
       expect(
         tester
-            .widget<DetailsAction>(find.byKey(const Key('details-watch-on-tv')))
+            .widget<AppButton>(find.byKey(const Key('details-watch-on-tv')))
             .onPressed,
         isNull,
         reason: 'not playable',
@@ -914,7 +935,7 @@ void main() {
       await launchWith(tester, repo, metadataFixture());
       await tapKey(tester, const ValueKey('home-card-se1'));
       expect(find.text('Continue'), findsOneWidget);
-      expect(find.text('Start over'), findsOneWidget);
+      expect(find.byKey(const Key('details-restart')), findsOneWidget);
       expect(find.byKey(const Key('details-watch-on-tv')), findsNothing);
       await tapKey(tester, const Key('details-restart'));
       var sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
@@ -926,15 +947,30 @@ void main() {
       expect([sheet.resume, sheet.episodeId], [true, '3012']);
       Navigator.of(tester.element(find.byType(WatchOnTvSheet))).pop();
       await tester.pumpAndSettle();
+      await fixtures.screenshot(tester, 'details/series-continue-restart');
       // Continuar (green) and Recomeçar in the action row.
       final cont = tester.getRect(find.byKey(const Key('details-continue')));
       final restart = tester.getRect(find.byKey(const Key('details-restart')));
       expect(cont.top, restart.top, reason: 'same row');
       expect(cont.left, lessThan(restart.left));
-      expect(find.text('Start over'), findsOneWidget);
+      expect(cont.width, greaterThan(restart.width));
+      expect(cont.height, 44);
+      expect(restart.height, 44);
+      expect(restart.width, 44);
+      final playback = tester.getRect(find.byKey(const Key('details-actions')));
+      expect(cont.left, playback.left);
+      expect(restart.right, playback.right);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-restart')),
+          matching: find.byType(Text),
+        ),
+        findsNothing,
+      );
+      expect(find.bySemanticsLabel('Start over'), findsOneWidget);
       expect(
         tester
-            .widget<DetailsAction>(find.byKey(const Key('details-continue')))
+            .widget<AppButton>(find.byKey(const Key('details-continue')))
             .primary,
         isTrue,
       );
@@ -1226,6 +1262,38 @@ void main() {
       expect(location(c), '/home/title/movie/1001');
     },
   );
+
+  testWidgets('"⋮" on Continue watching: remove it from the row', (
+    tester,
+  ) async {
+    final repo = LibraryRepo()
+      ..continueWatching = [
+        {
+          ...item('m1', 'Missão Fictícia', 'movie'),
+          'progress': {'position': 30, 'duration': 100},
+        },
+      ]
+      ..recentMovies = [item('m2', 'Filme Novo', 'movie')];
+    await launchWith(tester, repo, metadataFixture());
+    // Not offered for a title that is not in progress.
+    await tester.tap(find.byKey(const ValueKey('home-card-more-m2')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('option-remove-progress')), findsNothing);
+    Navigator.of(tester.element(find.byKey(const Key('content-options'))))
+        .pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('home-card-more-m1')).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('option-remove-progress')));
+    await tester.pumpAndSettle();
+    expect(
+      repo.mutationPayloads.lastWhere((m) => m.$1 == 'removeProgress').$2,
+      {'profileId': 'admin', 'contentId': 'm1'},
+    );
+    expect(find.byKey(const Key('content-options')), findsNothing);
+    expect(find.text('Continue watching'), findsNothing);
+    expect(find.byKey(const ValueKey('home-card-m1')), findsNothing);
+  });
 }
 
 class _GatedPerson extends FakeMetadata {

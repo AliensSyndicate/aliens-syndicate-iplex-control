@@ -21,6 +21,7 @@ class HomeCard extends StatelessWidget {
     required this.item,
     required this.onTap,
     this.onLongPress,
+    this.width,
   });
   final Entry item;
   final VoidCallback onTap;
@@ -28,13 +29,20 @@ class HomeCard extends StatelessWidget {
   /// Library actions (Favoritos / Lista de desejos) without opening the page.
   final VoidCallback? onLongPress;
 
+  /// Grid cell width ("Ver tudo"): titles keep the 2:3 poster, channels a
+  /// square tile. Null: the Home row sizes.
+  final double? width;
+
   @override
   Widget build(BuildContext context) {
     final channel = item.isChannel;
-    final width = channel
-        ? HomeCardSize.channelWidth
-        : HomeCardSize.posterWidth;
-    final height = channel
+    final cell = this.width;
+    final width =
+        cell ??
+        (channel ? HomeCardSize.channelWidth : HomeCardSize.posterWidth);
+    final height = cell != null
+        ? (channel ? cell : cell * 3 / 2)
+        : channel
         ? HomeCardSize.channelHeight
         : HomeCardSize.posterHeight;
     final progress = item.progress;
@@ -360,7 +368,10 @@ class HomeRow extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: Semantics(header: true, child: SectionHeader(title)),
+              child: Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.lg),
+                child: Semantics(header: true, child: SectionHeader(title)),
+              ),
             ),
             if (onSeeAll != null)
               Semantics(
@@ -388,6 +399,8 @@ class HomeRow extends StatelessWidget {
           height: height,
           child: ListView.separated(
             key: PageStorageKey('home-row-$title'),
+            // Edge to edge: no side margin, the same amount inside.
+            padding: EdgeToEdge.inset,
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             clipBehavior: Clip.none,

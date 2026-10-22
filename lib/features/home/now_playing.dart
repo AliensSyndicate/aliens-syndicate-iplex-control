@@ -69,7 +69,7 @@ class NowPlayingBar extends ConsumerWidget {
 
   /// Poster in 2:3 (channel logos keep a square) and the item around it.
   static const posterHeight = 72.0, posterWidth = posterHeight * 2 / 3;
-  static const height = posterHeight + 2 * AppSpacing.sm;
+  static const height = posterHeight + 2 * AppSpacing.md;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -124,7 +124,7 @@ class NowPlayingBar extends ConsumerWidget {
         // Card surface: slightly lighter than the screen to stand out.
         decoration: BoxDecoration(
           color: AppColors.surfaceDefault,
-          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderRadius: BorderRadius.circular(AppRadii.card),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -134,8 +134,9 @@ class NowPlayingBar extends ConsumerWidget {
                 Expanded(
                   child: InkWell(
                     onTap: () => openTitle(context, item),
+                    // Same inner padding as the device cards.
                     child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      padding: const EdgeInsets.all(AppSpacing.md),
                       child: Row(
                         children: [
                           ClipRRect(

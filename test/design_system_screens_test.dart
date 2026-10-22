@@ -200,4 +200,73 @@ void main() {
     );
     await fixtures.screenshot(tester, 'design-system/skeleton');
   });
+
+  testWidgets('horizontal scrollers run edge to edge with inner padding', (
+    tester,
+  ) async {
+    final repo = _Repo()
+      ..home = {
+        'continueWatching': [
+          {
+            'id': 'm1',
+            'title': 'Missão Fictícia',
+            'kind': 'movie',
+            'sourceId': 's',
+            'progress': {'position': 30, 'duration': 100},
+          },
+        ],
+        'recentMovies': [
+          {'id': 'm2', 'title': 'Filme Novo', 'kind': 'movie', 'sourceId': 's'},
+        ],
+      };
+    final c = await navigation.launch(tester, repo);
+    void edgeToEdge(Finder scroller) {
+      final rect = tester.getRect(scroller);
+      expect([rect.left, rect.right], [0, 390], reason: 'no side margin');
+    }
+
+    // Tabs: start at the screen edge; the first pill is the padding away.
+    void tabsEdgeToEdge(Finder tabs, Object firstValue) {
+      expect(
+        tester
+            .getRect(
+              find.descendant(
+                of: tabs,
+                matching: find.byType(SingleChildScrollView),
+              ),
+            )
+            .left,
+        0,
+      );
+      expect(
+        tester.getTopLeft(find.byKey(ValueKey('tab-$firstValue'))).dx,
+        AppSpacing.lg,
+      );
+    }
+
+    // Home tabs and rows.
+    tabsEdgeToEdge(find.byKey(const Key('home-tabs')), 0);
+    final row = find.byKey(
+      const PageStorageKey('home-row-Recently added movies'),
+    );
+    edgeToEdge(row);
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('home-card-m2'))).dx,
+      AppSpacing.lg,
+      reason: 'same amount as inner padding',
+    );
+    // "Now playing" item: same side margins as the device cards.
+    final playing = tester.getRect(find.byKey(const Key('now-playing-bar')));
+    c.read(routerProvider).go('/devices');
+    await tester.pumpAndSettle();
+    final device = tester.getRect(find.byType(InfoCard).first);
+    expect([playing.left, playing.right], [device.left, device.right]);
+    // Busca filters.
+    c.read(routerProvider).go('/search');
+    await tester.pumpAndSettle();
+    tabsEdgeToEdge(
+      find.byWidgetPredicate((w) => w is AppTabs),
+      'SearchFilter.all',
+    );
+  });
 }

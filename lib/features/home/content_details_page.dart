@@ -7,7 +7,6 @@ import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
-import 'details_button.dart';
 import 'details_layout.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
@@ -307,6 +306,7 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     final series = shown.kind == 'series';
     return DetailsLayout(
       height: box.maxHeight,
+      actions: _headerActions(context, shown, meta, home),
       coverFraction: channel ? 0.45 : 0.6,
       contentStart: channel ? 0.32 : 0.42,
       // Titles use the original TMDB poster as a full-bleed cover; channels
@@ -326,19 +326,22 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
       children: [
         ..._summary(context, shown, meta),
         const SizedBox(height: AppSpacing.lg),
-        _actions(context, shown, meta, home),
+        _actions(context, shown, home),
         ..._availability(context, shown),
         if (series) ...[
           const SizedBox(height: AppSpacing.lg),
-          AppTabs<int>(
-            key: const Key('series-tabs'),
-            options: [
-              (0, context.l.seasonsTab),
-              (1, context.l.aboutTab),
-              (2, context.l.castTab),
-            ],
-            selected: seriesTab,
-            onSelected: (i) => setState(() => seriesTab = i),
+          EdgeToEdge(
+            child: AppTabs<int>(
+              key: const Key('series-tabs'),
+              padding: EdgeToEdge.inset,
+              options: [
+                (0, context.l.seasonsTab),
+                (1, context.l.aboutTab),
+                (2, context.l.castTab),
+              ],
+              selected: seriesTab,
+              onSelected: (i) => setState(() => seriesTab = i),
+            ),
           ),
           if (seriesTab == 0) ..._seasons(context, shown, meta),
           if (seriesTab == 1) ...[
@@ -440,79 +443,101 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     return tvs.firstOrNull?.name;
   }
 
-  /// Assistir na TV (with the TV name) · Favorito · Lista de desejos ·
-  /// Compartilhar. In progress: Continuar + Recomeçar.
-  Widget _actions(
+  /// Playback fills the content width; resume and restart share it equally.
+  Widget _actions(BuildContext context, Entry shown, HomeData? home) {
+    final l = context.l;
+    final target = _withProgress(home);
+    final resume = target?.progress != null && !shown.isChannel;
+    final episode = _episode(target);
+    final tv = _tvName();
+    const actionHeight = 44.0;
+    return Column(
+      key: const Key('details-actions'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: AppButton.primary(
+                key: Key(resume ? 'details-continue' : 'details-watch-on-tv'),
+                height: actionHeight,
+                icon: AppIcons.play,
+                label: resume ? l.continueLabel : l.watchOnTv,
+                onPressed: target == null
+                    ? null
+                    : () => watchOnTv(target, resume: resume),
+              ),
+            ),
+            if (resume && target != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              AppButton(
+                key: const Key('details-restart'),
+                height: actionHeight,
+                width: actionHeight,
+                semanticsLabel: l.restartLabel,
+                icon: AppIcons.refresh,
+                onPressed: () => watchOnTv(
+                  target,
+                  episodeId: target.episodeId ?? episode?.id,
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          tv ?? l.noTvConnected,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
+
+  Widget _headerActions(
     BuildContext context,
     Entry shown,
     ContentMetadata? meta,
     HomeData? home,
   ) {
-    final l = context.l;
     final target = _withProgress(home);
-    final resume = target?.progress != null && !shown.isChannel;
-    final episode = _episode(target);
     final profile = home?.profile;
-    final tv = _tvName();
     return Row(
-      key: const Key('details-actions'),
-      crossAxisAlignment: CrossAxisAlignment.start,
+      key: const Key('details-header-actions'),
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: DetailsAction(
-            key: Key(resume ? 'details-continue' : 'details-watch-on-tv'),
-            primary: true,
-            material: Icons.play_arrow_rounded,
-            label: resume ? l.continueLabel : l.watchOnTv,
-            caption: tv ?? l.noTvConnected,
-            onPressed: target == null
-                ? null
-                : () => watchOnTv(target, resume: resume),
-          ),
-        ),
-        if (resume && target != null)
-          Expanded(
-            child: DetailsAction(
-              key: const Key('details-restart'),
-              icon: AppIcons.refresh,
-              label: l.restartLabel,
-              onPressed: () =>
-                  watchOnTv(target, episodeId: target.episodeId ?? episode?.id),
-            ),
-          ),
         if (profile != null && profile.persistent)
-          Expanded(
-            flex: shown.isChannel ? 1 : 2,
-            child: LibraryButtons(
-              key: ValueKey('library-${shown.id}'),
-              pageStyle: true,
-              item: shown,
-              profile: profile,
-              metadata: meta,
-              saved: {
-                for (final list in LibraryList.values)
-                  list:
-                      home!.isSaved(list, shown) ||
-                      (target != null && home.isSaved(list, target)) ||
-                      (meta?.tmdbId != null &&
-                          home.isSaved(
-                            list,
-                            editorialEntry(
-                              kind: shown.kind,
-                              tmdbId: meta!.tmdbId!,
-                              title: '',
-                            ),
-                          )),
-              },
-            ),
+          LibraryButtons(
+            key: ValueKey('library-${shown.id}'),
+            pageStyle: true,
+            item: shown,
+            profile: profile,
+            metadata: meta,
+            saved: {
+              for (final list in LibraryList.values)
+                list:
+                    home!.isSaved(list, shown) ||
+                    (target != null && home.isSaved(list, target)) ||
+                    (meta?.tmdbId != null &&
+                        home.isSaved(
+                          list,
+                          editorialEntry(
+                            kind: shown.kind,
+                            tmdbId: meta!.tmdbId!,
+                            title: '',
+                          ),
+                        )),
+            },
           ),
-        Expanded(
-          child: DetailsAction(
-            key: const Key('details-share'),
-            material: Icons.ios_share_rounded,
-            label: l.share,
-            onPressed: () => _share(context, shown, meta),
+        CircularButton(
+          key: const Key('details-share'),
+          onPad: true,
+          label: context.l.share,
+          child: const Icon(
+            Icons.ios_share_rounded,
+            color: AppColors.textPrimary,
           ),
+          onPressed: () => _share(context, shown, meta),
         ),
       ],
     );
@@ -719,9 +744,11 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     final discover = home?.profile?.canDiscover ?? true;
     return [
       _sectionTitle(context.l.castLabel),
-      PeopleRow(
-        people: meta.cast,
-        onTap: discover ? (id) => openPerson(context, id) : null,
+      EdgeToEdge(
+        child: PeopleRow(
+          people: meta.cast,
+          onTap: discover ? (id) => openPerson(context, id) : null,
+        ),
       ),
     ];
   }
@@ -769,18 +796,21 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     if (items.isEmpty) return const [];
     return [
       _sectionTitle(context.l.youMayLike),
-      SizedBox(
-        height:
-            HomeCardSize.posterHeight + HomeCardSize.caption + AppSpacing.sm,
-        child: ListView.separated(
-          key: const Key('details-recommendations'),
-          scrollDirection: Axis.horizontal,
-          itemCount: items.length,
-          separatorBuilder: (context, index) =>
-              const SizedBox(width: AppSpacing.md),
-          itemBuilder: (context, index) => HomeCard(
-            item: items[index],
-            onTap: () => openTitle(context, items[index]),
+      EdgeToEdge(
+        child: SizedBox(
+          height:
+              HomeCardSize.posterHeight + HomeCardSize.caption + AppSpacing.sm,
+          child: ListView.separated(
+            key: const Key('details-recommendations'),
+            padding: EdgeToEdge.inset,
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (context, index) =>
+                const SizedBox(width: AppSpacing.md),
+            itemBuilder: (context, index) => HomeCard(
+              item: items[index],
+              onTap: () => openTitle(context, items[index]),
+            ),
           ),
         ),
       ),
@@ -835,6 +865,7 @@ class PeopleRow extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     height: _size + AppSpacing.sm + MediaQuery.textScalerOf(context).scale(52),
     child: ListView.separated(
+      padding: EdgeToEdge.inset,
       scrollDirection: Axis.horizontal,
       itemCount: people.length,
       separatorBuilder: (context, index) =>

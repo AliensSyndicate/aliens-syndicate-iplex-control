@@ -124,18 +124,21 @@ List<Widget> _personChildren(
       Text(department, style: secondary),
     ],
     const SizedBox(height: AppSpacing.md),
-    AppTabs<int>(
-      key: const Key('person-tabs'),
-      options: [
-        (0, l.aboutTab),
-        // Number of acting credits (works only as crew are not counted).
-        (
-          1,
-          '${l.filmographyTab} (${p.credits.where((c) => c.character.isNotEmpty || c.job.isEmpty).length})',
-        ),
-      ],
-      selected: tab,
-      onSelected: onTab,
+    EdgeToEdge(
+      child: AppTabs<int>(
+        key: const Key('person-tabs'),
+        padding: EdgeToEdge.inset,
+        options: [
+          (0, l.aboutTab),
+          // Number of acting credits (works only as crew are not counted).
+          (
+            1,
+            '${l.filmographyTab} (${p.credits.where((c) => c.character.isNotEmpty || c.job.isEmpty).length})',
+          ),
+        ],
+        selected: tab,
+        onSelected: onTab,
+      ),
     ),
     const SizedBox(height: AppSpacing.md),
     if (tab == 0) ...[

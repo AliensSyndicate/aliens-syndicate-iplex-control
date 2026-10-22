@@ -820,5 +820,6 @@
   "seeDetails": "See details",
   "selectDevice": "Select a device",
   "connectedStatus": "Connected",
-  "availableStatus": "Available"
+  "availableStatus": "Available",
+  "removeFromContinueWatching": "Remove from Continue watching"
 }

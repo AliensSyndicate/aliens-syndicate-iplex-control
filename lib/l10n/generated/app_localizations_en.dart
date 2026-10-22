@@ -1837,4 +1837,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get availableStatus => 'Available';
+
+  @override
+  String get removeFromContinueWatching => 'Remove from Continue watching';
 }
