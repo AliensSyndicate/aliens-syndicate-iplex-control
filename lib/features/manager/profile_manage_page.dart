@@ -240,12 +240,21 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
             ),
 
           // Administrator limits.
-          if (type == 'admin')
+          if (type == 'admin') ...[
             Text(
               l.adminFullAccess,
               style: const TextStyle(color: AppColors.textSecondary),
-            )
-          else if (admin) ...[
+            ),
+            // O administrador liga ou desliga o próprio conteúdo adulto (as demais permissões seguem protegidas).
+            if (admin) ...[
+              const SizedBox(height: AppSpacing.md),
+              _AccessEditor(
+                profile: profile,
+                mode: _AccessMode.limits,
+                adultOnly: true,
+              ),
+            ],
+          ] else if (admin) ...[
             SectionHeader(l.adminLimitsTitle),
             Text(
               l.adminLimitsHint,
@@ -425,9 +434,16 @@ enum _AccessMode { limits, preferences }
 /// the administrator sets the maximum; in [preferences] mode the member
 /// narrows its own access, only inside those limits.
 class _AccessEditor extends ConsumerStatefulWidget {
-  const _AccessEditor({required this.profile, required this.mode});
+  const _AccessEditor({
+    required this.profile,
+    required this.mode,
+    this.adultOnly = false,
+  });
   final Entry profile;
   final _AccessMode mode;
+
+  /// Só o interruptor de conteúdo adulto (perfil do administrador).
+  final bool adultOnly;
   @override
   ConsumerState<_AccessEditor> createState() => _AccessEditorState();
 }
@@ -511,7 +527,7 @@ class _AccessEditorState extends ConsumerState<_AccessEditor> {
                 ? _savePrefs(adult: value)
                 : _saveLimits(adult: value),
           ),
-        if (!preferences)
+        if (!preferences && !widget.adultOnly)
           NeumorphicSwitchTile(
             key: const Key('all-spaces'),
             title: l.allSpaces,
@@ -520,7 +536,7 @@ class _AccessEditorState extends ConsumerState<_AccessEditor> {
             disabled: !enabled,
             onChanged: (value) => _saveLimits(all: value),
           ),
-        if (preferences || !limitsAll)
+        if (!widget.adultOnly && (preferences || !limitsAll))
           ref
               .watch(familySourcesProvider)
               .when(

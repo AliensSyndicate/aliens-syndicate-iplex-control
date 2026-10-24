@@ -363,6 +363,8 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   }
   const sessionId=idSchema.parse(p.sessionId), current=leases.find(x=>x.deviceId===a.deviceId&&x.id===sessionId);required(current,'session-expired');
   const pinSession=f.deviceData.pinSession as {profileId?:string}|undefined;
+  // O perfil em uso: o heartbeat informa a versão das permissões (a TV atualiza o catálogo e o menu quando muda).
+  const leasedProfile=await tx.get(f.ref.collection('profiles').doc(current!.profileId));
   if(action==='releaseSession'){
    leases=leases.filter(x=>x.id!==sessionId);
    // Leaving the profile (switch, exit) locks it again; multitasking keeps the PIN session.
@@ -372,7 +374,8 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   leases=leases.map(x=>x.id===sessionId?{...x,expiresAt:now+LEASE_MS}:x);
   tx.update(f.ref,{leases});tx.update(f.device,{sessionId,lastSeenAt:now,onlineUntil:now+LEASE_MS,...(pinSession?.profileId===current!.profileId?{pinSession:{profileId:current!.profileId,until:now+PIN_SESSION_MS}}:{})});
   // Fallback for the TV listener: a pending remote play request, if any.
-  return {ok:true,playRequest:pendingPointer(f.deviceData,now)};
+  const leasedView=leasedProfile.exists?profileView(leasedProfile.id,leasedProfile.data()!):null;
+  return {ok:true,playRequest:pendingPointer(f.deviceData,now),...(leasedView?{permissionsVersion:leasedView.permissionsVersion,adultEnabled:leasedView.permissions.adult}:{})};
  });
  if(action==='readSourceCatalog')return readSourceCatalog(p,a);
  if(action==='readCatalogManifest')return readCatalogManifest(p,a);

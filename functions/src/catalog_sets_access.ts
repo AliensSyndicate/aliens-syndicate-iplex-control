@@ -18,19 +18,19 @@ const MAX_DELTA_RECORDS = 30000;
 /** Mesma forma pública de readSourceCatalog (compatível com o cliente atual). */
 const publicItem = (sourceId: string, version: string, record: SetRecord) => ({...record, id: hash(`${sourceId}:${record.id}`), catalogItemId: record.id, sourceId, version});
 
-/** O perfil pode ver conteúdo adulto? (limite do administrador E preferência do membro; admin e sem perfil, sempre.) */
-export const adultEnabled = (viewer: Viewer): boolean => !viewer || viewer.type === 'admin' || viewer.permissions.adult;
+/** O perfil pode ver conteúdo adulto? (limite do administrador E preferência do membro; o administrador liga/desliga o próprio.) */
+export const adultEnabled = (viewer: Viewer): boolean => !viewer || viewer.permissions.adult;
 
 function visibleRecords(viewer: Viewer, sourceId: string, set: SetName, records: SetRecord[]): SetRecord[] {
   // Categorias fixas do conteúdo adulto: só para quem está habilitado (e tem o tipo liberado).
   if (set === 'adult_categories') {
     if (!adultEnabled(viewer)) return [];
-    if (!viewer || viewer.type === 'admin') return records;
+    if (!viewer) return records;
     return records.filter(r => viewer.permissions.allSpaces || viewer.permissions.spaces.includes(`${sourceId}:${String(r.kind)}`));
   }
   if (isItemSet(set)) return records.filter(r => canSee(viewer, sourceId, r as unknown as Parameters<typeof canSee>[2]));
   // Categorias: sem permissão para o tipo/adulto, o nome nem é enviado (vazias são ocultadas pelo cliente).
-  if (!viewer || viewer.type === 'admin') return records;
+  if (!viewer) return records;
   return records.filter(r => {
     const kind = String(r.kind);
     if (!viewer.permissions.allSpaces && !viewer.permissions.spaces.includes(`${sourceId}:${kind}`)) return false;

@@ -432,6 +432,27 @@ void main() {
     },
   );
 
+  testWidgets('administrator on the own profile: only the adult content switch', (
+    tester,
+  ) async {
+    final repo = _Repo({
+      'name': 'Admin',
+      'type': 'admin',
+      'linkedUid': 'u',
+      'permissions': {'allSpaces': true, 'spaces': [], 'adult': true},
+    });
+    await _open(tester, repo);
+    final adult = tester.widget<NeumorphicSwitchTile>(
+      find.byKey(const Key('limits-adult')),
+    );
+    expect([adult.value, adult.disabled], [true, false]);
+    // Fontes e seções seguem protegidas para o administrador.
+    expect(find.byKey(const Key('all-spaces')), findsNothing);
+    await _tap(tester, find.byKey(const Key('limits-adult')));
+    expect(repo.actions.single.$1, 'setProfilePermissions');
+    expect(repo.actions.single.$2['adult'], false);
+  });
+
   testWidgets(
     'member on its own profile: preferences within the limits, its own PIN, no administration',
     (tester) async {

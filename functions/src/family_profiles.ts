@@ -152,16 +152,35 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     return {id: GUEST_ID, enabled};
   });
 
+  /**
+   * Avisa as TVs da família, na hora, que as permissões de um perfil mudaram (conteúdo adulto, fontes...): marcador
+   * em families/{fid}/devices/{did}/play_requests (status "access"), que a TV já escuta. Só um sinal: a TV relê o que
+   * pode ver pelo backend. Sem ele, a TV só perceberia na próxima batida de presença (até 30 s).
+   */
+  const accessMarkers = (tx: Transaction, devices: FirebaseFirestore.QuerySnapshot, profileId: string, version: number, at: number) => {
+    for (const d of devices.docs) {
+      tx.set(d.ref.collection('play_requests').doc('access-changed'), {schemaVersion: 1, status: 'access', profileId, version, createdAt: at, expiresAt: at + 120_000, expireAt: new Date(at + 86_400_000)});
+    }
+  };
+
   if (action === 'setProfilePermissions') return db.runTransaction(async tx => {
     const f = await resolve(tx, true, false);
     const ref = f.ref.collection('profiles').doc(idSchema.parse(p.profileId)), snap = await tx.get(ref);
     require_(snap.exists, 'not-found');
     const current = profileView(ref.id, snap.data()!);
-    require_(current.type !== 'admin', 'administrator-protected');
+    const devices = await tx.get(f.ref.collection('devices'));
+    // O administrador só pode ajustar o próprio "Conteúdo adulto" (acessos e fontes seguem protegidos).
+    if (current.type === 'admin') {
+      const adult = z.boolean().parse(p.adult);
+      tx.update(ref, {'permissions.adult': adult, permissionsVersion: current.permissionsVersion + 1, updatedAt: now});
+      accessMarkers(tx, devices, ref.id, current.permissionsVersion + 1, now);
+      return {ok: true, permissionsVersion: current.permissionsVersion + 1};
+    }
     const allSpaces = z.boolean().parse(p.allSpaces), spaces = Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces ?? [])));
     // "Conteúdo adulto": kept when not sent (older clients).
     const adult = p.adult === undefined ? current.limits.adult : z.boolean().parse(p.adult);
     tx.update(ref, {permissions: {allSpaces, spaces, adult}, permissionsVersion: current.permissionsVersion + 1, updatedAt: now});
+    accessMarkers(tx, devices, ref.id, current.permissionsVersion + 1, now);
     return {ok: true, permissionsVersion: current.permissionsVersion + 1};
   });
 
@@ -173,9 +192,11 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     require_(profile.type !== 'guest', 'guest-not-persisted');
     const adult = z.boolean().parse(p.adult);
     const spaces = p.spaces === null || p.spaces === undefined ? null : Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces)));
+    const devices = await tx.get(f.ref.collection('devices'));
     require_(!adult || profile.limits.adult, 'beyond-limit');
     require_(!spaces || profile.limits.allSpaces || spaces.every(s => profile.limits.spaces.includes(s)), 'beyond-limit');
     tx.update(ref, {preferences: {adult, spaces}, permissionsVersion: profile.permissionsVersion + 1, updatedAt: now});
+    accessMarkers(tx, devices, ref.id, profile.permissionsVersion + 1, now);
     return {ok: true, permissionsVersion: profile.permissionsVersion + 1};
   });
 

@@ -21,7 +21,9 @@ const fold=(v:string)=>v.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowe
 /** Active profile restrictions. null = unrestricted (admin, personal scope, unlinked manager). */
 export type Viewer = ProfileView | null;
 export function canSee(viewer:Viewer,sourceId:string,item:{kind:Kind;title?:string;category?:string;ageRating?:string;isAdult?:boolean}) {
-  if(!viewer||viewer.type==='admin')return true;
+  if(!viewer)return true;
+  // O administrador vê tudo, exceto conteúdo adulto quando ele mesmo desligou o próprio "Conteúdo adulto".
+  if(viewer.type==='admin')return viewer.permissions.adult||!isAdultContent(item);
   if(!viewer.permissions.allSpaces&&!viewer.permissions.spaces.includes(`${sourceId}:${item.kind}`))return false;
   // Adult content off (administrator limit or the member's own, narrower preference).
   if(!viewer.permissions.adult&&isAdultContent(item))return false;

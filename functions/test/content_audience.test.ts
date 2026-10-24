@@ -26,3 +26,20 @@ test('provider age metadata is captured from M3U attributes and Xtream rows', ()
   const xtream = parseXtream([{name: 'A', stream_id: 1, age: 16}, {name: 'B', stream_id: 2, mpaa_rating: 'G'}, {name: 'C', stream_id: 3}], 'movie');
   assert.deepEqual(xtream.map(i => i.ageRating), ['16', 'g', undefined]);
 });
+
+import {canSee} from '../src/iptv_catalog_access';
+import {adultEnabled} from '../src/catalog_sets_access';
+import {profileView} from '../src/family_profiles';
+
+test('administrador: vê tudo, exceto adulto quando ele mesmo desliga o próprio "Conteúdo adulto"', () => {
+  const adultItem = {kind: 'movie' as const, title: 'Filme XXX', category: 'Adulto'};
+  const plain = {kind: 'movie' as const, title: 'Filme Comum', category: 'Ação'};
+  const on = profileView('admin', {type: 'admin', name: 'Admin', permissions: {allSpaces: true, spaces: [], adult: true}});
+  const off = profileView('admin', {type: 'admin', name: 'Admin', permissions: {allSpaces: true, spaces: [], adult: false}});
+  assert.equal(canSee(on, 's', adultItem), true);
+  assert.equal(adultEnabled(on), true);
+  assert.equal(canSee(off, 's', adultItem), false);
+  assert.equal(canSee(off, 's', plain), true);
+  assert.equal(adultEnabled(off), false);
+  assert.equal(adultEnabled(null), true);
+});

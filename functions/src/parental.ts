@@ -103,7 +103,7 @@ export async function verifyProfilePin(p: Record<string, unknown>, context: {ref
 export async function verifyAdultPin(p: Record<string, unknown>, context: {ref: DocumentReference; device: DocumentReference; fid: string; deviceId: string; view: Pick<ProfileView, 'id' | 'type' | 'permissions'>}) {
   const db = getFirestore(), now = Date.now();
   const pin = pinSchema.parse(p.pin);
-  require_(context.view.type === 'admin' || context.view.permissions.adult, 'permission-denied');
+  require_(context.view.permissions.adult, 'permission-denied');
   const attemptsRef = db.doc(`identity_attempts/adult_${context.fid}_${context.deviceId}`);
   return db.runTransaction(async tx => {
     const [secret, attempts] = await tx.getAll(context.ref.collection('private').doc('parental'), attemptsRef);
