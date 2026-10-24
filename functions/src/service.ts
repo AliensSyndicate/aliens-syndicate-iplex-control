@@ -1,4 +1,5 @@
 import {calculateCanonicalDeviceId, calculateIdentityFingerprint, maskIdentityFingerprint, generatePairingCode, hashPairingCode, PlatformType} from './device_identity';
+import {readCatalogChunk, readCatalogDelta, readCatalogManifest} from './catalog_sets_access';
 import {authorizeMetadata, libraryItem, readHome, readProfileLibrary, readSourceCatalog, readSourceSeries, resolveSourceStream, resolveTitle} from './iptv_catalog_access';
 import {libraryInputSchema, sameTitleDocs, writeLibraryItem} from './library';
 import {firestoreQuota} from './player';
@@ -17,7 +18,7 @@ import {iptvWorkspace} from './iptv_workspace';
 import {z} from 'zod';
 import {saveIptvSource, syncIptvSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
 import {acquire, addMember, canStartPlayback, DomainError, hash, idSchema, Lease, LEASE_MS, nameSchema, newToken, pinSchema, seal, sourceInputSchema, sourceSchema, startTrial, Subscription, TOKEN_MS, tokenSchema, unseal} from './domain';
-import {familyHasKids, isAdultProfile, manageParentalPin, parentalGate, PIN_SESSION_MS, verifyProfilePin} from './parental';
+import {familyHasKids, isAdultProfile, manageParentalPin, parentalGate, PIN_SESSION_MS, verifyAdultPin, verifyProfilePin} from './parental';
 import {decideProgressWrite,parseProgressSession,type SavedProgress} from './playback_progress';
 import {reportPlayback} from './playback_status';
 import {claimPlayRequest, pendingPointer, requestPlayback, UNLINK_MARKER, updatePlayRequest} from './play_requests';
@@ -181,6 +182,10 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   // pinRequired is informative for the interface; acquireSession enforces it.
   return {parentalPin:{configured:pinConfigured},account:{name:String(owner?.name??owner?.displayName??'').slice(0,80),photoUrl:safePhotoUrl(owner?.photoUrl)},profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion,pinRequired:kids&&isAdultProfile(x)}))};
  });
+ if(action==='verifyAdultPin'){
+  const f=await db().runTransaction(tx=>activePlayer(tx,a,p.profileId));
+  return verifyAdultPin(p,{ref:f.ref,device:f.device,fid:f.fid,deviceId:a.deviceId!,view:f.view});
+ }
  if(action==='verifyProfilePin'){
   const f=await db().runTransaction(tx=>playerContext(tx,a));
   return verifyProfilePin(p,{ref:f.ref,device:f.device,fid:f.fid,deviceId:a.deviceId!});
@@ -370,6 +375,9 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   return {ok:true,playRequest:pendingPointer(f.deviceData,now)};
  });
  if(action==='readSourceCatalog')return readSourceCatalog(p,a);
+ if(action==='readCatalogManifest')return readCatalogManifest(p,a);
+ if(action==='readCatalogChunk')return readCatalogChunk(p,a);
+ if(action==='readCatalogDelta')return readCatalogDelta(p,a);
  if(action==='readHome')return readHome(p,a);
  if(action==='readProfileLibrary')return readProfileLibrary(p,a);
  // TMDB grant for the Control (iplexWebTmdb → manager, with App Check): same item rules as the TV.

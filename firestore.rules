@@ -187,6 +187,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Seis conjuntos, manifesto e deltas do catálogo (catalogs/{id}/sets|meta|deltas/**):
+    // só o backend lê/escreve; a TV os recebe por callable, já filtrados pelo perfil.
+    match /catalogs/{catalogId}/{path=**} {
+      allow read, write: if false;
+    }
+
     // iptv_catalogs/{catalogId}
     match /iptv_catalogs/{catalogId} {
       allow read: if false; // Only source-authorized backend access

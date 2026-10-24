@@ -6,7 +6,7 @@ import ipaddr from 'ipaddr.js';
 import {z} from 'zod';
 import {DomainError,hash} from './domain';
 import {normalizeAgeRating} from './content_audience';
-export const itemSchema=z.object({id:z.string(),title:z.string().min(1).max(300),titleKey:z.string(),kind:z.enum(['channel','movie','series']),category:z.string().max(300),providerRef:z.string(),epgId:z.string().max(300).optional(),categoryId:z.string().optional(),imageRef:z.string().max(1000).optional(),addedAt:z.number().int().positive().optional(),containerExtension:z.string().max(20).optional(),plot:z.string().max(10000).optional(),year:z.union([z.string(),z.number()]).optional(),rating:z.union([z.string(),z.number()]).optional(),ageRating:z.string().max(20).optional(),tmdbId:z.number().int().positive().max(999999999).optional()});
+export const itemSchema=z.object({id:z.string(),title:z.string().min(1).max(300),titleKey:z.string(),kind:z.enum(['channel','movie','series']),category:z.string().max(300),providerRef:z.string(),epgId:z.string().max(300).optional(),categoryId:z.string().optional(),imageRef:z.string().max(1000).optional(),addedAt:z.number().int().positive().optional(),containerExtension:z.string().max(20).optional(),plot:z.string().max(10000).optional(),year:z.union([z.string(),z.number()]).optional(),rating:z.union([z.string(),z.number()]).optional(),ageRating:z.string().max(20).optional(),tmdbId:z.number().int().positive().max(999999999).optional(),isAdult:z.boolean().optional()});
 export const catalogSchema=z.object({schemaVersion:z.literal(1),items:z.array(itemSchema).max(100000),categories:z.array(z.object({id:z.string(),name:z.string(),kind:z.enum(['channel','movie','series'])})).optional(),seriesDetails:z.record(z.unknown()).optional()});
 export type Catalog=z.infer<typeof catalogSchema>;
 export function publicAddress(value:string):boolean {
@@ -287,7 +287,7 @@ export function parseXtream(rows:unknown,kind:'channel'|'movie'|'series',categor
      category:titleOf(names.get(categoryId)??categoryId),categoryId,providerRef,
      ...(typeof x.epg_channel_id==='string'&&x.epg_channel_id?{epgId:x.epg_channel_id.slice(0,300)}:{}),
      ...(/^\w{1,20}$/.test(extension)?{containerExtension:extension}:{}),...(imageRef?{imageRef}:{}),...(addedAt?{addedAt}:{}),...(typeof x.plot==='string'&&x.plot?{plot:x.plot.slice(0,10000)}:{}),
-     ...(year!==undefined&&year!==''?{year}:{}),...(scalar(x.rating)!==undefined&&x.rating!==''?{rating:scalar(x.rating)}:{}),...(ageRating?{ageRating}:{}),...(tmdbId&&kind!=='channel'?{tmdbId}:{})}));
+     ...(year!==undefined&&year!==''?{year}:{}),...(scalar(x.rating)!==undefined&&x.rating!==''?{rating:scalar(x.rating)}:{}),...(ageRating?{ageRating}:{}),...(tmdbId&&kind!=='channel'?{tmdbId}:{}),...(String(scalar(x.is_adult)??'')==='1'?{isAdult:true}:{})}));
  }
  return items;
 }

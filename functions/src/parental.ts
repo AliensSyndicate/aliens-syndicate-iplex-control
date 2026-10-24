@@ -25,6 +25,8 @@ export const PARENTAL_PIN = /^\d{4}$/;
 export const PIN_UNLOCK_MS = 2 * 60_000;
 /** Lease recovery, multitasking and heartbeat failures keep the unlock for this long. */
 export const PIN_SESSION_MS = 15 * 60_000;
+/** Janela para tocar um conteúdo adulto depois do PIN correto (uso único). */
+export const ADULT_UNLOCK_MS = 2 * 60_000;
 export const PIN_MAX_FAILURES = 5;
 export const PIN_LOCK_MS = 15 * 60_000;
 
@@ -90,6 +92,43 @@ export async function verifyProfilePin(p: Record<string, unknown>, context: {ref
     const locked = failures >= PIN_MAX_FAILURES;
     tx.set(attemptsRef, {failures: locked ? 0 : failures, lockedUntil: locked ? now + PIN_LOCK_MS : 0, expireAt: new Date(now + 2 * PIN_LOCK_MS)});
     return {verified: false, required: true, attemptsLeft: locked ? 0 : PIN_MAX_FAILURES - failures, ...(locked ? {retryAt: now + PIN_LOCK_MS} : {})};
+  });
+}
+
+/**
+ * Player: PIN parental para TOCAR conteúdo adulto. Sempre exigido (não depende de haver perfil infantil), só para
+ * perfis habilitados ao conteúdo adulto, com o mesmo limite de tentativas do PIN parental. Arma um desbloqueio de
+ * uso único neste dispositivo, consumido por resolveSourceStream.
+ */
+export async function verifyAdultPin(p: Record<string, unknown>, context: {ref: DocumentReference; device: DocumentReference; fid: string; deviceId: string; view: Pick<ProfileView, 'id' | 'type' | 'permissions'>}) {
+  const db = getFirestore(), now = Date.now();
+  const pin = pinSchema.parse(p.pin);
+  require_(context.view.type === 'admin' || context.view.permissions.adult, 'permission-denied');
+  const attemptsRef = db.doc(`identity_attempts/adult_${context.fid}_${context.deviceId}`);
+  return db.runTransaction(async tx => {
+    const [secret, attempts] = await tx.getAll(context.ref.collection('private').doc('parental'), attemptsRef);
+    require_(secret!.exists, 'parental-pin-not-configured');
+    const lockedUntil = (attempts!.data()?.lockedUntil as number | undefined) ?? 0;
+    if (lockedUntil > now) throw new DomainError('pin-locked', {retryAt: lockedUntil});
+    if (matchesParentalPin(pin, secret!.data())) {
+      tx.set(attemptsRef, {failures: 0, lockedUntil: 0, expireAt: new Date(now + PIN_LOCK_MS)});
+      tx.update(context.device, {adultUnlock: {profileId: context.view.id, expiresAt: now + ADULT_UNLOCK_MS}});
+      return {verified: true, required: true};
+    }
+    const failures = ((attempts!.data()?.failures as number | undefined) ?? 0) + 1;
+    const locked = failures >= PIN_MAX_FAILURES;
+    tx.set(attemptsRef, {failures: locked ? 0 : failures, lockedUntil: locked ? now + PIN_LOCK_MS : 0, expireAt: new Date(now + 2 * PIN_LOCK_MS)});
+    return {verified: false, required: true, attemptsLeft: locked ? 0 : PIN_MAX_FAILURES - failures, ...(locked ? {retryAt: now + PIN_LOCK_MS} : {})};
+  });
+}
+
+/** Consome o desbloqueio de uso único do conteúdo adulto (mesmo perfil, ainda válido); senão `adult-pin-required`. */
+export async function consumeAdultUnlock(fid: string, deviceId: string, profileId: string | undefined): Promise<void> {
+  const db = getFirestore(), ref = db.doc(`families/${fid}/devices/${deviceId}`), now = Date.now();
+  await db.runTransaction(async tx => {
+    const unlock = (await tx.get(ref)).data()?.adultUnlock as {profileId?: string; expiresAt?: number} | undefined;
+    require_(unlock && unlock.profileId === profileId && (unlock.expiresAt ?? 0) > now, 'adult-pin-required');
+    tx.update(ref, {adultUnlock: FieldValue.delete()});
   });
 }
 

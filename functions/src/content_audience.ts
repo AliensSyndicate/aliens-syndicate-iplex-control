@@ -25,7 +25,9 @@ export function normalizeAgeRating(value: unknown): string | undefined {
 
 /** Adult content (title/category signals or an 18 rating): hidden when a profile's
  * "conteúdo adulto" is off (administrator limit or the member's own preference). */
-export function isAdultContent(item: {title?: string; category?: string; ageRating?: string}): boolean {
+export function isAdultContent(item: {title?: string; category?: string; ageRating?: string; isAdult?: boolean}): boolean {
+  // Marca explícita do provedor (Xtream `is_adult`): sinal adicional, nunca reduz a proteção.
+  if (item.isAdult === true) return true;
   if (ADULT.test(fold(item.title)) || ADULT.test(fold(item.category))) return true;
   const rating = normalizeAgeRating(item.ageRating);
   return rating !== undefined && /^(18|18\+|r18|nc-17|nc17|x|xxx|pegi 18|pegi18|fsk 18|fsk18)$/.test(rating);

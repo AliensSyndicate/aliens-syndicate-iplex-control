@@ -13,13 +13,14 @@ import {lookup} from 'node:dns/promises';
 import {activePlayer,type Identity} from './service';
 import {classifyAudience, isAdultContent} from './content_audience';
 import {profileView, ProfileView} from './family_profiles';
+import {consumeAdultUnlock} from './parental';
 import {TitleResolver, type LibraryList} from './library';
 
 type Kind='channel'|'movie'|'series';
 const fold=(v:string)=>v.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 /** Active profile restrictions. null = unrestricted (admin, personal scope, unlinked manager). */
 export type Viewer = ProfileView | null;
-export function canSee(viewer:Viewer,sourceId:string,item:{kind:Kind;title?:string;category?:string;ageRating?:string}) {
+export function canSee(viewer:Viewer,sourceId:string,item:{kind:Kind;title?:string;category?:string;ageRating?:string;isAdult?:boolean}) {
   if(!viewer||viewer.type==='admin')return true;
   if(!viewer.permissions.allSpaces&&!viewer.permissions.spaces.includes(`${sourceId}:${item.kind}`))return false;
   // Adult content off (administrator limit or the member's own, narrower preference).
@@ -50,7 +51,7 @@ async function resolveViewer(tx:FirebaseFirestore.Transaction,actor:Identity,fid
 
 /** Shared objects are never public or signed into bearer download URLs. */
 const cache=new Map<string,Catalog>();
-async function authorize(actor:Identity,id:string,playback=false,requestedProfile?:unknown) {
+export async function authorize(actor:Identity,id:string,playback=false,requestedProfile?:unknown) {
   const db=getFirestore();
   return db.runTransaction(async tx=>{
     let fid:string, familyData:FirebaseFirestore.DocumentData|undefined;
@@ -75,7 +76,7 @@ async function authorize(actor:Identity,id:string,playback=false,requestedProfil
     return {fid,ref,data,viewer};
   });
 }
-async function load(version:string):Promise<Catalog> {
+export async function load(version:string):Promise<Catalog> {
   if(cache.has(version))return cache.get(version)!;
   if(!/^[a-f0-9]{64}$/.test(version))throw new DomainError('invalid-catalog');
   const record=(await getFirestore().doc(`catalogs/${version}`).get()).data();
@@ -132,6 +133,8 @@ export async function resolveSourceStream(input:Record<string,unknown>,actor:Ide
   const catalog=await load(access.data.version);
   const item=catalog.items.find(i=>i.id===itemId||hash(`${id}:${i.id}`)===itemId);
   if(!item||!canSee(access.viewer,id,item))throw new DomainError('not-found');
+  // Conteúdo adulto só toca depois do PIN parental (desbloqueio de uso único, por perfil e dispositivo).
+  if(isAdultContent(item)&&actor.deviceId)await consumeAdultUnlock(access.fid,actor.deviceId,access.viewer?.id);
   let url:string|undefined;
   // Series episodes are addressed by their own reference and must belong to the item the profile may see.
   const episodeOf=()=>{

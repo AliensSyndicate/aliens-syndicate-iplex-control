@@ -8,6 +8,7 @@ import {identifyOrCreateServer} from './iptv_server';
 import {fetchSnapshot, Source, ProviderFetch, ProviderSnapshot} from './iptv_ingestion';
 import {advanceDailyScan, terminal, writeJob} from './iptv_jobs';
 import {completionEvent} from './iptv_notifications';
+import {persistCatalogSets} from './catalog_sets';
 
 import {classifyIptvError, isRetryableIptvError, logSyncFailure} from './iptv_errors';
 
@@ -145,6 +146,14 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
       } catch {
         // EPG parsing error is logged but optional unless required
       }
+    }
+    // Seis conjuntos no Firestore + diferença para a versão anterior (base da sincronização incremental
+    // das TVs). Não fatal: o formato legado continua valendo e readCatalogManifest remonta sob demanda.
+    try {
+      const previousId = locked.data.catalogId as string | undefined;
+      await persistCatalogSets(version, catalog, previousId && previousId !== version ? await previousCatalogForDiff(previousId) : null);
+    } catch (err: any) {
+      console.error(JSON.stringify({component: 'iptv-sync', event: 'sets-failed', jobId: locked.jobId, sourceId: ref.id, message: String(err?.message ?? err).slice(0, 200)}));
     }
     const kinds = {channel: 0, movie: 0, series: 0};
     for (const item of catalog.items) kinds[item.kind]++;
@@ -284,6 +293,19 @@ export async function syncIptvCatalog(ref: DocumentReference, key: string, expec
       const leases=await tx.getAll(locked.slot,locked.serverRef);
       for (const lease of leases) if (lease.data()?.runId===runId) tx.delete(lease.ref);
     });
+  }
+}
+
+/** Catálogo anterior (íntegro) para calcular a diferença; null se indisponível (a TV reconstrói). */
+async function previousCatalogForDiff(version: string): Promise<{version: string; catalog: Catalog} | null> {
+  try {
+    const record = (await getFirestore().doc(`catalogs/${version}`).get()).data();
+    if (!record?.storagePath) return null;
+    const [body] = await getStorage().bucket().file(record.storagePath).download();
+    if (record.integrityHash && hash(body.toString()) !== record.integrityHash) return null;
+    return {version, catalog: catalogSchema.parse(JSON.parse(body.toString()))};
+  } catch {
+    return null;
   }
 }
 

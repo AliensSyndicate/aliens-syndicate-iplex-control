@@ -276,7 +276,7 @@ export class XtreamAdapter implements IptvSourceAdapter {
     // Episodes are fetched on demand (readSourceSeries), like IPTV players do:
     // one get_series_info per series during sync does not scale to large panels.
     const snapshot: ProviderSnapshot = {
-      proof: hash(`parser-6:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}`),
+      proof: hash(`parser-7:${xtreamBase(source.url!).toString()}:${JSON.stringify(data)}`),
       singleStream: false,
       build: async () => {
         const categories: NonNullable<Catalog['categories']> = data.flatMap(d =>
