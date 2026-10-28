@@ -568,8 +568,9 @@ class CatalogTab extends ConsumerStatefulWidget {
   ConsumerState<CatalogTab> createState() => _CatalogTabState();
 }
 
-/// Items per page of the catalog feed.
-const catalogPageSize = 40;
+/// Items per page of the catalog feed (first batch, skeletons and every
+/// following batch).
+const catalogPageSize = 30;
 
 /// Cards per row of the catalog feed.
 const catalogColumns = 3;
@@ -616,11 +617,20 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
         cursor = result['cursor'];
         more = result['hasMore'] == true;
       });
+      // Few cards (or a tall screen): keep fetching until the feed scrolls,
+      // without waiting for any interaction.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fillViewport());
     } catch (e) {
       if (mounted) setState(() => error = e);
     } finally {
       loading = false;
     }
+  }
+
+  void _fillViewport() {
+    if (!mounted || !more || loading || error != null) return;
+    final position = Scrollable.maybeOf(context)?.position;
+    if (position != null && position.maxScrollExtent <= 0) load();
   }
 
   Widget _box(Widget child) => SliverToBoxAdapter(child: _Padded(child: child));
@@ -641,7 +651,7 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
     if (loading && items.isEmpty) {
       return _box(
         PosterGridSkeleton(
-          count: catalogColumns * 4,
+          count: catalogPageSize,
           columns: catalogColumns,
           square: widget.kind == 'channel',
         ),

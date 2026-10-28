@@ -56,6 +56,7 @@ export const PLAYER_DEVICE_ACTIONS: ReadonlySet<string> = new Set([
   'readSourceEpg',
   'resolveSourceStream',
   'favorite',
+  'wishlist',
   'watchProgress',
   'markWatched',
 ]);
@@ -166,7 +167,7 @@ export async function runPlayer(request: PlayerRequest, key: string, deps: Playe
 }
 
 /** One-use request id for operations which change access or persistent state. */
-export const SENSITIVE_ACTIONS=new Set(['acquireSession','releaseSession','resolveSourceStream','favorite','watchProgress','markWatched','verifyProfilePin','verifyAdultPin','claimPlayRequest','updatePlayRequest']);
+export const SENSITIVE_ACTIONS=new Set(['acquireSession','releaseSession','resolveSourceStream','favorite','wishlist','watchProgress','markWatched','verifyProfilePin','verifyAdultPin','claimPlayRequest','updatePlayRequest']);
 export async function consumePlayerRequest(actor:Identity,action:string,payload:Record<string,unknown>,now:number){
  const requestId=payload.requestId,issuedAt=payload.issuedAt;
  if(typeof requestId!=='string'||!/^[a-f0-9]{32}$/.test(requestId)||typeof issuedAt!=='number'||!Number.isFinite(issuedAt)||Math.abs(now-issuedAt)>120_000)throw new DomainError('request-expired');

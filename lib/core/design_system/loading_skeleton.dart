@@ -172,7 +172,8 @@ class PosterRowsSkeleton extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: 6,
+              // Horizontal lists show at most 10 titles.
+              itemCount: 10,
               separatorBuilder: (context, index) =>
                   const SizedBox(width: AppSpacing.md),
               itemBuilder: (context, index) => const _PosterSkeleton(),
@@ -191,7 +192,7 @@ class PosterRowsSkeleton extends StatelessWidget {
 class PosterGridSkeleton extends StatelessWidget {
   const PosterGridSkeleton({
     super.key,
-    this.count = 9,
+    this.count = 30,
     this.columns,
     this.square = false,
   });

@@ -441,6 +441,19 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  if(action==='savePreferences') {
   required(!a.deviceId);const locale=z.enum(['system','en','pt_BR','es']).parse(p.locale);await db().doc(`users/${a.uid}`).set({locale},{merge:true});return {ok:true};
  }
+ // TV wishlist uses the same collection and generation as the Control, but
+ // requires an active device/profile lease and an authorized catalog title.
+ if(action==='wishlist'){
+  required(a?.deviceId);
+  const initial=await db().runTransaction(tx=>activePlayer(tx,a!,p.profileId));
+  const input=libraryInputSchema.parse({list:'wishlist',kind:z.enum(['movie','series']).parse(p.kind),contentId:idSchema.parse(p.contentId),sourceId:idSchema.parse(p.sourceId),title:p.title,remove:p.remove});
+  const verified=input.remove===true?null:await libraryItem(a!,input.sourceId!,input.contentId!);
+  return db().runTransaction(async tx=>{
+   const current=await activePlayer(tx,a!,p.profileId);
+   required(current.view.permissionsVersion===initial.view.permissionsVersion,'source-conflict');
+   return writeLibraryItem(tx,current.ref.collection('profiles').doc(current.view.id),current.view,input,verified,p.generation,now);
+  });
+ }
  if(action==='favorite'||action==='watchProgress'||action==='markWatched')return db().runTransaction(async tx=>{
   const f=a.deviceId?await activePlayer(tx,a,p.profileId):await family(tx,a);const profileId=idSchema.parse(p.profileId),contentId=idSchema.parse(p.contentId);const profile=f.ref.collection('profiles').doc(profileId);const snap=await tx.get(profile);required(snap.exists,'not-found');
   if(a.deviceId)required(((f.data.leases??[]) as Lease[]).some(x=>x.deviceId===a.deviceId&&x.profileId===profileId&&x.expiresAt>now),'session-expired');

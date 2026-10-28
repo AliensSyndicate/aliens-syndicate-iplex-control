@@ -487,7 +487,7 @@ export async function libraryItem(actor:Identity,sourceId:string,itemId:string) 
 /** Library reads are now server-authorized; direct Firestore access is closed. */
 export async function readPlayerLibrary(input:Record<string,unknown>,actor:Identity) {
  const db=getFirestore(),context=await db.runTransaction(tx=>activePlayer(tx,actor,input.profileId));
- if(context.view.type==='guest')return {favorites:[],progress:[],watched:[]};
+ if(context.view.type==='guest')return {favorites:[],wishlist:[],progress:[],watched:[]};
  const allowed=new Set<string>();
  const sources=await context.ref.collection('sources').where('enabled','==',true).get();
  for(const source of sources.docs){
@@ -499,8 +499,8 @@ export async function readPlayerLibrary(input:Record<string,unknown>,actor:Ident
  const profile=context.ref.collection('profiles').doc(context.view.id);
  const read=async(name:string,order:string)=> (await profile.collection(name).orderBy(order,'desc').limit(100).get()).docs
   .map(d=>d.data()).filter(d=>typeof d.contentId==='string'&&allowed.has(d.contentId.replace(/_e[A-Za-z0-9_-]+$/,'')));
- const [favorites,progress,watched]=await Promise.all([read('favorites','updatedAt'),read('watch_progress','updatedAt'),read('watched','completedAt')]);
+ const [favorites,wishlist,progress,watched]=await Promise.all([read('favorites','updatedAt'),read('wishlist','updatedAt'),read('watch_progress','updatedAt'),read('watched','completedAt')]);
  const latest=await db.runTransaction(tx=>activePlayer(tx,actor,input.profileId));
  if(latest.view.permissionsVersion!==context.view.permissionsVersion)throw new DomainError('source-conflict');
- return {favorites,progress,watched};
+ return {favorites,wishlist,progress,watched};
 }

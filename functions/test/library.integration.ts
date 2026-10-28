@@ -107,6 +107,20 @@ test('library: editorial titles saved without IPTV, no duplicates across sources
   await tvCall('favorite', {profileId: 'admin', contentId: linked, remove: true}, tv);
   assert.equal((await favorites.get()).size, 0, 'TV removal removes the canonical row');
 
+  // Wishlist on the TV persists in the same profile collection used by Control.
+  const wish = {profileId:'admin',contentId:linked,sourceId:linked===movieA.id?a.id:b.id,kind:'movie',title:'Missão Fictícia',generation:0};
+  await tvCall('wishlist', wish, tv);
+  await tvCall('wishlist', wish, tv);
+  assert.equal((await db().collection(`families/${fid}/profiles/admin/wishlist`).where('contentId','==',linked).get()).size,1);
+  assert.ok((await tvCall('readPlayerLibrary',{profileId:'admin'},tv)).wishlist.some((i:any)=>i.contentId===linked));
+  assert.ok((await home()).library.wishlist.some((i:any)=>i.id===linked));
+  await assert.rejects(tvCall('wishlist',{...wish,generation:99},tv),/stale-generation/);
+  await assert.rejects(tvCall('wishlist',{...wish,profileId:'guest'},tv),/session-expired|profile/);
+  await assert.rejects(tvCall('wishlist',{...wish,kind:'channel'},tv),/invalid/);
+  await assert.rejects(tvCall('wishlist',{...wish,contentId:'not-authorized'},tv),/not-found/);
+  await tvCall('wishlist',{...wish,remove:true},tv);
+  assert.ok(!(await tvCall('readPlayerLibrary',{profileId:'admin'},tv)).wishlist.some((i:any)=>i.contentId===linked));
+
   // 6) Source removed: an editorial row stays (unavailable), it is not deleted.
   await lib({list: 'wishlist', kind: 'movie', contentId: movieA.id, sourceId: a.id, tmdbId: 1001, title: 'Missão Fictícia', year: 2021});
   await a.update({enabled: false}); await b.update({enabled: false});

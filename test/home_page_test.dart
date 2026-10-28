@@ -719,13 +719,13 @@ Future<void> settleFeed(WidgetTester tester) async {
 void catalogFeedTests() {
   for (final (tab, kind) in [(1, 'channel'), (2, 'movie'), (3, 'series')]) {
     testWidgets(
-      '$kind tab: three per row feed, 40 per page, loads by scrolling, no "More" button',
+      '$kind tab: three per row feed, 30 per page, loads by scrolling, no "More" button',
       (tester) async {
         final repo = _FeedRepo(kind);
         await navigation.launch(tester, repo);
         await tester.tap(find.byKey(ValueKey('tab-$tab')));
         await settleFeed(tester);
-        expect(repo.pages.first['limit'], 40);
+        expect(repo.pages.first['limit'], 30);
         expect(find.widgetWithText(AppButton, 'More'), findsNothing);
         // Three cards share the first row; channels are square, titles 2:3.
         final first = tester.getRect(
@@ -749,12 +749,12 @@ void catalogFeedTests() {
           await tester.drag(scroll, const Offset(0, -1500));
           await settleFeed(tester);
         }
-        expect(repo.pages.map((p) => p['cursor']), [0, 40, 80]);
+        expect(repo.pages.map((p) => p['cursor']), [0, 30, 60]);
         for (var i = 0; i < 20; i++) {
           await tester.drag(scroll, const Offset(0, -3000));
           await settleFeed(tester);
         }
-        expect(repo.pages.length, 3, reason: 'nothing left to load');
+        expect(repo.pages.map((p) => p['cursor']), [0, 30, 60, 90], reason: 'nothing left to load');
         expect(find.widgetWithText(AppButton, 'More'), findsNothing);
       },
     );
