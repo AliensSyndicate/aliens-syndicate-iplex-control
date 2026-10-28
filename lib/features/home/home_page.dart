@@ -15,9 +15,11 @@ import '../manager/widgets/iptv_source_status.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
+import 'home_section_page.dart';
 import 'home_widgets.dart';
 import 'library.dart';
 import 'now_playing.dart';
+import 'release_hero.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -257,6 +259,30 @@ class _HomePageState extends ConsumerState<HomePage> {
           ],
         ),
       );
+    } else if (_hero(sourceId, ready) case (final home, final releases)) {
+      // Meu iPlex: the day's featured release, as on the TV.
+      final account = ref.watch(accountProvider).asData?.value;
+      final profile = home.profile;
+      header = Column(
+        children: [
+          ReleaseHero(
+            candidates: releases,
+            greeting: profile == null || profile.name.isEmpty
+                ? l.myIplex
+                : l.homeGreeting(profile.name),
+            storageKey:
+                'iplex.hero.v1.${account?.uid}.${account?.iptvScopeId}.${profile?.id}',
+            top: floating
+                ? barSpace
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [appBar, tabs],
+                  ),
+            onOpen: (item) => open(item, home),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+      );
     } else {
       header = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,15 +328,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         scrollCacheExtent: const ScrollCacheExtent.pixels(800),
         slivers: [
           SliverToBoxAdapter(child: header),
-          if (source != null && source.text('status') == 'error')
-            SliverToBoxAdapter(
-              child: _Padded(
-                child: Text(
-                  context.l.sourceError,
-                  style: const TextStyle(color: AppColors.warning),
-                ),
-              ),
-            ),
           if (tab == 0)
             ..._homeSlivers(context, home, sourceId)
           else if (source != null)
@@ -346,6 +363,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  /// Home data and Lançamentos for the featured release (Meu iPlex tab with
+  /// a ready source only), or null.
+  (HomeData, List<Entry>)? _hero(String? sourceId, List<Entry> ready) {
+    if (tab != 0 || ready.isEmpty) return null;
+    final home = ref.watch(homeProvider(sourceId)).asData?.value;
+    final releases = home?.section(HomeSection.releases) ?? const <Entry>[];
+    return home == null || releases.isEmpty ? null : (home, releases);
+  }
+
   List<Widget> _homeSlivers(
     BuildContext context,
     AsyncValue<HomeData> home,
@@ -371,21 +397,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       data: (data) {
         void tap(Entry item) => open(item, data);
         final rows = [
-          (l.homeFavorites, data.libraryFavorites, HomeSection.favorites),
-          (
-            l.homeContinueWatching,
-            data.continueWatching,
-            HomeSection.continueWatching,
-          ),
-          (l.homeWishlist, data.wishlist, HomeSection.wishlist),
-          (l.homeRecentMovies, data.recentMovies, HomeSection.recentMovies),
-          (l.homeRecentSeries, data.recentSeries, HomeSection.recentSeries),
-          (
-            l.homeRecentSearches,
-            data.recentSearches,
-            HomeSection.recentSearches,
-          ),
-        ].where((row) => row.$2.isNotEmpty);
+          for (final section in homeSections)
+            if (data.section(section).isNotEmpty) section,
+        ];
         if (rows.isEmpty) {
           return [
             SliverToBoxAdapter(
@@ -404,14 +418,15 @@ class _HomePageState extends ConsumerState<HomePage> {
           ];
         }
         return [
-          for (final row in rows)
+          for (final section in rows)
             SliverToBoxAdapter(
               child: HomeRow(
-                title: row.$1,
-                items: row.$2,
+                title: homeSectionTitle(context, section),
+                items: data.section(section),
+                landscape: landscapeSections.contains(section),
                 onTap: tap,
                 onLongPress: libraryActions(data),
-                onSeeAll: () => context.push('/home/section/${row.$3.name}'),
+                onSeeAll: () => context.push('/home/section/${section.name}'),
               ),
             ),
         ];
@@ -419,16 +434,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  /// Favoritos and Lista de desejos (also titles no source offers).
+  /// Personal rows without a ready source (Favoritos and Lista de desejos
+  /// also hold titles no source offers).
   List<Widget> _libraryRows(BuildContext context, HomeData home) => [
-    for (final (title, items, section) in [
-      (context.l.homeFavorites, home.libraryFavorites, HomeSection.favorites),
-      (context.l.homeWishlist, home.wishlist, HomeSection.wishlist),
-    ])
-      if (items.isNotEmpty)
+    for (final section in homeSections)
+      if (section != HomeSection.releases && home.section(section).isNotEmpty)
         HomeRow(
-          title: title,
-          items: items,
+          title: homeSectionTitle(context, section),
+          items: home.section(section),
+          landscape: landscapeSections.contains(section),
           onTap: (item) => open(item, home),
           onLongPress: libraryActions(home),
           onSeeAll: () => context.push('/home/section/${section.name}'),

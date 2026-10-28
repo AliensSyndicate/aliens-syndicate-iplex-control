@@ -9,6 +9,21 @@ import 'home_providers.dart';
 import 'home_widgets.dart';
 import 'library.dart';
 
+/// Title of a Home row and of its "Ver tudo" tab.
+String homeSectionTitle(BuildContext context, HomeSection section) {
+  final l = context.l;
+  return switch (section) {
+    HomeSection.favorites => l.homeFavorites,
+    HomeSection.continueWatching => l.homeContinueWatching,
+    HomeSection.wishlist => l.homeWishlist,
+    HomeSection.releases => l.homeReleases,
+    HomeSection.watched => l.watchedHistory,
+    HomeSection.recentMovies => l.homeRecentMovies,
+    HomeSection.recentSeries => l.homeRecentSeries,
+    HomeSection.recentSearches => l.homeRecentSearches,
+  };
+}
+
 /// "Ver tudo": one screen for every Home category. The tabs switch between
 /// the categories that have content (opening on the one tapped); each shows
 /// all its items (the Home shows the first 10) in a two-column grid —
@@ -24,18 +39,6 @@ class HomeSectionPage extends ConsumerStatefulWidget {
 class _HomeSectionPageState extends ConsumerState<HomeSectionPage> {
   late HomeSection section = widget.section;
 
-  static String title(BuildContext context, HomeSection section) {
-    final l = context.l;
-    return switch (section) {
-      HomeSection.favorites => l.homeFavorites,
-      HomeSection.continueWatching => l.homeContinueWatching,
-      HomeSection.wishlist => l.homeWishlist,
-      HomeSection.recentMovies => l.homeRecentMovies,
-      HomeSection.recentSeries => l.homeRecentSeries,
-      HomeSection.recentSearches => l.homeRecentSearches,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     final sources = ref.watch(entriesProvider('sources')).asData?.value;
@@ -48,7 +51,7 @@ class _HomeSectionPageState extends ConsumerState<HomeSectionPage> {
     // Categories with content on the Home, in the Home order.
     final home = ref.watch(currentHomeProvider).asData?.value;
     final sections = [
-      for (final s in HomeSection.values)
+      for (final s in homeSections)
         if (s == section || (home?.section(s).isNotEmpty ?? false)) s,
     ];
     final key = (section, sourceId);
@@ -67,7 +70,9 @@ class _HomeSectionPageState extends ConsumerState<HomeSectionPage> {
             AppTabs<HomeSection>(
               key: const Key('home-section-tabs'),
               padding: EdgeToEdge.inset,
-              options: [for (final s in sections) (s, title(context, s))],
+              options: [
+                for (final s in sections) (s, homeSectionTitle(context, s)),
+              ],
               selected: section,
               onSelected: (s) => setState(() => section = s),
             ),

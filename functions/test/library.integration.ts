@@ -206,3 +206,31 @@ test('library: kids profile only saves catalog items it can see; no editorial di
   const h = await execute('readHome', {...liaCtx, sourceId: src.id}, lia) as any;
   assert.deepEqual(h.library.wishlist.map((i: any) => i.title), ['Aventura no Parque']);
 });
+
+test('readHome: Meu iPlex rules — Lançamentos merged by date, Assistidos, one Continuar entry per title', async () => {
+  const {admin, fid, ctx, save} = await setup();
+  const src = await save('Fonte');
+  const items = await catalog(admin, ctx, src.id);
+  const byTitle = (t: string) => items.find(i => i.title === t);
+  const [missao, aventura, serie, canal] = ['Missão Fictícia', 'Aventura no Parque', 'Série Exemplo', 'Canal Notícias'].map(byTitle);
+  const profile = db().doc(`families/${fid}/profiles/admin`);
+  const now = Date.now();
+  // Series: the newest episode is completed, an older one unfinished → the series is not offered.
+  await profile.collection('watch_progress').doc(`${serie.id}_e2`).set({contentId: `${serie.id}_e2`, position: 99, duration: 100, generation: 0, updatedAt: now});
+  await profile.collection('watch_progress').doc(`${serie.id}_e1`).set({contentId: `${serie.id}_e1`, position: 10, duration: 100, generation: 0, updatedAt: now - 1000});
+  await profile.collection('watch_progress').doc(missao.id).set({contentId: missao.id, position: 10, duration: 100, generation: 0, updatedAt: now - 2000});
+  await profile.collection('watch_progress').doc(canal.id).set({contentId: canal.id, position: 10, duration: 100, generation: 0, updatedAt: now - 3000});
+  for (const [id, at] of [[`${serie.id}_e1`, now], [`${serie.id}_e2`, now - 10], [aventura.id, now - 20], [canal.id, now - 30]] as const) {
+    await profile.collection('watched').doc(id).set({contentId: id, completedAt: at, generation: 0});
+  }
+  const h = await execute('readHome', {...ctx, sourceId: src.id}, admin) as any;
+  assert.deepEqual(h.continueWatching.map((i: any) => i.id), [missao.id], 'one per title, no channels, completed newest wins');
+  assert.deepEqual(h.watched.map((i: any) => i.id), [serie.id, aventura.id], 'one per title, movies and series only');
+  const dates = h.releases.map((i: any) => i.addedAt);
+  assert.ok(h.releases.length > 0 && h.releases.every((i: any) => i.kind === 'movie' || i.kind === 'series'));
+  assert.deepEqual(dates, [...dates].sort((a: number, b: number) => b - a), 'newest first, movies and series merged');
+  assert.ok(h.releases.some((i: any) => i.id === aventura.id) && h.releases.some((i: any) => i.id === missao.id));
+  const whole = await execute('readHome', {...ctx, sourceId: src.id, section: 'watched'}, admin) as any;
+  assert.deepEqual(whole.watched.map((i: any) => i.id), [serie.id, aventura.id]);
+
+});

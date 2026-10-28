@@ -258,7 +258,7 @@ void main() {
     // Home tabs and rows.
     tabsEdgeToEdge(find.byKey(const Key('home-tabs')), 0);
     final row = find.byKey(
-      const PageStorageKey('home-row-Recently added movies'),
+      const PageStorageKey('home-row-New releases'),
     );
     edgeToEdge(row);
     expect(

@@ -246,11 +246,15 @@ export async function listProfileSpaces(input:Record<string,unknown>,actor:Ident
     const sources=(await tx.get(db.collection(`families/${fid}/sources`))).docs.filter(d=>d.data().enabled&&d.data().version);
     return {viewer,sources};
   });
-  const spaces:{sourceId:string;name:string;kinds:Kind[]}[]=[];
+  const spaces:{sourceId:string;name:string;kinds:Kind[];unavailable?:boolean;lastSyncAt?:number}[]=[];
   for(const source of context.sources){
     const catalog=await load(source.data().version);
     const kinds=(['channel','movie','series'] as Kind[]).filter(kind=>catalog.items.some(i=>i.kind===kind&&canSee(context.viewer,source.id,i)));
-    if(kinds.length)spaces.push({sourceId:source.id,name:String(source.data().name??''),kinds});
+    // The user's IPTV source is failing (invalid credentials or last sync errored): the TV shows the watermark.
+    const broken=source.data().authorizationStatus==='invalid'||source.data().status==='error';
+    // When the list was last updated (successful sync), shown in the TV settings.
+    const synced=source.data().lastSuccessfulSyncAt??source.data().lastSyncAt;
+    if(kinds.length)spaces.push({sourceId:source.id,name:String(source.data().name??''),kinds,...(broken?{unavailable:true}:{}),...(typeof synced==='number'?{lastSyncAt:synced}:{})});
   }
   return {profileId:context.viewer?.id??null,permissionsVersion:context.viewer?.permissionsVersion??null,spaces};
 }
@@ -297,7 +301,9 @@ function itemIndex(version:string,sourceId:string,catalog:Catalog) {
 }
 const HOME_ROW=10;
 /** Sections of the Control Home that "Ver tudo" can open whole. */
-export const HOME_SECTIONS=['favorites','continueWatching','wishlist','recentMovies','recentSeries','recentSearches'] as const;
+export const HOME_SECTIONS=['favorites','continueWatching','wishlist','releases','watched','recentMovies','recentSeries','recentSearches'] as const;
+/** "Lançamentos" of the Home: the newest titles of each kind, merged (same rule as the TV "Meu iPlex"). */
+const RELEASES_PER_KIND=5;
 const SECTION_MAX=100;
 type Item=Catalog['items'][number];
 type Visible={sourceId:string;sourceName:string;version:string;item:Item};
@@ -344,25 +350,32 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
   const full=input.section===undefined||input.section===null?null:z.enum(HOME_SECTIONS).parse(input.section);
   const rowLimit=(section:typeof HOME_SECTIONS[number])=>full===section?SECTION_MAX:HOME_ROW;
   const context=await homeScope(actor);
-  const recentMovies:Record<string,unknown>[]=[],recentSeries:Record<string,unknown>[]=[];
+  const recentMovies:Record<string,unknown>[]=[],recentSeries:Record<string,unknown>[]=[],releases:Record<string,unknown>[]=[];
   const {visible,known}=await visibleCatalog(actor,context.sources,(source,access,catalog,name)=>{
     if(source.id!==selected)return;
     // Only providers that publish an "added" date: nothing is guessed for the others.
-    const recent=(kind:Kind)=>catalog.items.filter(i=>i.kind===kind&&i.addedAt&&canSee(access.viewer,source.id,i))
-      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,rowLimit(kind==='movie'?'recentMovies':'recentSeries'))
-      .map(i=>publicItem({sourceId:source.id,sourceName:name,version:access.data.version,item:i},hash(`${source.id}:${i.id}`)));
-    recentMovies.push(...recent('movie'));recentSeries.push(...recent('series'));
+    const newest=(kind:Kind)=>catalog.items.filter(i=>i.kind===kind&&i.addedAt&&canSee(access.viewer,source.id,i))
+      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey));
+    const pub=(i:Item)=>publicItem({sourceId:source.id,sourceName:name,version:access.data.version,item:i},hash(`${source.id}:${i.id}`));
+    const movies=newest('movie'),series=newest('series');
+    recentMovies.push(...movies.slice(0,rowLimit('recentMovies')).map(pub));recentSeries.push(...series.slice(0,rowLimit('recentSeries')).map(pub));
+    // Lançamentos: never adult (even when allowed, adult content stays in its own category).
+    const perKind=full==='releases'?SECTION_MAX:RELEASES_PER_KIND;
+    releases.push(...[...movies.filter(i=>!isAdultContent(i)).slice(0,perKind),...series.filter(i=>!isAdultContent(i)).slice(0,perKind)]
+      .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,full==='releases'?SECTION_MAX:RELEASES_PER_KIND*2).map(pub));
   });
   const profile=context.profile;
   const resolved=(id:string)=>{const v=visible.get(id);return v?publicItem(v,id):null;};
   const recentSearches:Record<string,unknown>[]=[];
   if(profile?.type!=='guest')for(const id of new Set(recentSearchIds)){const item=resolved(id);if(item)recentSearches.push(item);}
+  // Personal rows (guest: none) never carry adult content, as on the TV "Meu iPlex".
   const {favoriteIds,favorites,myList,continueWatching,library,saved}=profile&&profile.type!=='guest'
-    ?await profileLibrary(context.ref,profile,visible,known,selected,rowLimit,full==='continueWatching'?SECTION_MAX:50)
+    ?await profileLibrary(context.ref,profile,visible,known,selected,rowLimit,full==='continueWatching'?SECTION_MAX:50,true)
     :emptyLibrary();
+  const watched=profile&&profile.type!=='guest'?await watchedTitles(context.ref,profile,visible,rowLimit('watched'),true):[];
   return {schemaVersion:2,selectedSourceId:selected,
     profile:profile?{id:profile.id,name:profile.name,type:profile.type,generations:profile.generations}:null,
-    favoriteIds,favorites,myList,continueWatching,recentMovies,recentSeries,recentSearches,library,saved};
+    favoriteIds,favorites,myList,continueWatching,releases,watched,recentMovies,recentSeries,recentSearches,library,saved};
 }
 
 type RowLimit=(section:typeof HOME_SECTIONS[number])=>number;
@@ -373,8 +386,10 @@ const emptyLibrary=()=>({favoriteIds:[] as string[],favorites:[] as Record<strin
 /** Favorites, wishlist and progress of one profile resolved against the visible catalog
  * (shared by the Home and the member details page). Saved titles that no catalog offers
  * are editorial entries (`available: false`) for non-kids profiles. */
-async function profileLibrary(family:FirebaseFirestore.DocumentReference,profile:ProfileView,visible:Map<string,Visible>,known:Set<string>,selected:string|null,rowLimit:RowLimit,progressLimit:number) {
+async function profileLibrary(family:FirebaseFirestore.DocumentReference,profile:ProfileView,visible:Map<string,Visible>,known:Set<string>,selected:string|null,rowLimit:RowLimit,progressLimit:number,noAdult=false) {
   const resolved=(id:string)=>{const v=visible.get(id);return v?publicItem(v,id):null;};
+  // Home rows: adult titles stay saved (keys) but are not listed.
+  const listed=(item:Record<string,unknown>)=>!(noAdult&&isAdultContent(item));
   const favoriteIds:string[]=[],favorites:Record<string,unknown>[]=[],myList:Record<string,unknown>[]=[],continueWatching:Record<string,unknown>[]=[];
   const library:Record<LibraryList,Record<string,unknown>[]>={favorites:[],wishlist:[]};
   const saved:Record<LibraryList,string[]>={favorites:[],wishlist:[]};
@@ -401,6 +416,7 @@ async function profileLibrary(family:FirebaseFirestore.DocumentReference,profile
         saved[list].push(...new Set([doc.id,d.contentId,...(typeof d.catalogContentId==='string'?[d.catalogContentId]:[]),...(item?[item.id as string]:[]),...(typeof d.tmdbKey==='string'?[`tmdb:${d.tmdbKey}`]:[])]));
         // Associate a saved title with the catalog item found later (same library row).
         if(item&&link.via!=='link'&&linkWrites<50){links.update(doc.ref,{contentId:item.id,catalogContentId:item.id,sourceId:item.sourceId});linkWrites++;}
+        if(item&&!listed(item))continue;
         if(item){
           const entry={...item,library:{id:doc.id,...(typeof d.tmdbId==='number'?{tmdbId:d.tmdbId}:{})},available:true};
           if(library[list].length<rowLimit(list))library[list].push(entry);
@@ -414,14 +430,18 @@ async function profileLibrary(family:FirebaseFirestore.DocumentReference,profile
     }
     // Best effort: a row removed or cleared meanwhile makes update fail, never resurrects it.
     if(linkWrites)await links.commit().catch(()=>{});
+    // One entry per title (movies and series only), chosen before excluding completed playback:
+    // an older unfinished episode never replaces a newer completed one (same rule as the TV).
+    const seenTitles=new Set<string>();
     for(const doc of progress.docs){
       const d=doc.data();
       if(continueWatching.length>=rowLimit('continueWatching')||d.generation!==profile.generations.progress||typeof d.contentId!=='string')continue;
-      if(!(Number(d.duration)>0)||Number(d.position)/Number(d.duration)>=0.95)continue;
       // Episodes are saved as `<seriesItemId>_e<episodeId>` (same contract as the TV).
       const episode=/^([A-Za-z0-9-]+)_e([A-Za-z0-9_-]+)$/.exec(d.contentId);
       const item=resolved(episode?episode[1]!:d.contentId);
-      if(!item||(episode&&item.kind!=='series'))continue;
+      if(!item||!listed(item)||item.kind==='channel'||(episode&&item.kind!=='series')||(item.kind==='series'&&!episode)||seenTitles.has(item.id as string))continue;
+      seenTitles.add(item.id as string);
+      if(!(Number(d.duration)>0)||Number(d.position)/Number(d.duration)>=0.95)continue;
       continueWatching.push({...item,progress:{position:Number(d.position),duration:Number(d.duration),updatedAt:Number(d.updatedAt)||0},...(episode?{episodeId:episode[2]}:{})});
     }
   }
@@ -449,17 +469,27 @@ export async function readProfileLibrary(input:Record<string,unknown>,actor:Iden
   if(profile.type==='guest')return {profile:{id:profile.id,type:profile.type},favorites:[],wishlist:[],continueWatching:[],watched:[]};
   const {visible,known}=await visibleCatalog(actor,scope.sources);
   const lib=await profileLibrary(scope.ref,profile,visible,known,null,()=>SECTION_MAX,SECTION_MAX);
-  const watched:Record<string,unknown>[]=[];
-  const rows=await scope.ref.collection('profiles').doc(profile.id).collection('watched').orderBy('completedAt','desc').limit(SECTION_MAX).get();
+  const watched=await watchedTitles(scope.ref,profile,visible,SECTION_MAX);
+  return {profile:{id:profile.id,type:profile.type},favorites:lib.library.favorites,wishlist:lib.library.wishlist,continueWatching:lib.continueWatching,watched};
+}
+
+/** History ("assistidos") of one profile, newest first, resolved against the visible catalog.
+ * `home`: the Home row — one entry per title, movies and series only, never adult. */
+async function watchedTitles(family:FirebaseFirestore.DocumentReference,profile:ProfileView,visible:Map<string,Visible>,limit:number,home=false) {
+  const watched:Record<string,unknown>[]=[],seen=new Set<string>();
+  const rows=await family.collection('profiles').doc(profile.id).collection('watched').orderBy('completedAt','desc').limit(SECTION_MAX).get();
   for(const doc of rows.docs){
+    if(watched.length>=limit)break;
     const d=doc.data();
     if(d.generation!==profile.generations.watched||typeof d.contentId!=='string')continue;
     const episode=/^([A-Za-z0-9-]+)_e([A-Za-z0-9_-]+)$/.exec(d.contentId);
-    const v=visible.get(episode?episode[1]!:d.contentId);
+    const id=episode?episode[1]!:d.contentId,v=visible.get(id);
     if(!v||(episode&&v.item.kind!=='series'))continue;
-    watched.push({...publicItem(v,episode?episode[1]!:d.contentId),watchedAt:Number(d.completedAt)||0,...(episode?{episodeId:episode[2]}:{})});
+    if(home&&(v.item.kind==='channel'||isAdultContent(v.item)||seen.has(id)))continue;
+    seen.add(id);
+    watched.push({...publicItem(v,id),watchedAt:Number(d.completedAt)||0,...(episode?{episodeId:episode[2]}:{})});
   }
-  return {profile:{id:profile.id,type:profile.type},favorites:lib.library.favorites,wishlist:lib.library.wishlist,continueWatching:lib.continueWatching,watched};
+  return watched;
 }
 
 const titleQuerySchema=z.object({kind:z.enum(['movie','series']),tmdbId:z.number().int().positive().max(999_999_999),

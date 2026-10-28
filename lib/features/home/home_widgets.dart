@@ -12,6 +12,10 @@ import 'metadata_service.dart';
 abstract final class HomeCardSize {
   static const posterWidth = 112.0, posterHeight = 168.0;
   static const channelWidth = 168.0, channelHeight = 96.0;
+
+  /// 16:9 cover (Continuar assistindo, Favoritos) and, in those rows, the
+  /// square channel tile of the same height (same as the TV "Meu iPlex").
+  static const landscapeWidth = 200.0, landscapeHeight = 112.5;
   static const caption = 40.0;
 }
 
@@ -26,8 +30,12 @@ class HomeCard extends StatelessWidget {
     this.width,
     this.showCaption = false,
     this.detail,
+    this.landscape = false,
   });
   final Entry item;
+
+  /// 16:9 cover for titles, square tile for channels (Meu iPlex rows).
+  final bool landscape;
   final VoidCallback onTap;
 
   /// Library actions (Favoritos / Lista de desejos) without opening the page.
@@ -48,11 +56,20 @@ class HomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final channel = item.isChannel;
     final cell = this.width;
+    final wide = landscape && cell == null;
     final width =
         cell ??
-        (channel ? HomeCardSize.channelWidth : HomeCardSize.posterWidth);
+        (wide
+            ? (channel
+                  ? HomeCardSize.landscapeHeight
+                  : HomeCardSize.landscapeWidth)
+            : channel
+            ? HomeCardSize.channelWidth
+            : HomeCardSize.posterWidth);
     final height = cell != null
         ? (channel ? cell : cell * 3 / 2)
+        : wide
+        ? HomeCardSize.landscapeHeight
         : channel
         ? HomeCardSize.channelHeight
         : HomeCardSize.posterHeight;
@@ -82,6 +99,7 @@ class HomeCard extends StatelessWidget {
                     children: [
                       Artwork(
                         item: item,
+                        backdrop: wide && !channel,
                         fit: channel ? BoxFit.contain : BoxFit.cover,
                         decodeWidth:
                             (width * MediaQuery.devicePixelRatioOf(context))
@@ -403,7 +421,11 @@ class HomeRow extends StatelessWidget {
     this.onLongPress,
     this.limit = 10,
     this.onSeeAll,
+    this.landscape = false,
   });
+
+  /// 16:9 covers (channels square), as Continuar assistindo and Favoritos.
+  final bool landscape;
 
   /// "Ver tudo": opens the screen with every item of the section.
   final VoidCallback? onSeeAll;
@@ -417,7 +439,9 @@ class HomeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final shown = items.take(limit).toList();
     final channel = shown.every((i) => i.isChannel);
-    final height = channel
+    final height = landscape
+        ? HomeCardSize.landscapeHeight
+        : channel
         ? HomeCardSize.channelHeight
         : HomeCardSize.posterHeight;
     return Column(
@@ -469,6 +493,7 @@ class HomeRow extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
             itemBuilder: (context, index) => HomeCard(
               item: shown[index],
+              landscape: landscape,
               onTap: () => onTap(shown[index]),
               onLongPress: onLongPress == null
                   ? null

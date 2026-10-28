@@ -140,8 +140,48 @@ final homeProvider = FutureProvider.autoDispose.family<HomeData, String?>((
         if (recentSearchIds.isNotEmpty) 'recentSearchIds': recentSearchIds,
       })
       .timeout(const Duration(seconds: 30));
-  return HomeData.fromJson(result);
+  return HomeData.fromJson(await withWatched(ref, result, homeRow));
 }, retry: (retryCount, error) => null);
+
+/// Cards per Home row.
+const homeRow = 10;
+
+/// Older backends have no Assistidos in readHome: it comes from the
+/// profile's own library (readProfileLibrary, same visibility rules). Best
+/// effort: without it the row is simply not shown.
+Future<Map<String, dynamic>> withWatched(
+  Ref ref,
+  Map<String, dynamic> home,
+  int limit,
+) async {
+  final profile = home['profile'];
+  if (home.containsKey('watched') ||
+      profile is! Map ||
+      profile['id'] is! String ||
+      profile['type'] == 'guest') {
+    return home;
+  }
+  try {
+    final library = await ref
+        .read(repositoryProvider)
+        .mutate('readProfileLibrary', {'profileId': profile['id']})
+        .timeout(const Duration(seconds: 30));
+    final watched = [
+      for (final raw in (library['watched'] as List? ?? const []))
+        if (raw is Map && raw['id'] is String) Map<String, dynamic>.from(raw),
+    ];
+    // One per title, movies and series, never adult (the Meu iPlex rule).
+    final rows = meuIplex([
+      for (final raw in watched) Entry(raw['id'] as String, raw),
+    ]).take(limit);
+    return {
+      ...home,
+      'watched': [for (final e in rows) e.data],
+    };
+  } catch (_) {
+    return home;
+  }
+}
 
 /// "Ver tudo": one Home section returned whole by readHome (same source,
 /// scope and visibility rules as the Home itself).
@@ -158,5 +198,11 @@ final homeSectionProvider = FutureProvider.autoDispose
             if (recentSearchIds.isNotEmpty) 'recentSearchIds': recentSearchIds,
           })
           .timeout(const Duration(seconds: 30));
-      return HomeData.fromJson(result);
+      return HomeData.fromJson(
+        await withWatched(
+          ref,
+          result,
+          section == HomeSection.watched ? 100 : homeRow,
+        ),
+      );
     }, retry: (retryCount, error) => null);

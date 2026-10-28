@@ -80,21 +80,28 @@ void main() {
             for (var i = 0; i < 12; i++) item('l$i', 'Título $i', 'movie'),
           ],
         },
-        'recentMovies': [item('r1', 'Filme Novo', 'movie')],
-        'recentSeries': [item('r2', 'Série Nova', 'series')],
+        'releases': [
+          item('r1', 'Filme Novo', 'movie'),
+          item('r2', 'Série Nova', 'series'),
+        ],
+        'watched': [item('h1', 'Já Visto', 'movie')],
+        'recentSearches': [item('s1', 'Buscado', 'movie')],
       });
       await navigation.launch(tester, repo);
-      tester.view.physicalSize = const Size(390, 2400);
+      tester.view.physicalSize = const Size(390, 2600);
       await tester.pumpAndSettle();
+      // Same rule as the TV "Meu iPlex".
       final titles = [
-        'Favorites',
         'Continue watching',
+        'Favorites',
         'Wishlist',
-        'Recently added movies',
-        'Recently added series',
+        'New releases',
+        'Watched',
       ];
       final ys = [for (final t in titles) tester.getTopLeft(find.text(t)).dy];
       expect(ys, [...ys]..sort(), reason: 'fixed section order');
+      expect(find.text('Recently searched'), findsNothing);
+      expect(find.text('Recently added movies'), findsNothing);
       final myList = tester.widget<ListView>(
         find.byKey(const PageStorageKey('home-row-Wishlist')),
       );
@@ -148,12 +155,13 @@ void main() {
         'recentMovies': [item('r1', 'Filme Novo', 'movie')],
       }),
     );
-    expect(find.text('Recently added movies'), findsOneWidget);
+    expect(find.text('New releases'), findsOneWidget);
     for (final t in [
       'Favorites',
       'Continue watching',
       'Wishlist',
-      'Recently added series',
+      'Watched',
+      'Recently added movies',
     ]) {
       expect(find.text(t), findsNothing);
     }
@@ -388,7 +396,7 @@ void main() {
   );
 
   testWidgets(
-    'Continue watching uses the same poster cards as the other rows',
+    'Meu iPlex layout (same as the TV): 16:9 Continuar and Favoritos, square channels, posters elsewhere, featured release on top',
     (tester) async {
       await navigation.launch(
         tester,
@@ -402,10 +410,17 @@ void main() {
               progress: {'position': 30, 'duration': 100},
             ),
           ],
+          'library': {
+            'favorites': [
+              item('ch1', 'Canal Notícias', 'channel'),
+              item('f1', 'Favorito', 'movie'),
+            ],
+            'wishlist': [],
+          },
           'recentMovies': [item('r1', 'Filme Novo', 'movie')],
         }),
       );
-      tester.view.physicalSize = const Size(390, 2400);
+      tester.view.physicalSize = const Size(390, 3000);
       await tester.pumpAndSettle();
       Size art(String id) => tester.getSize(
         find.descendant(
@@ -413,8 +428,18 @@ void main() {
           matching: find.byType(Artwork),
         ),
       );
-      expect(art('m1'), art('r1'));
-      expect(art('m1').height / art('m1').width, closeTo(1.5, 0.01));
+      expect(art('m1').width / art('m1').height, closeTo(16 / 9, 0.01));
+      expect(art('f1'), art('m1'));
+      expect(art('ch1').width, art('ch1').height, reason: 'channels: square');
+      expect(art('r1').height / art('r1').width, closeTo(1.5, 0.01));
+      // Featured release: greeting, label, title and "Ver detalhes".
+      expect(find.byKey(const Key('home-hero')), findsOneWidget);
+      expect(find.text('Featured release'), findsOneWidget);
+      expect(find.byKey(const Key('home-hero-title')), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('home-hero'))).dy,
+        lessThan(tester.getTopLeft(find.text('Continue watching')).dy),
+      );
     },
   );
 
@@ -434,7 +459,7 @@ void main() {
     final c = await navigation.launch(tester, repo);
     tester.view.physicalSize = const Size(390, 2400);
     await tester.pumpAndSettle();
-    for (final title in ['Favorites', 'Wishlist', 'Recently added movies']) {
+    for (final title in ['Favorites', 'Wishlist', 'New releases']) {
       final link = find.byKey(ValueKey('home-see-all-$title'));
       expect(link, findsOneWidget);
       expect(
@@ -475,7 +500,7 @@ void main() {
     );
     // One screen for every category: tabs, opening on the tapped one.
     expect(find.byKey(const Key('home-section-tabs')), findsOneWidget);
-    for (final t in ['Favorites', 'Wishlist', 'Recently added movies']) {
+    for (final t in ['Favorites', 'Wishlist', 'New releases']) {
       expect(
         find.descendant(
           of: find.byKey(const Key('home-section-tabs')),
@@ -754,7 +779,12 @@ void catalogFeedTests() {
           await tester.drag(scroll, const Offset(0, -3000));
           await settleFeed(tester);
         }
-        expect(repo.pages.map((p) => p['cursor']), [0, 30, 60, 90], reason: 'nothing left to load');
+        expect(repo.pages.map((p) => p['cursor']), [
+          0,
+          30,
+          60,
+          90,
+        ], reason: 'nothing left to load');
         expect(find.widgetWithText(AppButton, 'More'), findsNothing);
       },
     );

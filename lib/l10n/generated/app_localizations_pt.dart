@@ -1262,6 +1262,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeFavorites => 'Favoritos';
 
   @override
+  String homeGreeting(String name) {
+    return 'Olá, $name';
+  }
+
+  @override
+  String get homeFeaturedRelease => 'Lançamento em destaque';
+
+  @override
+  String get homeReleases => 'Lançamentos';
+
+  @override
   String get homeContinueWatching => 'Continuar assistindo';
 
   @override

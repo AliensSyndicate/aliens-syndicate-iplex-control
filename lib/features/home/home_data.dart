@@ -95,10 +95,30 @@ enum HomeSection {
   favorites,
   continueWatching,
   wishlist,
+  releases,
+  watched,
   recentMovies,
   recentSeries,
   recentSearches,
 }
+
+/// The "Meu iPlex" rows, in order (same rule as the TV): Continuar
+/// assistindo, Favoritos, Lista de desejos, Lançamentos and Assistidos. A
+/// guest only has Lançamentos (the backend returns no personal rows for it)
+/// and a row without content is never shown.
+const homeSections = [
+  HomeSection.continueWatching,
+  HomeSection.favorites,
+  HomeSection.wishlist,
+  HomeSection.releases,
+  HomeSection.watched,
+];
+
+/// Rows with 16:9 covers (channels square); the others use 2:3 posters.
+const landscapeSections = {HomeSection.continueWatching, HomeSection.favorites};
+
+/// Titles per kind in Lançamentos (the newest movies and series, merged).
+const releasesPerKind = 5;
 
 /// Favoritos and Lista de desejos: independent lists of the same profile.
 enum LibraryList { favorites, wishlist }
@@ -137,6 +157,8 @@ class HomeData {
     this.recentMovies = const [],
     this.recentSeries = const [],
     this.recentSearches = const [],
+    this.releases = const [],
+    this.watched = const [],
     this.libraryFavorites = const [],
     this.wishlist = const [],
     this.saved = const {},
@@ -175,6 +197,11 @@ class HomeData {
       recentMovies: items('recentMovies'),
       recentSeries: items('recentSeries'),
       recentSearches: items('recentSearches'),
+      // Older backends: the newest movies and series rows, merged here.
+      releases: json.containsKey('releases')
+          ? items('releases')
+          : mergeReleases(items('recentMovies'), items('recentSeries')),
+      watched: items('watched'),
       // Older backends: favorites (channels) + my list (titles), all available.
       libraryFavorites: library is Map
           ? [
@@ -208,6 +235,10 @@ class HomeData {
   final List<Entry> recentMovies, recentSeries;
   final List<Entry> recentSearches;
 
+  /// Lançamentos (newest movies and series by provider date, never adult)
+  /// and Assistidos (history, one entry per title).
+  final List<Entry> releases, watched;
+
   /// Library rows (catalog items and editorial titles, `available` flag).
   final List<Entry> libraryFavorites, wishlist;
   final Map<LibraryList, Set<String>> saved;
@@ -220,13 +251,20 @@ class HomeData {
       myList.isEmpty &&
       recentMovies.isEmpty &&
       recentSeries.isEmpty &&
-      recentSearches.isEmpty;
+      recentSearches.isEmpty &&
+      releases.isEmpty &&
+      watched.isEmpty;
 
   /// Items of one section (the Home shows 10; "Ver tudo" the whole list).
+  /// "Meu iPlex" rules (same as the TV), also applied here so they hold
+  /// with older backends: never adult content; Continuar assistindo,
+  /// Lançamentos and Assistidos only movies and series, one entry per title.
   List<Entry> section(HomeSection section) => switch (section) {
-    HomeSection.favorites => libraryFavorites,
-    HomeSection.continueWatching => continueWatching,
-    HomeSection.wishlist => wishlist,
+    HomeSection.favorites => meuIplex(libraryFavorites, channels: true),
+    HomeSection.continueWatching => meuIplex(continueWatching),
+    HomeSection.wishlist => meuIplex(wishlist),
+    HomeSection.releases => meuIplex(releases),
+    HomeSection.watched => meuIplex(watched),
     HomeSection.recentMovies => recentMovies,
     HomeSection.recentSeries => recentSeries,
     HomeSection.recentSearches => recentSearches,
@@ -236,6 +274,84 @@ class HomeData {
 
   bool isSaved(LibraryList list, Entry item) =>
       item.libraryKeys.any((saved[list] ?? const {}).contains);
+}
+
+/// Items of a "Meu iPlex" row: no adult content, one entry per title and,
+/// unless [channels], movies and series only.
+List<Entry> meuIplex(List<Entry> items, {bool channels = false}) {
+  final seen = <String>{};
+  return [
+    for (final item in items)
+      if ((channels || !item.isChannel) &&
+          !isAdultEntry(item) &&
+          seen.add(item.id))
+        item,
+  ];
+}
+
+const _accents = {
+  'á': 'a',
+  'à': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'ä': 'a',
+  'é': 'e',
+  'è': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'í': 'i',
+  'ì': 'i',
+  'î': 'i',
+  'ï': 'i',
+  'ó': 'o',
+  'ò': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ö': 'o',
+  'ú': 'u',
+  'ù': 'u',
+  'û': 'u',
+  'ü': 'u',
+  'ç': 'c',
+  'ñ': 'n',
+};
+String _fold(Object? value) => [
+  for (final c in '${value ?? ''}'.toLowerCase().trim().split(''))
+    _accents[c] ?? c,
+].join();
+final _adult = RegExp(
+  r'(^|[^a-z0-9])(xxx|adult[oa]?s?|adults?|porn\w*|erotic\w*|erotik\w*|hentai|playboy|sexy|18\s*\+|\+\s*18|for adults)([^a-z0-9]|$)',
+);
+final _adultRating = RegExp(
+  r'^(18|18\+|r18|nc-17|nc17|x|xxx|pegi 18|pegi18|fsk 18|fsk18)$',
+);
+
+/// Adult content: same signals as the backend (`isAdultContent`): provider
+/// flag, title/category words or an 18 rating.
+bool isAdultEntry(Entry item) {
+  if (item.data['isAdult'] == true) return true;
+  if (_adult.hasMatch(_fold(item.data['title'])) ||
+      _adult.hasMatch(_fold(item.data['category']))) {
+    return true;
+  }
+  final rating = _fold(item.data['ageRating'])
+      .replaceFirst(
+        RegExp(r'^(rated|classificacao|clasificacion|age|idade|edad)[:\s]*'),
+        '',
+      )
+      .replaceFirst(RegExp(r'\s+anos?$|\s+years?$'), '')
+      .trim();
+  return _adultRating.hasMatch(rating);
+}
+
+/// Lançamentos from the separate rows of older backends: the
+/// [releasesPerKind] newest of each kind, newest first by provider date.
+List<Entry> mergeReleases(List<Entry> movies, List<Entry> series) {
+  num added(Entry e) => e.data['addedAt'] is num ? e.data['addedAt'] as num : 0;
+  Iterable<Entry> newest(List<Entry> items) =>
+      items.where((e) => !isAdultEntry(e)).take(releasesPerKind);
+  return [...newest(movies), ...newest(series)]
+    ..sort((a, b) => added(b).compareTo(added(a)));
 }
 
 /// Sources the Home can show: published catalog, and unlocked when protected.

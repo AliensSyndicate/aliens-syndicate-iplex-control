@@ -2314,6 +2314,24 @@ abstract class AppLocalizations {
   /// **'Favorites'**
   String get homeFavorites;
 
+  /// No description provided for @homeGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, {name}'**
+  String homeGreeting(String name);
+
+  /// No description provided for @homeFeaturedRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured release'**
+  String get homeFeaturedRelease;
+
+  /// No description provided for @homeReleases.
+  ///
+  /// In en, this message translates to:
+  /// **'New releases'**
+  String get homeReleases;
+
   /// No description provided for @homeContinueWatching.
   ///
   /// In en, this message translates to:
