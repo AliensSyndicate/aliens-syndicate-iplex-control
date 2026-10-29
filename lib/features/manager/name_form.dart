@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
+import '../../core/config/features.dart';
 
 class NameForm extends ConsumerStatefulWidget {
   const NameForm({
@@ -78,7 +79,8 @@ class _NameFormState extends ConsumerState<NameForm> {
                   ? context.l.requiredField
                   : null,
             ),
-            if (creatingProfile) ...[
+            // Only "Membro" while Kids profiles are hidden: no choice to show.
+            if (creatingProfile && Features.kidsProfiles) ...[
               const SizedBox(height: AppSpacing.lg),
               AppDropdownField<String>(
                 key: const Key('profile-type'),

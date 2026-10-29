@@ -56,9 +56,13 @@ function visibilityError(error: unknown): DomainError {
 
 const progressContentId = (itemId: string, episodeId: string | null) => (episodeId ? episodeContentId(itemId, episodeId) : itemId);
 
-/** Saved progress of the requester's own profile (what their Control showed), or null. */
+/** Saved progress of the requester's own profile (what their Control showed, or where its
+ * phone player stopped), or null. Same profile as the phone player: the account's link, else
+ * `admin` for the family administrator (an individual family's owner often has no link). */
 async function requesterProgress(tx: FirebaseFirestore.Transaction, family: FirebaseFirestore.DocumentReference, uid: string, contentId: string): Promise<ResumeHint | null> {
-  const profileId = (await tx.get(family.collection('profile_links').doc(uid))).data()?.profileId;
+  const [link, familyDoc] = await tx.getAll(family.collection('profile_links').doc(uid), family);
+  const admin = (familyDoc!.data()?.adminUid ?? familyDoc!.data()?.adminId) === uid;
+  const profileId = link!.data()?.profileId ?? (admin ? 'admin' : undefined);
   if (typeof profileId !== 'string') return null;
   const profile = family.collection('profiles').doc(profileId);
   const [meta, progress] = await tx.getAll(profile, profile.collection('watch_progress').doc(contentId));

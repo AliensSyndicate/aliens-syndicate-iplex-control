@@ -123,7 +123,9 @@ class _DetailsLayoutState extends State<DetailsLayout> {
         ),
         Positioned(
           top: padding.top + AppSpacing.sm,
-          left: AppSpacing.lg,
+          // Same inset as the actions on the right (the icon sits in a
+          // 48 dp target).
+          left: AppSpacing.sm,
           child: const DetailsBackButton(),
         ),
         if (widget.actions case final actions?)

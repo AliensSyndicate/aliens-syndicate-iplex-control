@@ -1,3 +1,5 @@
+import 'package:aliens_syndicate_iplex_control/core/config/features.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -185,8 +187,18 @@ void main() {
           'type': type == 'kids' ? 'regular' : 'kids',
         });
       },
+      // Turning a profile into Kids is hidden until there is children's
+      // content; an existing Kids profile can still be turned back.
+      skip: type == 'regular' && !Features.kidsProfiles,
     );
   }
+  testWidgets('Kids profiles hidden: a regular profile has no Kids toggle', (
+    tester,
+  ) async {
+    await _open(tester, _Repo(_regular));
+    expect(find.byKey(const Key('kids-account-toggle')), findsNothing);
+    expect(find.text('Kids account'), findsNothing);
+  }, skip: Features.kidsProfiles);
   testWidgets('member sees its classification but cannot change it', (
     tester,
   ) async {
@@ -255,10 +267,12 @@ void main() {
     final watched = y(find.byKey(const ValueKey('library-watched')));
     final pin = y(find.byKey(const Key('personal-pin')));
     final content = y(find.text('Conteúdo'));
-    final kids = y(find.byKey(const Key('kids-account-toggle')));
     final channel = y(find.byKey(const Key('content-channel')));
-    expect(watched < pin && pin < content && content < kids, isTrue);
-    expect(kids < channel, isTrue, reason: 'Conta infantil comes first');
+    expect(watched < pin && pin < content && content < channel, isTrue);
+    if (Features.kidsProfiles) {
+      final kids = y(find.byKey(const Key('kids-account-toggle')));
+      expect(content < kids && kids < channel, isTrue);
+    }
     expect(find.byKey(const Key('personal-pin-set')), findsNothing);
   });
 
@@ -337,14 +351,16 @@ void main() {
         reason: k,
       );
     }
-    expect(
-      tester
-          .widget<NeumorphicSwitchTile>(
-            find.byKey(const Key('kids-account-toggle')),
-          )
-          .disabled,
-      isTrue,
-    );
+    if (Features.kidsProfiles) {
+      expect(
+        tester
+            .widget<NeumorphicSwitchTile>(
+              find.byKey(const Key('kids-account-toggle')),
+            )
+            .disabled,
+        isTrue,
+      );
+    }
     expect(find.byKey(const ValueKey('library-favorites')), findsNothing);
     expect(find.byKey(const Key('personal-pin')), findsNothing);
     expect(find.byKey(const Key('remove-profile')), findsNothing);

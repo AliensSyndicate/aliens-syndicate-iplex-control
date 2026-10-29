@@ -8,6 +8,7 @@ import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../../core/domain/public_identity.dart';
 import 'widgets/profile_library.dart';
+import '../../core/config/features.dart';
 
 /// Família › integrante: header (avatar, name, role, account, last sync),
 /// permissions, the member's own preferences and PIN, content (Continuar
@@ -224,7 +225,9 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
 
           // Content: kids classification and the allowed types.
           SectionHeader(l.contentSection),
-          if (type == 'regular' || type == 'kids')
+          // Hidden while there is no children's content; a profile that is
+          // already Kids still shows it, so it can be turned back.
+          if ((Features.kidsProfiles && type == 'regular') || type == 'kids')
             NeumorphicSwitchTile(
               key: const Key('kids-account-toggle'),
               title: l.kidsAccount,

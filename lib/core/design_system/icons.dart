@@ -15,8 +15,12 @@ abstract final class AppIcons {
       left = HugeIcons.strokeRoundedArrowLeft01,
       right = HugeIcons.strokeRoundedArrowRight01;
 
+  /// Lista de desejos (details page and content options).
+  static const wishlist = HugeIcons.strokeRoundedAlbum;
+
   /// "Ver detalhes" (icon only, featured release).
   static const details = HugeIcons.strokeRoundedProfile;
+
   /// Player controls (same icons as the TV player).
   static const pause = HugeIcons.strokeRoundedPause,
       skipBack = HugeIcons.strokeRoundedGoBackward10Sec,
@@ -48,7 +52,7 @@ abstract final class AppIcons {
   static const subscription = HugeIcons.strokeRoundedCrown,
       help = HugeIcons.strokeRoundedHelpCircle,
       info = HugeIcons.strokeRoundedInformationCircle,
-      share = HugeIcons.strokeRoundedShare08,
+      share = HugeIcons.strokeRoundedShare01,
       language = HugeIcons.strokeRoundedLanguageCircle,
       terms = HugeIcons.strokeRoundedLegalDocument01,
       privacy = HugeIcons.strokeRoundedShield01;

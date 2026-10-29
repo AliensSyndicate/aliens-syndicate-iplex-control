@@ -1,3 +1,5 @@
+import 'package:aliens_syndicate_iplex_control/core/config/features.dart';
+
 import 'dart:async';
 
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
@@ -41,15 +43,19 @@ void main() {
         expect(find.byType(AppModalSheet), findsNothing);
         expect(find.text('Add member'), findsOneWidget);
         final toggle = find.byKey(const Key('kids-account-toggle'));
-        expect(tester.widget<NeumorphicSwitchTile>(toggle).value, isFalse);
+        // Kids profiles hidden (no children's content yet): no toggle.
+        if (!Features.kidsProfiles) expect(toggle, findsNothing);
         if (kids) {
+          expect(tester.widget<NeumorphicSwitchTile>(toggle).value, isFalse);
           await tester.tap(toggle);
           await tester.pumpAndSettle();
         }
         await tester.enterText(find.byType(TextFormField), 'A7K9M2P4X8Q3');
         await tester.tap(find.widgetWithText(AppButton, 'Search your catalog'));
         await tester.pumpAndSettle();
-        expect(tester.widget<NeumorphicSwitchTile>(toggle).value, kids);
+        if (kids) {
+          expect(tester.widget<NeumorphicSwitchTile>(toggle).value, isTrue);
+        }
         expect(find.text('Lia'), findsOneWidget);
         final send = find.widgetWithText(AppButton, 'Request membership');
         await tester.ensureVisible(send);
@@ -68,6 +74,8 @@ void main() {
         );
         expect(navigation.path(c), '/users');
       },
+      // Kept for when Kids profiles come back.
+      skip: kids && !Features.kidsProfiles,
     );
   }
 
@@ -87,7 +95,7 @@ void main() {
     );
     repo.pending!.complete();
     await tester.pumpAndSettle();
-  });
+  }, skip: !Features.kidsProfiles);
 
   testWidgets('members cannot open add member through a direct route', (
     tester,

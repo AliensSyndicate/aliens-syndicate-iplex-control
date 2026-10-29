@@ -225,7 +225,7 @@ class _ReleaseHeroState extends ConsumerState<ReleaseHero> {
                             : () => widget.onPlay(item),
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
+                    const SizedBox(width: AppSpacing.md),
                     CircularButton(
                       key: const Key('home-hero-open'),
                       icon: AppIcons.details,
@@ -234,7 +234,7 @@ class _ReleaseHeroState extends ConsumerState<ReleaseHero> {
                           ? null
                           : () => widget.onOpen(item),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
+                    const SizedBox(width: AppSpacing.md),
                     CircularButton(
                       key: const Key('home-hero-tv'),
                       icon: AppIcons.devices,

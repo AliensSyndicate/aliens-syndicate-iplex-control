@@ -61,8 +61,7 @@ String failureText(BuildContext context, Object error) {
     'session-expired' => l.playbackSessionExpired,
     'invalid-action' => l.errorFeatureUnavailable,
     'stream-unreachable' => l.playbackStreamUnreachable,
-    'profile-unavailable' ||
-    'profile-disabled' => l.errorProfileUnavailable,
+    'profile-unavailable' || 'profile-disabled' => l.errorProfileUnavailable,
     'not-found' => l.errorContentUnavailable,
     'catalog-integrity' => l.playbackFailed,
     // Provider answers while resolving a stream (same copy as the sync).

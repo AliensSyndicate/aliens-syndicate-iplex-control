@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
+import 'stream_proxy.dart';
+
 /// One audio or subtitle track of the playing media.
 @immutable
 class PlaybackTrack {
@@ -106,9 +108,19 @@ class MediaKitEngine implements PlaybackEngine {
         ),
       );
 
+  /// Provider hosts that this network's DNS does not resolve still play:
+  /// the engine opens the stream through the loopback [StreamProxy].
+  StreamProxy? _proxy;
+
   @override
-  Future<void> open(String url, {Duration? start}) =>
-      _player.open(Media(url, start: start));
+  Future<void> open(String url, {Duration? start}) async {
+    final proxy = _proxy ??= await StreamProxy.start();
+    final target = Uri.tryParse(url);
+    await _player.open(
+      Media(target == null ? url : proxy.wrap(target).toString(), start: start),
+    );
+  }
+
   @override
   Future<void> play() => _player.play();
   @override
@@ -139,7 +151,10 @@ class MediaKitEngine implements PlaybackEngine {
   );
 
   @override
-  Future<void> dispose() => _player.dispose();
+  Future<void> dispose() async {
+    await _player.dispose();
+    await _proxy?.close();
+  }
 }
 
 extension on String {

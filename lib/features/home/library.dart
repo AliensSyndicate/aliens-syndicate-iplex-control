@@ -148,11 +148,16 @@ class _LibraryButtonsState extends ConsumerState<LibraryButtons> {
                 : () => toggle(LibraryList.favorites),
             child: _icon(
               LibraryList.favorites,
-              favorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              favorite,
+              Icon(
+                favorite
+                    ? Icons.favorite_rounded
+                    : Icons.favorite_border_rounded,
+                color: favorite ? AppColors.primary : AppColors.textPrimary,
+              ),
             ),
           ),
-          if (!widget.item.isChannel)
+          if (!widget.item.isChannel) ...[
+            const SizedBox(width: AppSpacing.sm),
             CircularButton(
               key: const Key('details-wishlist'),
               onPad: true,
@@ -163,17 +168,20 @@ class _LibraryButtonsState extends ConsumerState<LibraryButtons> {
                   : () => toggle(LibraryList.wishlist),
               child: _icon(
                 LibraryList.wishlist,
-                wished ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                wished,
+                AppIcon(
+                  AppIcons.wishlist,
+                  color: wished ? AppColors.primary : AppColors.textPrimary,
+                ),
               ),
             ),
+          ],
         ],
       );
     }
     return const SizedBox.shrink();
   }
 
-  Widget _icon(LibraryList list, IconData icon, bool active) => busy == list
+  Widget _icon(LibraryList list, Widget icon) => busy == list
       ? const SizedBox.square(
           dimension: 20,
           child: CircularProgressIndicator(
@@ -181,7 +189,7 @@ class _LibraryButtonsState extends ConsumerState<LibraryButtons> {
             color: AppColors.textPrimary,
           ),
         )
-      : Icon(icon, color: active ? AppColors.primary : AppColors.textPrimary);
+      : icon;
 }
 
 /// Content options (reference: "Modal Sheet – Opções de conteúdo"), from
@@ -328,9 +336,7 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
           if (!item.isChannel)
             SheetActionRow(
               key: const Key('option-wishlist'),
-              material: wished
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
+              icon: AppIcons.wishlist,
               active: wished,
               label: wished ? l.removeFromWishlist : l.addToWishlist,
               onTap: busy == null ? () => toggle(LibraryList.wishlist) : null,
@@ -350,7 +356,7 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
         if (!adult) ...[
           SheetActionRow(
             key: const Key('option-share'),
-            material: Icons.ios_share_rounded,
+            icon: AppIcons.share,
             label: l.share,
             onTap: () async {
               final title = item.year == null

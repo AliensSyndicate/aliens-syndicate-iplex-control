@@ -170,6 +170,30 @@ void main() {
     expect(find.text('Reproduzindo em Sala.'), findsOneWidget);
   });
 
+  testWidgets('iPlex in a web browser is not offered as a TV', (tester) async {
+    final repo = _Repo(
+      devices: [
+        _tv('tv1', 'Sala'),
+        Entry('web1', {
+          ..._tv('web1', 'iPlex Web (navegador)').data,
+          'platform': 'web',
+          'identitySource': 'web_browser_storage',
+        }),
+      ],
+    );
+    await tester.pumpWidget(_host(WatchOnTvSheet(item: _movie), repo));
+    await tester.pumpAndSettle();
+    expect(find.text('Sala'), findsOneWidget);
+    expect(find.text('iPlex Web (navegador)'), findsNothing);
+    // The only TV left is chosen by itself.
+    await tester.tap(find.byKey(const Key('send-to-tv')));
+    await tester.pump();
+    expect(
+      repo.calls.firstWhere((c) => c.$1 == 'requestPlayback').$2['deviceId'],
+      'tv1',
+    );
+  });
+
   testWidgets('several TVs: the user picks one; backend errors are specific', (
     tester,
   ) async {

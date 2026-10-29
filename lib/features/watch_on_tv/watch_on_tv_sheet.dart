@@ -31,6 +31,11 @@ Future<void> showWatchOnTv(
   ),
 );
 
+/// iPlex Web running in a browser (paired with platform `web`), not a TV.
+bool isBrowserDevice(Entry device) =>
+    device.text('platform') == 'web' ||
+    device.text('identitySource') == 'web_browser_storage';
+
 /// One episode the phone can ask the TV to start.
 @immutable
 class TvEpisode {
@@ -184,8 +189,11 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
           onRetry: () => ref.invalidate(entriesProvider('devices')),
         ),
         data: (all) {
+          // TVs only: iPlex opened in a web browser is not offered.
           final tvs = all
-              .where((d) => d.text('status') != 'unlinked')
+              .where(
+                (d) => d.text('status') != 'unlinked' && !isBrowserDevice(d),
+              )
               .toList(growable: false);
           if (tvs.isEmpty) {
             return EmptyState(
@@ -282,7 +290,9 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
           busy: busy,
           onPressed: () {
             final tvs = (devices.asData?.value ?? const <Entry>[])
-                .where((d) => d.text('status') != 'unlinked')
+                .where(
+                  (d) => d.text('status') != 'unlinked' && !isBrowserDevice(d),
+                )
                 .toList();
             final tv =
                 tvs.where((d) => d.id == deviceId).firstOrNull ??

@@ -1,23 +1,52 @@
+import '../../../core/config/features.dart';
+
 /// Frequently asked questions of the Help and support page, per language.
 /// Every answer describes the real screens of the app; keep them in sync
 /// when a flow changes.
 class HelpTopic {
-  const HelpTopic(this.title, this.items);
+  const HelpTopic(this.title, this.items, {this.titleWithoutKids});
   final String title;
   final List<HelpItem> items;
+
+  /// Title while Kids profiles are hidden ([Features.kidsProfiles]).
+  final String? titleWithoutKids;
 }
 
 class HelpItem {
-  const HelpItem(this.question, this.answer);
+  const HelpItem(
+    this.question,
+    this.answer, {
+    this.kids = false,
+    this.answerWithoutKids,
+  });
   final String question, answer;
+
+  /// About Kids profiles only: hidden while they are.
+  final bool kids;
+
+  /// Answer while Kids profiles are hidden (no mention of them).
+  final String? answerWithoutKids;
 }
+
+/// [topics] as shown: without the Kids answers while Kids profiles are hidden.
+List<HelpTopic> _shown(List<HelpTopic> topics) => Features.kidsProfiles
+    ? topics
+    : [
+        for (final t in topics)
+          HelpTopic(t.titleWithoutKids ?? t.title, [
+            for (final i in t.items)
+              if (!i.kids)
+                HelpItem(i.question, i.answerWithoutKids ?? i.answer),
+          ]),
+      ];
 
 /// Topics for [languageCode] (`pt`, `es`; anything else gets English).
 List<HelpTopic> helpTopics(String languageCode) => switch (languageCode) {
-  'pt' => _pt,
-  'es' => _es,
-  _ => _en,
+  'pt' => _shownPt,
+  'es' => _shownEs,
+  _ => _shownEn,
 };
+final _shownPt = _shown(_pt), _shownEn = _shown(_en), _shownEs = _shown(_es);
 
 const _pt = [
   HelpTopic('Primeiros passos', [
@@ -102,6 +131,7 @@ const _pt = [
     HelpItem(
       'Como adiciono um membro?',
       'Na aba Família, toque em “+”. Digite o código de 12 caracteres da pessoa ou leia o QR Code dela, escolha se a conta será Membro ou Infantil e envie a solicitação. A pessoa aceita pela aba Família no celular dela.',
+      answerWithoutKids: 'Na aba Família, toque em “+”. Digite o código de 12 caracteres da pessoa ou leia o QR Code dela e envie a solicitação. A pessoa aceita pela aba Família no celular dela.',
     ),
     HelpItem(
       'Onde encontro o meu código?',
@@ -132,14 +162,16 @@ const _pt = [
       'Um perfil extra para convidados, ligado e desligado pelo botão no topo da aba Família. Ele não ocupa vaga de membro e não guarda favoritos, assistidos nem progresso.',
     ),
   ]),
-  HelpTopic('Infantil e PIN', [
+  HelpTopic('Infantil e PIN', titleWithoutKids: 'PIN e conteúdo', [
     HelpItem(
       'O que é um perfil Infantil?',
       'Um perfil que recebe somente conteúdo classificado como infantil pelo servidor do iPlex. Conteúdo adulto nunca aparece nele. A classificação depende das informações enviadas pelo provedor da lista.',
+      kids: true,
     ),
     HelpItem(
       'Como transformo um perfil em Infantil?',
       'Somente o administrador pode fazer isso: na aba Família, abra o cartão do membro e ative Conta infantil. Favoritos, histórico e vínculos são mantidos.',
+      kids: true,
     ),
     HelpItem(
       'O que é o PIN pessoal?',
@@ -289,6 +321,7 @@ const _en = [
     HelpItem(
       'How do I add a member?',
       'In the Family tab, tap “+”. Type the person’s 12-character code or scan their QR code, choose Member or Child account, and send the request. The person accepts it in the Family tab on their phone.',
+      answerWithoutKids: 'In the Family tab, tap “+”. Type the person’s 12-character code or scan their QR code, and send the request. The person accepts it in the Family tab on their phone.',
     ),
     HelpItem(
       'Where is my code?',
@@ -319,14 +352,16 @@ const _en = [
       'An extra profile for visitors, turned on and off with the button at the top of the Family tab. It does not use a member slot and never saves favorites, watched titles or progress.',
     ),
   ]),
-  HelpTopic('Kids and PIN', [
+  HelpTopic('Kids and PIN', titleWithoutKids: 'PIN and content', [
     HelpItem(
       'What is a Kids profile?',
       'A profile that only receives content classified as children’s content by the iPlex server. Adult content never appears there. The classification depends on the information sent by the list provider.',
+      kids: true,
     ),
     HelpItem(
       'How do I turn a profile into Kids?',
       'Only the administrator can: in the Family tab, open the member’s card and turn on Child account. Favorites, history and links are kept.',
+      kids: true,
     ),
     HelpItem(
       'What is the personal PIN?',
@@ -476,6 +511,7 @@ const _es = [
     HelpItem(
       '¿Cómo agrego un miembro?',
       'En la pestaña Familia, toca “+”. Escribe el código de 12 caracteres de la persona o escanea su código QR, elige Miembro o Infantil y envía la solicitud. La persona la acepta en la pestaña Familia de su celular.',
+      answerWithoutKids: 'En la pestaña Familia, toca “+”. Escribe el código de 12 caracteres de la persona o escanea su código QR y envía la solicitud. La persona la acepta en la pestaña Familia de su celular.',
     ),
     HelpItem(
       '¿Dónde está mi código?',
@@ -506,14 +542,16 @@ const _es = [
       'Un perfil extra para visitas, que se activa y desactiva con el botón de arriba en la pestaña Familia. No ocupa lugar de miembro y nunca guarda favoritos, vistos ni progreso.',
     ),
   ]),
-  HelpTopic('Infantil y PIN', [
+  HelpTopic('Infantil y PIN', titleWithoutKids: 'PIN y contenido', [
     HelpItem(
       '¿Qué es un perfil Infantil?',
       'Un perfil que solo recibe contenido clasificado como infantil por el servidor de iPlex. El contenido adulto nunca aparece ahí. La clasificación depende de la información que envía el proveedor de la lista.',
+      kids: true,
     ),
     HelpItem(
       '¿Cómo convierto un perfil en Infantil?',
       'Solo el administrador puede hacerlo: en la pestaña Familia, abre la tarjeta del miembro y activa Cuenta infantil. Se conservan favoritos, historial y vínculos.',
+      kids: true,
     ),
     HelpItem(
       '¿Qué es el PIN personal?',

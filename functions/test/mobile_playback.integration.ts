@@ -79,3 +79,29 @@ test('the Control plays on the phone in its own session, with the TV rules (subs
  // A PIN check needs the phone's own session.
  await assert.rejects(execute('verifyAdultPin',{sessionId:'nope',pin:'2468'},a),/session-expired/);
 });
+
+test('"Continuar na TV": where the phone stopped travels to a TV on another profile, for an administrator without a profile link', async () => {
+ const {a,fid}=await account();
+ const catalog={schemaVersion:1,items:[{id:'m1',title:'Drama',titleKey:'drama',kind:'movie',category:'Filmes',providerRef:'1'}]};
+ const body=JSON.stringify(catalog),version=hash(body);
+ await getStorage().bucket().file(`catalogs/${version}.json`).save(body);
+ await db().doc(`catalogs/${version}`).set({storagePath:`catalogs/${version}.json`,integrityHash:version});
+ await db().doc(`families/${fid}/sources/src`).set({name:'Lista',enabled:true,version,revision:1,authorizationStatus:'valid',authorizationRevision:1});
+ // The individual family's owner plays with "admin" (no link needed).
+ await db().doc(`families/${fid}/profile_links/${a.uid}`).delete();
+ const item=hash(`src:m1`);
+ // A TV on another profile of the family.
+ const other=(await execute('saveProfile',{name:'Rui'},a) as {id:string}).id;
+ const pairing=await execute('beginDevicePair',{name:'TV'},undefined) as {token:string};
+ const device=await execute('linkDevice',{token:pairing.token},a) as {id:string};
+ const tv:Identity={uid:`tv_${device.id}`,deviceId:device.id,familyId:fid,credentialVersion:(await db().doc(`families/${fid}/devices/${device.id}`).get()).data()!.credentialVersion};
+ await execute('acquireSession',{profileId:other},tv);
+ // The phone plays until 42 min and saves where it stopped.
+ const session=await execute('startMobilePlayback',{},a) as {sessionId:string;profileId:string};
+ assert.equal(session.profileId,'admin');
+ await execute('watchProgress',{profileId:'admin',contentId:item,position:2520,duration:7200,generation:0,playId:'phone-run-0001',startedAt:Date.now(),seq:1,origin:'start'},a);
+ const request=await execute('requestPlayback',{deviceId:device.id,sourceId:'src',itemId:item,resume:true,requestId:randomUUID().replace(/-/g,'')},a) as {id:string};
+ const claimed=await execute('claimPlayRequest',{playRequestId:request.id},tv) as {request:{resume?:boolean;resumePositionSec?:number}};
+ assert.equal(claimed.request.resume,true);
+ assert.equal(claimed.request.resumePositionSec,2520);
+});

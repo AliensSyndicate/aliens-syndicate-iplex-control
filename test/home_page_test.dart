@@ -464,6 +464,11 @@ void main() {
         final size = tester.getSize(find.byKey(Key(key)));
         expect(size.width, size.height, reason: '$key: round, 1:1');
       }
+      double gap(String a, String b) =>
+          tester.getTopLeft(find.byKey(Key(b))).dx -
+          tester.getTopRight(find.byKey(Key(a))).dx;
+      expect(gap('home-hero-play', 'home-hero-open'), AppSpacing.md);
+      expect(gap('home-hero-open', 'home-hero-tv'), AppSpacing.md);
       // "Assistir" (on this phone) is the white main button; then details.
       expect(
         tester

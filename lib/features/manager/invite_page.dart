@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/public_identity.dart';
+import '../../core/config/features.dart';
 
 class InvitePage extends ConsumerStatefulWidget {
   const InvitePage({super.key});
@@ -52,7 +53,9 @@ class _InvitePageState extends ConsumerState<InvitePage> {
       await ref.read(repositoryProvider).mutate('requestMembership', {
         'code': person!['code'],
         'familyId': targetFamilyId,
-        'profileType': kidsAccount ? 'kids' : 'regular',
+        'profileType': Features.kidsProfiles && kidsAccount
+            ? 'kids'
+            : 'regular',
       });
       if (mounted) {
         context.pop();
@@ -77,14 +80,16 @@ class _InvitePageState extends ConsumerState<InvitePage> {
         key: form,
         child: Column(
           children: [
-            NeumorphicSwitchTile(
-              key: const Key('kids-account-toggle'),
-              title: context.l.kidsAccount,
-              subtitle: kidsAccount ? context.l.kidsRestrictionNote : null,
-              value: kidsAccount,
-              disabled: busy || !ref.watch(adminProvider),
-              onChanged: (value) => setState(() => kidsAccount = value),
-            ),
+            // Hidden while there is no children's content.
+            if (Features.kidsProfiles)
+              NeumorphicSwitchTile(
+                key: const Key('kids-account-toggle'),
+                title: context.l.kidsAccount,
+                subtitle: kidsAccount ? context.l.kidsRestrictionNote : null,
+                value: kidsAccount,
+                disabled: busy || !ref.watch(adminProvider),
+                onChanged: (value) => setState(() => kidsAccount = value),
+              ),
             AppTextField(
               label: context.l.publicUserCode,
               controller: code,

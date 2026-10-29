@@ -390,6 +390,29 @@ void main() {
           tester.getRect(find.byKey(Key(k))),
       ];
       expect(actions.map((r) => r.top).toSet().length, 1);
+      // A gap between them; the wishlist uses the Bookmark01 icon.
+      expect(actions[1].left - actions[0].right, AppSpacing.sm);
+      expect(actions[2].left - actions[1].right, AppSpacing.sm);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-wishlist')),
+          matching: find.byWidgetPredicate(
+            (w) => w is AppIcon && w.icon == AppIcons.wishlist,
+          ),
+        ),
+        findsOneWidget,
+      );
+      // White, like the other header icons.
+      final share = tester.widget<AppIcon>(
+        find.descendant(
+          of: find.byKey(const Key('details-share')),
+          matching: find.byType(AppIcon),
+        ),
+      );
+      expect(
+        [share.icon, share.color],
+        [AppIcons.share, AppColors.textPrimary],
+      );
       final header = find.byKey(const Key('details-header-actions'));
       expect(
         find.descendant(of: header, matching: find.byType(Text)),
@@ -403,6 +426,16 @@ void main() {
         find.byKey(const Key('details-watch-on-tv')),
       );
       final playback = tester.getRect(find.byKey(const Key('details-actions')));
+      // Back close to the left edge, as the actions on the right.
+      expect(
+        tester.getTopLeft(find.byKey(const Key('details-back'))).dx,
+        AppSpacing.sm,
+      );
+      expect(
+        watch.left -
+            tester.getTopRight(find.byKey(const Key('details-play'))).dx,
+        AppSpacing.md,
+      );
       // "Assistir" on this phone (white) and, beside it, "Assistir na TV"
       // as an icon only.
       final play = tester.getRect(find.byKey(const Key('details-play')));
@@ -428,7 +461,11 @@ void main() {
             .primary,
         isFalse,
       );
-      expect(find.text('No TV'), findsNothing, reason: 'no TV name under the buttons');
+      expect(
+        find.text('No TV'),
+        findsNothing,
+        reason: 'no TV name under the buttons',
+      );
       // Synopsis, round cast (actors only), then Informações.
       expect(find.text('Uma missão.'), findsOneWidget);
       expect(find.text('Cast'), findsOneWidget);
@@ -621,11 +658,10 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.descendant(
-          of: find.byKey(const Key('details-wishlist')),
-          matching: find.byIcon(Icons.bookmark_border_rounded),
-        ),
-        findsOneWidget,
+        tester
+            .widget<CircularButton>(find.byKey(const Key('details-wishlist')))
+            .selected,
+        false,
         reason: 'independent lists',
       );
 
@@ -658,11 +694,10 @@ void main() {
       await fixtures.screenshot(tester, 'details/series-external-seasons');
       await tapKey(tester, const Key('details-wishlist'));
       expect(
-        find.descendant(
-          of: find.byKey(const Key('details-wishlist')),
-          matching: find.byIcon(Icons.bookmark_rounded),
-        ),
-        findsOneWidget,
+        tester
+            .widget<CircularButton>(find.byKey(const Key('details-wishlist')))
+            .selected,
+        true,
       );
       await tapKey(tester, const Key('details-wishlist'));
       expect(
@@ -672,11 +707,10 @@ void main() {
         true,
       );
       expect(
-        find.descendant(
-          of: find.byKey(const Key('details-wishlist')),
-          matching: find.byIcon(Icons.bookmark_border_rounded),
-        ),
-        findsOneWidget,
+        tester
+            .widget<CircularButton>(find.byKey(const Key('details-wishlist')))
+            .selected,
+        false,
       );
       await tapKey(tester, const Key('details-wishlist'));
       expect(repo.library['wishlist']!.map((r) => r['tmdbId']), [55]);

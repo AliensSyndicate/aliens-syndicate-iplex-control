@@ -473,7 +473,7 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
               ),
             ),
             if (resume && target != null) ...[
-              const SizedBox(width: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.md),
               AppButton(
                 key: const Key('details-restart'),
                 height: actionHeight,
@@ -487,7 +487,7 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
                 ),
               ),
             ],
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.md),
             // On a linked TV (continues from the same point when resuming).
             AppButton(
               key: const Key('details-watch-on-tv'),
@@ -540,14 +540,13 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
                         )),
             },
           ),
+        if (profile != null && profile.persistent)
+          const SizedBox(width: AppSpacing.sm),
         CircularButton(
           key: const Key('details-share'),
           onPad: true,
           label: context.l.share,
-          child: const Icon(
-            Icons.ios_share_rounded,
-            color: AppColors.textPrimary,
-          ),
+          child: const AppIcon(AppIcons.share, color: AppColors.textPrimary),
           onPressed: () => _share(context, shown, meta),
         ),
       ],

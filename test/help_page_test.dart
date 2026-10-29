@@ -1,3 +1,4 @@
+import 'package:aliens_syndicate_iplex_control/core/config/features.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/help/help_content.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/help/help_page.dart';
 import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
@@ -80,6 +81,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Nenhuma resposta encontrada'), findsOneWidget);
   });
+
+  test('Kids profiles hidden: no Kids answers or mentions in any language', () {
+    for (final code in ['pt', 'en', 'es']) {
+      final text = [
+        for (final t in helpTopics(code)) ...[
+          t.title,
+          for (final i in t.items) ...[i.question, i.answer],
+        ],
+      ].join(' ');
+      expect(
+        RegExp(r'infantil|kids|child', caseSensitive: false).hasMatch(text),
+        isFalse,
+        reason: code,
+      );
+    }
+  }, skip: Features.kidsProfiles);
 
   testWidgets('English locale shows the English questions', (tester) async {
     await _pump(tester, const Locale('en'));
