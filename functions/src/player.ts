@@ -40,6 +40,7 @@ export const PLAYER_DEVICE_ACTIONS: ReadonlySet<string> = new Set([
   'authorizeMetadata',
   'listPlayerProfiles',
   'listProfileSpaces',
+  'syncPlayerSource',
   'acquireSession',
   'heartbeat',
   'reportPlayback',

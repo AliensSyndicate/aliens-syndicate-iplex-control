@@ -17,7 +17,7 @@ import {obfuscatedAccount, paymentsConfig, verifyPlayPurchase} from './play_bill
 import {redeemCoupon} from './coupons';
 import {iptvWorkspace} from './iptv_workspace';
 import {z} from 'zod';
-import {saveIptvSource, syncIptvSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
+import {saveIptvSource, syncIptvSource, syncPlayerSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
 import {acquire, addMember, canStartPlayback, DomainError, hash, idSchema, Lease, LEASE_MS, nameSchema, newToken, pinSchema, seal, sourceInputSchema, sourceSchema, startTrial, Subscription, TOKEN_MS, tokenSchema, unseal} from './domain';
 import {familyHasKids, isAdultProfile, manageParentalPin, parentalGate, PIN_SESSION_MS, verifyAdultPin, verifyProfilePin} from './parental';
 import {decideProgressWrite,parseProgressSession,type SavedProgress} from './playback_progress';
@@ -444,6 +444,7 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  if(action==='readSourceEpg')return readIptvEpg(p,a);
  if(action==='saveSource')return saveIptvSource(p,a,key);
  if(action==='syncSource')return syncIptvSource(p,a);
+ if(action==='syncPlayerSource')return syncPlayerSource(p,a);
  if(action==='verifySourcePin')return verifyIptvPin(p,a,key);
  if(action==='deleteSource')return deleteIptvSource(p,a);
  if(action==='savePreferences') {

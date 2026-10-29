@@ -246,7 +246,7 @@ export async function listProfileSpaces(input:Record<string,unknown>,actor:Ident
     const sources=(await tx.get(db.collection(`families/${fid}/sources`))).docs.filter(d=>d.data().enabled&&d.data().version);
     return {viewer,sources};
   });
-  const spaces:{sourceId:string;name:string;kinds:Kind[];unavailable?:boolean;lastSyncAt?:number}[]=[];
+  const spaces:{sourceId:string;name:string;kinds:Kind[];unavailable?:boolean;lastSyncAt?:number;syncing?:boolean}[]=[];
   for(const source of context.sources){
     const catalog=await load(source.data().version);
     const kinds=(['channel','movie','series'] as Kind[]).filter(kind=>catalog.items.some(i=>i.kind===kind&&canSee(context.viewer,source.id,i)));
@@ -254,7 +254,9 @@ export async function listProfileSpaces(input:Record<string,unknown>,actor:Ident
     const broken=source.data().authorizationStatus==='invalid'||source.data().status==='error';
     // When the list was last updated (successful sync), shown in the TV settings.
     const synced=source.data().lastSuccessfulSyncAt??source.data().lastSyncAt;
-    if(kinds.length)spaces.push({sourceId:source.id,name:String(source.data().name??''),kinds,...(broken?{unavailable:true}:{}),...(typeof synced==='number'?{lastSyncAt:synced}:{})});
+    // A sync was requested (Gestor, TV or schedule) and has not finished: the TV settings show it.
+    const syncing=source.data().status==='queued'||source.data().status==='syncing';
+    if(kinds.length)spaces.push({sourceId:source.id,name:String(source.data().name??''),kinds,...(broken?{unavailable:true}:{}),...(typeof synced==='number'?{lastSyncAt:synced}:{}),...(syncing?{syncing:true}:{})});
   }
   return {profileId:context.viewer?.id??null,permissionsVersion:context.viewer?.permissionsVersion??null,spaces};
 }

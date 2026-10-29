@@ -1,4 +1,4 @@
-import {assertChannelVisible} from './iptv_catalog_access';
+import {assertChannelVisible, authorize} from './iptv_catalog_access';
 import {getFirestore, FieldValue, Transaction, DocumentReference} from 'firebase-admin/firestore';
 import {getStorage} from 'firebase-admin/storage';
 import {randomUUID, timingSafeEqual} from 'node:crypto';
@@ -144,46 +144,64 @@ export async function syncIptvSource(payload: Record<string, unknown>, actor: Id
     const f = await iptvWorkspace(tx, actor), ref = f.ref.collection('sources').doc(idSchema.parse(payload.id));
     const snap = await tx.get(ref); requireValue(snap.exists, 'not-found');
     await requireSourceAccess(tx, ref, snap.data()!, actor.uid);
-    const now = Date.now(), data = snap.data()!;
-    const previous = data.currentJobId ? await tx.get(db().doc(`iptv_sync_jobs/${data.currentJobId}`)) : null;
-    if (previous?.exists && !terminal(previous.data()?.status) && previous.data()?.sourceRevision===data.revision) {
-      // Promote a scheduled run to this user's explicit request; no new worker.
-      tx.update(previous.ref,{trigger:'manual',requestedByUid:actor.uid});
-      return {id:ref.id,jobId:previous.id,ref};
-    }
-    requireValue(now - (data.lastAttemptAt ?? 0) >= 10000, 'rate-limited');
-
-    if (data.catalogId) {
-      const runningCatalogJobs = await tx.get(
-        db().collection('iptv_sync_jobs')
-          .where('catalogId', '==', data.catalogId)
-          .where('status', 'in', ['queued', 'running'])
-          .limit(1)
-      );
-      if (!runningCatalogJobs.empty) {
-        const cJob = runningCatalogJobs.docs[0]!;
-        const jobId = randomUUID();
-        writeJob(tx, ref, data, jobId, actor.uid, 'manual', now);
-        tx.update(db().doc(`iptv_sync_jobs/${jobId}`), {
-          catalogId: data.catalogId,
-          stage: cJob.data().stage ?? 'downloading',
-          progress: cJob.data().progress ?? null,
-          status: 'running',
-          startedAt: cJob.data().startedAt ?? now,
-        });
-        tx.update(ref, {status: 'syncing', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId});
-        tx.set(db().doc(`iptv_sources/${ref.id}`), {status: 'syncing', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId}, {merge: true});
-        return {id: ref.id, jobId, ref};
-      }
-    }
-
-    const jobId = randomUUID();
-    writeJob(tx,ref,data,jobId,actor.uid,'manual',now);
-    tx.update(ref, {nextSyncAt: now, status: 'queued', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId});
-    tx.set(db().doc(`iptv_sources/${ref.id}`), {status: 'queued', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId}, {merge: true});
-    return {id: ref.id, jobId, ref};
+    return queueSourceSync(tx, ref, snap.data()!, actor.uid);
   });
   return {id: result.id, jobId: result.jobId};
+}
+
+/**
+ * TV (Configurações › Listas IPTV): pede a mesma sincronização manual do Gestor para uma lista que o perfil em uso
+ * (lease ativo) pode ver. A autorização é a mesma da leitura do catálogo pela TV.
+ */
+export async function syncPlayerSource(payload: Record<string, unknown>, actor: Identity) {
+  requireValue(actor.deviceId, 'permission-denied');
+  const access = await authorize(actor, idSchema.parse(payload.sourceId));
+  const result = await db().runTransaction(async tx => {
+    const snap = await tx.get(access.ref); requireValue(snap.exists && snap.data()?.enabled, 'not-found');
+    return queueSourceSync(tx, access.ref, snap.data()!, actor.uid);
+  });
+  return {id: result.id, jobId: result.jobId};
+}
+
+/** Enfileira (ou promove) a sincronização manual de uma fonte já autorizada. */
+async function queueSourceSync(tx: Transaction, ref: DocumentReference, data: FirebaseFirestore.DocumentData, uid: string) {
+  const now = Date.now();
+  const previous = data.currentJobId ? await tx.get(db().doc(`iptv_sync_jobs/${data.currentJobId}`)) : null;
+  if (previous?.exists && !terminal(previous.data()?.status) && previous.data()?.sourceRevision===data.revision) {
+    // Promote a scheduled run to this user's explicit request; no new worker.
+    tx.update(previous.ref,{trigger:'manual',requestedByUid:uid});
+    return {id:ref.id,jobId:previous.id};
+  }
+  requireValue(now - (data.lastAttemptAt ?? 0) >= 10000, 'rate-limited');
+  if (data.catalogId) {
+    const runningCatalogJobs = await tx.get(
+      db().collection('iptv_sync_jobs')
+        .where('catalogId', '==', data.catalogId)
+        .where('status', 'in', ['queued', 'running'])
+        .limit(1)
+    );
+    if (!runningCatalogJobs.empty) {
+      const cJob = runningCatalogJobs.docs[0]!;
+      const jobId = randomUUID();
+      writeJob(tx, ref, data, jobId, uid, 'manual', now);
+      tx.update(db().doc(`iptv_sync_jobs/${jobId}`), {
+        catalogId: data.catalogId,
+        stage: cJob.data().stage ?? 'downloading',
+        progress: cJob.data().progress ?? null,
+        status: 'running',
+        startedAt: cJob.data().startedAt ?? now,
+      });
+      tx.update(ref, {status: 'syncing', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId});
+      tx.set(db().doc(`iptv_sources/${ref.id}`), {status: 'syncing', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId}, {merge: true});
+      return {id: ref.id, jobId};
+    }
+  }
+
+  const jobId = randomUUID();
+  writeJob(tx,ref,data,jobId,uid,'manual',now);
+  tx.update(ref, {nextSyncAt: now, status: 'queued', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId});
+  tx.set(db().doc(`iptv_sources/${ref.id}`), {status: 'queued', updatedAt: now, lastAttemptAt: now, errorCode: null, currentJobId: jobId}, {merge: true});
+  return {id: ref.id, jobId};
 }
 
 export async function verifyIptvPin(payload: Record<string, unknown>, actor: Identity, key: string) {

@@ -334,3 +334,26 @@ test('Control Home: favorites, my list, continue watching and recently added, re
   const stored = (await db().doc(`families/${fid}/devices/${tvAuth.token.deviceId}/play_requests/${request.id}`).get()).data()!;
   assert.equal(stored.resume, true);
 });
+
+test('TV asks for the same manual sync as the Gestor: queued job, syncing flag, rate limit, then ready again', async () => {
+  const {admin, fid} = await family();
+  const ref = await save(admin, fid, {name: 'Lista da TV', format: 'xtream', url: provider.base, username: 'assinante', password: 'senha-1'});
+  const first = await sync(ref);
+  assert.equal(first.source.status, 'ready');
+  const player = await tv(admin, fid);
+  await ref.update({lastAttemptAt: 0});
+  const {jobId} = await tvCall('syncPlayerSource', {sourceId: ref.id}, player);
+  const job = (await db().doc(`iptv_sync_jobs/${jobId}`).get()).data()!;
+  assert.equal(job.trigger, 'manual'); assert.equal(job.requestedByUid, player.uid);
+  assert.equal((await ref.get()).data()!.currentJobId, jobId);
+  assert.equal((await tvCall('listProfileSpaces', {}, player)).spaces[0].syncing, true);
+  // A second press while the job runs promotes the same job (no new worker).
+  assert.equal((await tvCall('syncPlayerSource', {sourceId: ref.id}, player)).jobId, jobId);
+  const done = await sync(ref);
+  assert.equal(done.source.status, 'ready');
+  assert.equal((await tvCall('listProfileSpaces', {}, player)).spaces[0].syncing, undefined);
+  await assert.rejects(tvCall('syncPlayerSource', {sourceId: ref.id}, player), /rate-limited/);
+  await assert.rejects(tvCall('syncPlayerSource', {sourceId: 'nao-existe'}, player), /not-found/);
+  // People keep using syncSource; the TV action is device-only.
+  await assert.rejects(execute('syncPlayerSource', {sourceId: ref.id, contextFamilyId: fid}, admin), /permission-denied/);
+});
