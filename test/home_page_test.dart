@@ -214,7 +214,12 @@ void main() {
           Entry('s3', {'name': 'Fonte C', 'status': 'error'}),
         ];
       await navigation.launch(tester, repo);
-      expect(repo.mutationPayloads.last.$2['sourceId'], 's1');
+      expect(
+        repo.mutationPayloads
+            .lastWhere((m) => m.$1 == 'readHome')
+            .$2['sourceId'],
+        's1',
+      );
       await tester.tap(find.byKey(const Key('home-source-picker')));
       await tester.pumpAndSettle();
       for (final name in ['Fonte A', 'Fonte B', 'Fonte C']) {
@@ -238,8 +243,9 @@ void main() {
       );
       await tester.tap(find.text('Fonte B'));
       await tester.pumpAndSettle();
-      expect(repo.mutationPayloads.last.$1, 'readHome');
-      expect(repo.mutationPayloads.last.$2, {'sourceId': 's2'});
+      expect(repo.mutationPayloads.lastWhere((m) => m.$1 == 'readHome').$2, {
+        'sourceId': 's2',
+      });
       expect(
         await SharedPreferencesAsync().getString('iplex.home.source.u.family'),
         's2',
@@ -443,9 +449,25 @@ void main() {
       expect(find.text('Featured release'), findsNothing);
       expect(find.textContaining('Hi, '), findsNothing);
       expect(find.byKey(const Key('home-hero-title')), findsOneWidget);
+      // "Ver detalhes" and "Assistir na TV" in the featured release: icons
+      // only.
+      for (final key in ['home-hero-open', 'home-hero-tv']) {
+        expect(find.byKey(Key(key)), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.byType(Text),
+          ),
+          findsNothing,
+          reason: key,
+        );
+        final size = tester.getSize(find.byKey(Key(key)));
+        expect(size.width, size.height, reason: '$key: round, 1:1');
+      }
+      // "Assistir" (on this phone) is the white main button; then details.
       expect(
         tester
-            .widget<AppButton>(find.byKey(const Key('home-hero-open')))
+            .widget<AppButton>(find.byKey(const Key('home-hero-play')))
             .primary,
         isTrue,
       );
@@ -799,10 +821,12 @@ void catalogFeedTests() {
           'movie': 'vod',
           'series': 'series',
         }[kind]!;
-        expect(repo.chunks.map((c) => c['set']).toSet(), {
-          set,
-          '${set}_categories',
-        });
+        // (The three kinds load in the background once Meu iPlex has data.)
+        expect(
+          repo.chunks.map((c) => c['set']),
+          containsAll([set, '${set}_categories']),
+        );
+        expect(repo.chunks.map((c) => c['set']), isNot(contains('adult')));
         // The top menu keeps the Meu iPlex look on every tab.
         expect(
           tester

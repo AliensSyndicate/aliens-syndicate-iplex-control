@@ -1727,4 +1727,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adultTab => 'Adult';
+
+  @override
+  String get playHere => 'Watch';
+
+  @override
+  String get continueOnTv => 'Continue on TV';
+
+  @override
+  String get nextEpisode => 'Next episode';
+
+  @override
+  String get playerAudio => 'Audio';
+
+  @override
+  String get playerSubtitles => 'Subtitles';
+
+  @override
+  String get playerSubtitlesOff => 'Off';
+
+  @override
+  String get playerLive => 'Live';
+
+  @override
+  String get playerPlay => 'Play';
+
+  @override
+  String get playerPause => 'Pause';
+
+  @override
+  String get playerSkipBack => 'Back 10 seconds';
+
+  @override
+  String get playerSkipForward => 'Forward 10 seconds';
+
+  @override
+  String get playbackFailed => 'This content could not be played.';
+
+  @override
+  String get playbackSessionExpired => 'Playback ended. Try again.';
+
+  @override
+  String get profilePinTitle => 'Profile PIN';
+
+  @override
+  String get adultPinBody => 'Adult content: enter the profile PIN to watch.';
+
+  @override
+  String get playerDeviceName => 'Phone';
+
+  @override
+  String get errorFeatureUnavailable =>
+      'This feature is not available on the server yet. Try again later.';
+
+  @override
+  String get errorProfileUnavailable =>
+      'Your profile is not available for playback. Check your profile in the Family tab.';
+
+  @override
+  String get playbackStreamUnreachable =>
+      'Your IPTV list provider did not deliver the video (address offline). Try other content or contact the provider.';
 }

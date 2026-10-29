@@ -23,7 +23,7 @@ const _pt = [
   HelpTopic('Primeiros passos', [
     HelpItem(
       'O que é o iPlex?',
-      'O iPlex tem duas partes: este aplicativo de celular, gratuito, onde você administra família, perfis, TVs e listas IPTV, e o iPlex na TV, onde o conteúdo é reproduzido.',
+      'O iPlex tem duas partes: este aplicativo de celular, gratuito, onde você administra família, perfis, TVs e listas IPTV, e o iPlex na TV. O conteúdo toca no próprio celular ou no iPlex da TV.',
     ),
     HelpItem(
       'O iPlex fornece canais ou listas IPTV?',
@@ -35,7 +35,7 @@ const _pt = [
     ),
     HelpItem(
       'Preciso pagar para usar o aplicativo no celular?',
-      'Não. Tudo no celular é gratuito: família, perfis, TVs, listas IPTV e configurações. A assinatura libera somente a reprodução no iPlex da TV.',
+      'Não. Tudo no celular é gratuito: família, perfis, TVs, listas IPTV e configurações. A assinatura libera somente a reprodução, no celular e no iPlex da TV.',
     ),
   ]),
   HelpTopic('Listas IPTV', [
@@ -61,7 +61,7 @@ const _pt = [
     ),
     HelpItem(
       'Minha senha IPTV fica segura?',
-      'Sim. Usuário e senha do provedor ficam criptografados no servidor, são usados só para baixar o catálogo e reproduzir na sua TV e nunca são exibidos de volta no aplicativo.',
+      'Sim. Usuário e senha do provedor ficam criptografados no servidor, são usados só para baixar o catálogo e reproduzir no celular e na sua TV e nunca são exibidos de volta no aplicativo.',
     ),
     HelpItem(
       'Como edito ou excluo uma lista?',
@@ -88,6 +88,10 @@ const _pt = [
     HelpItem(
       'O que é “Assistir na TV”?',
       'Na tela de um filme ou série, toque em Assistir na TV e escolha a TV (e o episódio, nas séries). O pedido chega à TV com o iPlex aberto, e você acompanha a situação pelo celular.',
+    ),
+    HelpItem(
+      'Posso assistir no celular?',
+      'Sim. Na tela de um filme, série ou canal, e no destaque da Home, toque em Assistir. O vídeo abre em tela cheia, na horizontal, com as mesmas regras da TV: precisa de assinatura ou teste ativo, conta no limite de 3 reproduções ao mesmo tempo e o perfil só toca em um aparelho por vez. No player, Continuar na TV leva o vídeo para a TV escolhida, do mesmo ponto.',
     ),
   ]),
   HelpTopic('Família e membros', [
@@ -139,7 +143,7 @@ const _pt = [
     ),
     HelpItem(
       'O que é o PIN pessoal?',
-      'Um PIN de 4 dígitos que protege o seu perfil. Na aba Família, abra o seu cartão e toque em PIN pessoal para ativar, alterar ou desativar. Com ele ativo, a TV pede o PIN para abrir o seu perfil e para tocar conteúdo adulto. Somente você pode definir.',
+      'Um PIN de 4 dígitos que protege o seu perfil. Na aba Família, abra o seu cartão e toque em PIN pessoal para ativar, alterar ou desativar. Com ele ativo, a TV pede o PIN para abrir o seu perfil, e a TV e o celular pedem o PIN para tocar conteúdo adulto. Somente você pode definir.',
     ),
     HelpItem(
       'Como escolho o que cada membro pode ver?',
@@ -206,7 +210,7 @@ const _en = [
   HelpTopic('Getting started', [
     HelpItem(
       'What is iPlex?',
-      'iPlex has two parts: this free phone app, where you manage your family, profiles, TVs and IPTV lists, and iPlex on the TV, where content is played.',
+      'iPlex has two parts: this free phone app, where you manage your family, profiles, TVs and IPTV lists, and iPlex on the TV. Content plays on the phone itself or in iPlex on the TV.',
     ),
     HelpItem(
       'Does iPlex provide channels or IPTV lists?',
@@ -218,7 +222,7 @@ const _en = [
     ),
     HelpItem(
       'Do I have to pay to use the phone app?',
-      'No. Everything on the phone is free: family, profiles, TVs, IPTV lists and settings. The subscription only unlocks playback in iPlex on the TV.',
+      'No. Everything on the phone is free: family, profiles, TVs, IPTV lists and settings. The subscription only unlocks playback, on the phone and in iPlex on the TV.',
     ),
   ]),
   HelpTopic('IPTV lists', [
@@ -244,7 +248,7 @@ const _en = [
     ),
     HelpItem(
       'Is my IPTV password safe?',
-      'Yes. The provider username and password are encrypted on the server, used only to download the catalog and to play on your TV, and are never shown again in the app.',
+      'Yes. The provider username and password are encrypted on the server, used only to download the catalog and to play on the phone and your TV, and are never shown again in the app.',
     ),
     HelpItem(
       'How do I edit or delete a list?',
@@ -271,6 +275,10 @@ const _en = [
     HelpItem(
       'What is “Watch on TV”?',
       'On a movie or series page, tap Watch on TV and choose the TV (and the episode, for series). The request reaches the TV with iPlex open, and you can follow its status on the phone.',
+    ),
+    HelpItem(
+      'Can I watch on the phone?',
+      'Yes. On a movie, series or channel page, and on the Home featured title, tap Watch. The video opens full screen, in landscape, with the same rules as the TV: it needs an active subscription or trial, counts towards the limit of 3 plays at the same time and a profile plays on one device at a time. In the player, Continue on TV takes the video to the chosen TV, from the same point.',
     ),
   ]),
   HelpTopic('Family and members', [
@@ -322,7 +330,7 @@ const _en = [
     ),
     HelpItem(
       'What is the personal PIN?',
-      'A 4-digit PIN that protects your profile. In the Family tab, open your card and tap Personal PIN to turn it on, change it or turn it off. When it is on, the TV asks for it to open your profile and to play adult content. Only you can set it.',
+      'A 4-digit PIN that protects your profile. In the Family tab, open your card and tap Personal PIN to turn it on, change it or turn it off. When it is on, the TV asks for it to open your profile, and the TV and the phone ask for it to play adult content. Only you can set it.',
     ),
     HelpItem(
       'How do I choose what each member can see?',
@@ -389,7 +397,7 @@ const _es = [
   HelpTopic('Primeros pasos', [
     HelpItem(
       '¿Qué es iPlex?',
-      'iPlex tiene dos partes: esta app gratuita para el celular, donde administras la familia, los perfiles, los televisores y las listas IPTV, e iPlex en el televisor, donde se reproduce el contenido.',
+      'iPlex tiene dos partes: esta app gratuita para el celular, donde administras la familia, los perfiles, los televisores y las listas IPTV, e iPlex en el televisor. El contenido se reproduce en el propio celular o en iPlex del televisor.',
     ),
     HelpItem(
       '¿iPlex ofrece canales o listas IPTV?',
@@ -401,7 +409,7 @@ const _es = [
     ),
     HelpItem(
       '¿Tengo que pagar para usar la app del celular?',
-      'No. Todo en el celular es gratis: familia, perfiles, televisores, listas IPTV y configuración. La suscripción solo habilita la reproducción en iPlex del televisor.',
+      'No. Todo en el celular es gratis: familia, perfiles, televisores, listas IPTV y configuración. La suscripción solo habilita la reproducción, en el celular y en iPlex del televisor.',
     ),
   ]),
   HelpTopic('Listas IPTV', [
@@ -427,7 +435,7 @@ const _es = [
     ),
     HelpItem(
       '¿Mi contraseña IPTV está segura?',
-      'Sí. El usuario y la contraseña del proveedor se guardan cifrados en el servidor, se usan solo para descargar el catálogo y reproducir en tu televisor y nunca se vuelven a mostrar en la app.',
+      'Sí. El usuario y la contraseña del proveedor se guardan cifrados en el servidor, se usan solo para descargar el catálogo y reproducir en el celular y en tu televisor y nunca se vuelven a mostrar en la app.',
     ),
     HelpItem(
       '¿Cómo edito o elimino una lista?',
@@ -454,6 +462,10 @@ const _es = [
     HelpItem(
       '¿Qué es “Ver en la TV”?',
       'En la pantalla de una película o serie, toca Ver en la TV y elige el televisor (y el episodio, en las series). El pedido llega al televisor con iPlex abierto y puedes seguir su estado desde el celular.',
+    ),
+    HelpItem(
+      '¿Puedo ver en el celular?',
+      'Sí. En la pantalla de una película, serie o canal, y en el destacado de la Home, toca Ver. El video se abre en pantalla completa, en horizontal, con las mismas reglas del televisor: necesita una suscripción o prueba activa, cuenta en el límite de 3 reproducciones al mismo tiempo y un perfil solo reproduce en un dispositivo a la vez. En el reproductor, Continuar en la TV lleva el video al televisor elegido, desde el mismo punto.',
     ),
   ]),
   HelpTopic('Familia y miembros', [
@@ -505,7 +517,7 @@ const _es = [
     ),
     HelpItem(
       '¿Qué es el PIN personal?',
-      'Un PIN de 4 dígitos que protege tu perfil. En la pestaña Familia, abre tu tarjeta y toca PIN personal para activarlo, cambiarlo o desactivarlo. Activado, el televisor lo pide para abrir tu perfil y para reproducir contenido adulto. Solo tú puedes definirlo.',
+      'Un PIN de 4 dígitos que protege tu perfil. En la pestaña Familia, abre tu tarjeta y toca PIN personal para activarlo, cambiarlo o desactivarlo. Activado, el televisor lo pide para abrir tu perfil, y el televisor y el celular lo piden para reproducir contenido adulto. Solo tú puedes definirlo.',
     ),
     HelpItem(
       '¿Cómo elijo qué puede ver cada miembro?',

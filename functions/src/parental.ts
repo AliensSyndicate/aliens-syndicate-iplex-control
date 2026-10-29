@@ -101,9 +101,10 @@ export async function verifyAdultPin(p: Record<string, unknown>, context: {ref: 
 }
 
 /** Consome o desbloqueio de uso único do conteúdo adulto (mesmo perfil, ainda válido); senão `adult-pin-required`. Sem PIN pessoal, nada é exigido. */
-export async function consumeAdultUnlock(fid: string, deviceId: string, profileId: string | undefined, pinConfigured: boolean): Promise<void> {
+/** `ref`: the TV's device document, or the phone's mobile session (iPlex Control). */
+export async function consumeAdultUnlock(ref: DocumentReference, profileId: string | undefined, pinConfigured: boolean): Promise<void> {
   if (!pinConfigured) return;
-  const db = getFirestore(), ref = db.doc(`families/${fid}/devices/${deviceId}`), now = Date.now();
+  const db = getFirestore(), now = Date.now();
   await db.runTransaction(async tx => {
     const unlock = (await tx.get(ref)).data()?.adultUnlock as {profileId?: string; expiresAt?: number} | undefined;
     require_(unlock && unlock.profileId === profileId && (unlock.expiresAt ?? 0) > now, 'adult-pin-required');

@@ -14,6 +14,15 @@ abstract final class AppIcons {
       down = HugeIcons.strokeRoundedArrowDown01,
       left = HugeIcons.strokeRoundedArrowLeft01,
       right = HugeIcons.strokeRoundedArrowRight01;
+
+  /// "Ver detalhes" (icon only, featured release).
+  static const details = HugeIcons.strokeRoundedProfile;
+  /// Player controls (same icons as the TV player).
+  static const pause = HugeIcons.strokeRoundedPause,
+      skipBack = HugeIcons.strokeRoundedGoBackward10Sec,
+      skipForward = HugeIcons.strokeRoundedGoForward10Sec,
+      audio = HugeIcons.strokeRoundedMusicNote01,
+      subtitles = HugeIcons.strokeRoundedClosedCaption;
   static const play = HugeIcons.strokeRoundedPlay,
       back = HugeIcons.strokeRoundedArrowTurnBackward,
       search = HugeIcons.strokeRoundedSearch01,

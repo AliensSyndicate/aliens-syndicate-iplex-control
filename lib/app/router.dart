@@ -41,6 +41,7 @@ import 'main_shell.dart';
 import 'route_access_page.dart';
 import 'router_refresh.dart';
 import 'session_loading_page.dart';
+import '../features/player/mobile_player_page.dart';
 
 // Defaults to Home; explicit platform deep links still take precedence in go_router.
 final initialRouteProvider = Provider<String>((ref) => '/home');
@@ -61,6 +62,13 @@ String? _requestedDestination(Uri location) {
   }
   return destination.toString();
 }
+
+/// The player's title: the location's `extra`, or the one already playing
+/// (a rebuilt location may lose its `extra`).
+MobilePlayerArgs? _playerArgs(GoRouterState state) => switch (state.extra) {
+  final MobilePlayerArgs args => args,
+  _ => currentPlayerArgs,
+};
 
 String _gateLocation(String path, String? destination) => Uri(
   path: path,
@@ -223,6 +231,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (c, s) =>
             _appPage(key: s.pageKey, child: const SessionLoadingPage()),
       ),
+      // Phone player: full screen over everything (no main menu), landscape.
+      GoRoute(
+        path: '/player',
+        redirect: (c, s) => _playerArgs(s) == null ? '/home' : null,
+        pageBuilder: (c, s) => _appPage(
+          key: s.pageKey,
+          child: switch (_playerArgs(s)) {
+            final args? => MobilePlayerPage(args: args),
+            null => const ColoredBox(color: Colors.black),
+          },
+        ),
+      ),
       GoRoute(
         path: '/legal/terms',
         pageBuilder: (c, s) => _appPage(
@@ -264,7 +284,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     redirect: (c, s) => s.extra is Entry ? null : '/home',
                     pageBuilder: (c, s) => _appPage(
                       key: s.pageKey,
-                      child: AdultSeriesPage(series: s.extra! as Entry),
+                      child: switch (s.extra) {
+                        final Entry series => AdultSeriesPage(series: series),
+                        _ => const SizedBox.shrink(),
+                      },
                     ),
                   ),
                   // as `extra`; editorial titles are addressed by TMDB id.

@@ -198,6 +198,7 @@ Na tela Configurações (`SettingsPage`), existe a opção **Compartilhar aplica
 - Máximo de 3 reproduções simultâneas (`leases`).
 - Máximo de 1 sessão de reprodução por perfil.
 - Controle de reprodução e expiração executado exclusivamente pelo backend (`canStartPlayback`, `acquireSession`, `heartbeat`, `releaseSession`).
+- **Player no celular (Control)**: botões "Assistir" (celular) e "Assistir na TV" nos detalhes e no destaque. O celular é um player com sessão própria (`startMobilePlayback` / `mobilePlaybackHeartbeat` / `stopMobilePlayback`, lease `mobile_{uid}`) nas mesmas regras da TV: assinatura ou teste, 3 simultâneas, 1 por perfil, PIN pessoal para adulto (`verifyAdultPin` com `sessionId`). A URL só sai por `resolveSourceStream` com o `sessionId` da sessão móvel. O app é fixo em retrato; só o player gira para paisagem. O player espelha o da TV (overlay de 5 s, ±10 s, linha do tempo, selo de qualidade, áudio/legenda, próximo episódio nos últimos 30 s, progresso só em VOD não adulto). "Continuar na TV" salva a posição e envia `requestPlayback` com `resume`; aceito o pedido, o celular encerra a sessão.
 
 ---
 

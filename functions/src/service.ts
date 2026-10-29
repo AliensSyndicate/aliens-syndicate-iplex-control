@@ -20,6 +20,7 @@ import {z} from 'zod';
 import {saveIptvSource, syncIptvSource, syncPlayerSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
 import {acquire, addMember, canStartPlayback, DomainError, hash, idSchema, Lease, LEASE_MS, nameSchema, newToken, pinSchema, seal, sourceInputSchema, sourceSchema, startTrial, Subscription, TOKEN_MS, tokenSchema, unseal} from './domain';
 import {parentalGate, PIN_SESSION_MS, verifyAdultPin, verifyProfilePin} from './parental';
+import {mobileDeviceId, mobilePlayback, mobileProfile, mobileLease, mobileSessionRef} from './mobile_playback';
 import {decideProgressWrite,parseProgressSession,type SavedProgress} from './playback_progress';
 import {reportPlayback} from './playback_status';
 import {claimPlayRequest, pendingPointer, requestPlayback, UNLINK_MARKER, updatePlayRequest} from './play_requests';
@@ -182,8 +183,20 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   return {account:{name:String(owner?.name??owner?.displayName??'').slice(0,80),photoUrl:safePhotoUrl(owner?.photoUrl)},profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion,pinRequired:x.pinConfigured}))};
  });
  if(action==='verifyAdultPin'){
+  if(!a.deviceId){
+   // The Control's phone player: its own profile, inside its mobile session.
+   const m=await db().runTransaction(async tx=>{
+    const scope=await family(tx,a);mobileLease(scope,a.uid,p.sessionId);
+    return {scope,view:await mobileProfile(tx,scope,a.uid)};
+   });
+   return verifyAdultPin(p,{ref:m.scope.ref,device:mobileSessionRef(m.scope.ref,a.uid),fid:m.scope.fid,deviceId:mobileDeviceId(a.uid),view:m.view});
+  }
   const f=await db().runTransaction(tx=>activePlayer(tx,a,p.profileId));
   return verifyAdultPin(p,{ref:f.ref,device:f.device,fid:f.fid,deviceId:a.deviceId!,view:f.view});
+ }
+ if(action==='startMobilePlayback'||action==='mobilePlaybackHeartbeat'||action==='stopMobilePlayback'){
+  required(!a.deviceId);
+  return db().runTransaction(async tx=>mobilePlayback(action,p,a.uid,tx,await family(tx,a)));
  }
  if(action==='verifyProfilePin'){
   const f=await db().runTransaction(tx=>playerContext(tx,a));

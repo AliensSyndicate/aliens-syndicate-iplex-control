@@ -3189,6 +3189,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adult'**
   String get adultTab;
+
+  /// Plays the title on this phone (details page and featured release).
+  ///
+  /// In en, this message translates to:
+  /// **'Watch'**
+  String get playHere;
+
+  /// Player button: stops here and continues on a linked TV at the same point.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue on TV'**
+  String get continueOnTv;
+
+  /// No description provided for @nextEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'Next episode'**
+  String get nextEpisode;
+
+  /// No description provided for @playerAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get playerAudio;
+
+  /// No description provided for @playerSubtitles.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtitles'**
+  String get playerSubtitles;
+
+  /// No description provided for @playerSubtitlesOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get playerSubtitlesOff;
+
+  /// No description provided for @playerLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get playerLive;
+
+  /// No description provided for @playerPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get playerPlay;
+
+  /// No description provided for @playerPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get playerPause;
+
+  /// No description provided for @playerSkipBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 10 seconds'**
+  String get playerSkipBack;
+
+  /// No description provided for @playerSkipForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 10 seconds'**
+  String get playerSkipForward;
+
+  /// No description provided for @playbackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This content could not be played.'**
+  String get playbackFailed;
+
+  /// No description provided for @playbackSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback ended. Try again.'**
+  String get playbackSessionExpired;
+
+  /// No description provided for @profilePinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile PIN'**
+  String get profilePinTitle;
+
+  /// No description provided for @adultPinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Adult content: enter the profile PIN to watch.'**
+  String get adultPinBody;
+
+  /// Name of the phone in the playback limit messages (e.g. "in use on Phone").
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get playerDeviceName;
+
+  /// The backend does not know the action yet (app newer than the deployed server).
+  ///
+  /// In en, this message translates to:
+  /// **'This feature is not available on the server yet. Try again later.'**
+  String get errorFeatureUnavailable;
+
+  /// No description provided for @errorProfileUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile is not available for playback. Check your profile in the Family tab.'**
+  String get errorProfileUnavailable;
+
+  /// The player could not reach the stream address the IPTV provider gave (DNS, connection, HTTP error).
+  ///
+  /// In en, this message translates to:
+  /// **'Your IPTV list provider did not deliver the video (address offline). Try other content or contact the provider.'**
+  String get playbackStreamUnreachable;
 }
 
 class _AppLocalizationsDelegate

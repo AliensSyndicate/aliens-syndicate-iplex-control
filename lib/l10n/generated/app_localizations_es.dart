@@ -1747,4 +1747,66 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get adultTab => 'Adulto';
+
+  @override
+  String get playHere => 'Ver';
+
+  @override
+  String get continueOnTv => 'Continuar en la TV';
+
+  @override
+  String get nextEpisode => 'Siguiente episodio';
+
+  @override
+  String get playerAudio => 'Audio';
+
+  @override
+  String get playerSubtitles => 'Subtítulos';
+
+  @override
+  String get playerSubtitlesOff => 'Desactivados';
+
+  @override
+  String get playerLive => 'En vivo';
+
+  @override
+  String get playerPlay => 'Reproducir';
+
+  @override
+  String get playerPause => 'Pausar';
+
+  @override
+  String get playerSkipBack => 'Retroceder 10 segundos';
+
+  @override
+  String get playerSkipForward => 'Avanzar 10 segundos';
+
+  @override
+  String get playbackFailed => 'No fue posible reproducir este contenido.';
+
+  @override
+  String get playbackSessionExpired =>
+      'La reproducción terminó. Inténtalo de nuevo.';
+
+  @override
+  String get profilePinTitle => 'PIN del perfil';
+
+  @override
+  String get adultPinBody =>
+      'Contenido adulto: escribe el PIN del perfil para ver.';
+
+  @override
+  String get playerDeviceName => 'Celular';
+
+  @override
+  String get errorFeatureUnavailable =>
+      'Esta función aún no está disponible en el servidor. Inténtalo más tarde.';
+
+  @override
+  String get errorProfileUnavailable =>
+      'Tu perfil no está disponible para reproducir. Revisa tu perfil en la pestaña Familia.';
+
+  @override
+  String get playbackStreamUnreachable =>
+      'El proveedor de tu lista IPTV no entregó el video (dirección fuera de línea). Prueba otro contenido o contacta al proveedor.';
 }

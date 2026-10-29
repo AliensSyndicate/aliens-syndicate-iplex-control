@@ -29,7 +29,7 @@ const _pt = AboutContent(
   sections: [
     (
       'Sobre o app',
-      'O iPlex organiza as listas IPTV que você adiciona e leva o conteúdo para a sua TV. Pelo celular você administra a família, os perfis, as TVs vinculadas e as listas. A reprodução acontece no iPlex da TV. O iPlex é somente um player: não oferece, vende nem indica listas IPTV.',
+      'O iPlex organiza as listas IPTV que você adiciona e leva o conteúdo para a sua TV. Pelo celular você administra a família, os perfis, as TVs vinculadas e as listas. Você assiste no próprio celular ou no iPlex da TV. O iPlex é somente um player: não oferece, vende nem indica listas IPTV.',
     ),
     ('Desenvolvido por', 'Aliens Syndicate Inc.'),
     (
@@ -59,7 +59,7 @@ const _en = AboutContent(
   sections: [
     (
       'About the app',
-      'iPlex organizes the IPTV lists you add and brings the content to your TV. On the phone you manage your family, profiles, linked TVs and lists. Playback happens in iPlex on the TV. iPlex is only a player: it does not offer, sell or recommend IPTV lists.',
+      'iPlex organizes the IPTV lists you add and brings the content to your TV. On the phone you manage your family, profiles, linked TVs and lists. You watch on the phone itself or in iPlex on the TV. iPlex is only a player: it does not offer, sell or recommend IPTV lists.',
     ),
     ('Developed by', 'Aliens Syndicate Inc.'),
     (
@@ -89,7 +89,7 @@ const _es = AboutContent(
   sections: [
     (
       'Acerca de la app',
-      'iPlex organiza las listas IPTV que agregas y lleva el contenido a tu televisor. Desde el celular administras la familia, los perfiles, los televisores vinculados y las listas. La reproducción ocurre en iPlex del televisor. iPlex es solo un reproductor: no ofrece, vende ni recomienda listas IPTV.',
+      'iPlex organiza las listas IPTV que agregas y lleva el contenido a tu televisor. Desde el celular administras la familia, los perfiles, los televisores vinculados y las listas. Puedes ver en el propio celular o en iPlex del televisor. iPlex es solo un reproductor: no ofrece, vende ni recomienda listas IPTV.',
     ),
     ('Desarrollado por', 'Aliens Syndicate Inc.'),
     (

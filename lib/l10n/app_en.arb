@@ -729,5 +729,39 @@
   "adultTab": "Adult",
   "@adultTab": {
     "description": "Home tab with the adult content (only for profiles allowed to see it)."
+  },
+  "playHere": "Watch",
+  "@playHere": {
+    "description": "Plays the title on this phone (details page and featured release)."
+  },
+  "continueOnTv": "Continue on TV",
+  "@continueOnTv": {
+    "description": "Player button: stops here and continues on a linked TV at the same point."
+  },
+  "nextEpisode": "Next episode",
+  "playerAudio": "Audio",
+  "playerSubtitles": "Subtitles",
+  "playerSubtitlesOff": "Off",
+  "playerLive": "Live",
+  "playerPlay": "Play",
+  "playerPause": "Pause",
+  "playerSkipBack": "Back 10 seconds",
+  "playerSkipForward": "Forward 10 seconds",
+  "playbackFailed": "This content could not be played.",
+  "playbackSessionExpired": "Playback ended. Try again.",
+  "profilePinTitle": "Profile PIN",
+  "adultPinBody": "Adult content: enter the profile PIN to watch.",
+  "playerDeviceName": "Phone",
+  "@playerDeviceName": {
+    "description": "Name of the phone in the playback limit messages (e.g. \"in use on Phone\")."
+  },
+  "errorFeatureUnavailable": "This feature is not available on the server yet. Try again later.",
+  "@errorFeatureUnavailable": {
+    "description": "The backend does not know the action yet (app newer than the deployed server)."
+  },
+  "errorProfileUnavailable": "Your profile is not available for playback. Check your profile in the Family tab.",
+  "playbackStreamUnreachable": "Your IPTV list provider did not deliver the video (address offline). Try other content or contact the provider.",
+  "@playbackStreamUnreachable": {
+    "description": "The player could not reach the stream address the IPTV provider gave (DNS, connection, HTTP error)."
   }
 }

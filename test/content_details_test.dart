@@ -17,12 +17,18 @@ import 'package:aliens_syndicate_iplex_control/features/watch_on_tv/watch_on_tv_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'home_page_test.dart' show item, profile;
 import 'navigation_test.dart' as navigation;
 import 'support/now_playing_fixture.dart';
+
+import 'package:aliens_syndicate_iplex_control/features/player/mobile_player_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/player/playback_engine.dart';
+
+import 'support/fake_playback_engine.dart';
 import 'widget_test.dart' as fixtures;
 
 /// Backend double with a real in-memory library (same contract as readHome /
@@ -313,6 +319,7 @@ Future<ProviderContainer> launchWith(
       repositoryProvider.overrideWithValue(repo),
       metadataServiceProvider.overrideWithValue(metadata),
       initialRouteProvider.overrideWithValue('/home'),
+      playbackEngineProvider.overrideWithValue(FakePlaybackEngine.new),
     ],
   );
   addTearDown(() {
@@ -396,15 +403,32 @@ void main() {
         find.byKey(const Key('details-watch-on-tv')),
       );
       final playback = tester.getRect(find.byKey(const Key('details-actions')));
-      expect(watch.width, playback.width);
-      expect(watch.top, greaterThan(actions.first.bottom));
+      // "Assistir" on this phone (white) and, beside it, "Assistir na TV"
+      // as an icon only.
+      final play = tester.getRect(find.byKey(const Key('details-play')));
+      expect(play.top, greaterThan(actions.first.bottom));
+      expect(watch.top, play.top);
+      expect(watch.width, watch.height);
+      expect(watch.right, playback.right);
+      expect(play.left, playback.left);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('details-watch-on-tv')),
+          matching: find.byType(Text),
+        ),
+        findsNothing,
+      );
+      expect(
+        tester.widget<AppButton>(find.byKey(const Key('details-play'))).primary,
+        isTrue,
+      );
       expect(
         tester
             .widget<AppButton>(find.byKey(const Key('details-watch-on-tv')))
             .primary,
-        isTrue,
+        isFalse,
       );
-      expect(find.text('No TV'), findsOneWidget, reason: 'no TV linked here');
+      expect(find.text('No TV'), findsNothing, reason: 'no TV name under the buttons');
       // Synopsis, round cast (actors only), then Informações.
       expect(find.text('Uma missão.'), findsOneWidget);
       expect(find.text('Cast'), findsOneWidget);
@@ -967,14 +991,20 @@ void main() {
       await tapKey(tester, const ValueKey('home-card-se1'));
       expect(find.text('Continue'), findsOneWidget);
       expect(find.byKey(const Key('details-restart')), findsOneWidget);
-      expect(find.byKey(const Key('details-watch-on-tv')), findsNothing);
+      // On this phone: restart and continue open the player.
+      MobilePlayerArgs args() =>
+          tester.widget<MobilePlayerPage>(find.byType(MobilePlayerPage)).args;
       await tapKey(tester, const Key('details-restart'));
-      var sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
-      expect([sheet.resume, sheet.episodeId], [false, '3012']);
-      Navigator.of(tester.element(find.byType(WatchOnTvSheet))).pop();
+      expect([args().resume, args().episodeId], [false, '3012']);
+      GoRouter.of(tester.element(find.byType(MobilePlayerPage))).pop();
       await tester.pumpAndSettle();
       await tapKey(tester, const Key('details-continue'));
-      sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
+      expect([args().resume, args().episodeId], [true, '3012']);
+      GoRouter.of(tester.element(find.byType(MobilePlayerPage))).pop();
+      await tester.pumpAndSettle();
+      // On a TV: "Assistir na TV" continues there.
+      await tapKey(tester, const Key('details-watch-on-tv'));
+      final sheet = tester.widget<WatchOnTvSheet>(find.byType(WatchOnTvSheet));
       expect([sheet.resume, sheet.episodeId], [true, '3012']);
       Navigator.of(tester.element(find.byType(WatchOnTvSheet))).pop();
       await tester.pumpAndSettle();
@@ -990,7 +1020,12 @@ void main() {
       expect(restart.width, 44);
       final playback = tester.getRect(find.byKey(const Key('details-actions')));
       expect(cont.left, playback.left);
-      expect(restart.right, playback.right);
+      expect(
+        restart.right,
+        lessThan(
+          tester.getRect(find.byKey(const Key('details-watch-on-tv'))).left,
+        ),
+      );
       expect(
         find.descendant(
           of: find.byKey(const Key('details-restart')),
@@ -1215,11 +1250,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('tab-1')));
     await tester.pumpAndSettle();
     expect(
-      repo.mutationPayloads.lastWhere((m) => m.$1 == 'readCatalogChunk').$2,
-      anyOf(
-        containsPair('set', 'live'),
-        containsPair('set', 'live_categories'),
-      ),
+      repo.mutationPayloads
+          .where((m) => m.$1 == 'readCatalogChunk')
+          .map((m) => m.$2['set']),
+      contains('live'),
     );
     // Categories first; items only inside the open one.
     expect(find.byKey(const ValueKey('home-card-ch1')), findsNothing);

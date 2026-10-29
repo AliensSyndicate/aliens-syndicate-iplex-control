@@ -14,15 +14,21 @@ import '../../core/domain/models.dart';
 ///
 /// [resume] ("Continuar assistindo") asks the TV to resume from its active
 /// profile's saved progress; [episodeId] preselects that series episode.
+/// [onSent]: the TV accepted the request (the phone player stops then).
 Future<void> showWatchOnTv(
   BuildContext context,
   Entry item, {
   bool resume = false,
   String? episodeId,
+  VoidCallback? onSent,
 }) => showAppModalSheet<void>(
   context: context,
-  builder: (_) =>
-      WatchOnTvSheet(item: item, resume: resume, episodeId: episodeId),
+  builder: (_) => WatchOnTvSheet(
+    item: item,
+    resume: resume,
+    episodeId: episodeId,
+    onSent: onSent,
+  ),
 );
 
 /// One episode the phone can ask the TV to start.
@@ -79,10 +85,12 @@ class WatchOnTvSheet extends ConsumerStatefulWidget {
     required this.item,
     this.resume = false,
     this.episodeId,
+    this.onSent,
   });
   final Entry item;
   final bool resume;
   final String? episodeId;
+  final VoidCallback? onSent;
   @override
   ConsumerState<WatchOnTvSheet> createState() => _WatchOnTvSheetState();
 }
@@ -141,6 +149,7 @@ class _WatchOnTvSheetState extends ConsumerState<WatchOnTvSheet> {
         },
       );
       if (!mounted) return;
+      widget.onSent?.call();
       setState(
         () => sent = (
           deviceId: device.id,

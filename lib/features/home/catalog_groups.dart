@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/data/providers.dart';
@@ -24,8 +29,61 @@ const _sets = {
   'adult': ('adult', 'adult_categories'),
 };
 
+/// Chunks read at the same time.
+const _parallelChunks = 8;
+
+/// Device copy of the sets, as the TV keeps its own: one file per account,
+/// source, version and profile view (the manifest's `viewerKey` changes when
+/// the profile's permissions do), so a list is only downloaded again when
+/// it or the permissions change.
+Future<Directory?> _cacheDir() async {
+  if (_testing) return null;
+  try {
+    final base = await getApplicationSupportDirectory();
+    return await Directory('${base.path}/catalog_sets').create(recursive: true);
+  } catch (_) {
+    return null; // No cache (tests, restricted storage): always downloads.
+  }
+}
+
+String _safe(String value) => value.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+
+CatalogSet _decodeSet(String body) {
+  final json = jsonDecode(body) as Map<String, dynamic>;
+  return _buildSet(
+    (json['records'] as List).cast<Map>(),
+    (json['categories'] as List).cast<Map>(),
+  );
+}
+
+/// Widget tests run on a fake clock that never delivers another isolate's
+/// answer: there the work runs inline.
+final _testing = Platform.environment.containsKey('FLUTTER_TEST');
+Future<R> _background<M, R>(ComputeCallback<M, R> callback, M message) =>
+    _testing ? Future.value(callback(message)) : compute(callback, message);
+
+// Isolate entry points are top-level functions with one message (a closure
+// would also try to send whatever its scope holds, such as `ref`).
+String _encodeSet((List<Map>, List<Map>) message) =>
+    jsonEncode({'records': message.$1, 'categories': message.$2});
+List<CatalogGroup> _groupMessage((CatalogSet, String, bool) message) =>
+    groupCatalog(message.$1, message.$2, adult: message.$3);
+
+CatalogSet _buildSet(List<Map> records, List<Map> categories) => CatalogSet(
+  [
+    for (final raw in records)
+      if (raw['id'] is String)
+        Entry(raw['id'] as String, Map<String, dynamic>.from(raw)),
+  ],
+  {
+    for (final c in categories)
+      if (c['id'] != null && c['name'] is String)
+        '${c['id']}': c['name'] as String,
+  },
+);
+
 /// One set of a source version, kept while the app runs (switching tabs
-/// does not read it again; a new version is a new key).
+/// does not read it again; a new version is a new key) and on the device.
 final catalogSetProvider =
     FutureProvider.family<CatalogSet, (String, String, String)>((
       ref,
@@ -34,54 +92,80 @@ final catalogSetProvider =
       final (sourceId, version, group) = key;
       final (itemSet, categorySet) = _sets[group]!;
       final repository = ref.read(repositoryProvider);
+      final uid = ref.read(accountProvider).asData?.value?.uid ?? '';
       final manifest = await repository.mutate('readCatalogManifest', {
         'id': sourceId,
         if (version.isNotEmpty) 'version': version,
       });
       final current = '${manifest['version'] ?? version}';
+      final viewer = '${manifest['viewerKey'] ?? ''}';
+      final dir = await _cacheDir();
+      final prefix = _safe('${uid}_${sourceId}_$group');
+      final file = dir == null
+          ? null
+          : File('${dir.path}/${prefix}_${_safe('${current}_$viewer')}.json');
+      if (file != null && await file.exists()) {
+        try {
+          final body = await file.readAsString();
+          return await _background(_decodeSet, body);
+        } catch (_) {
+          // Damaged copy: downloaded again below.
+        }
+      }
+
       int chunks(String set) =>
-          ((manifest['sets'] as Map?)?[set] as Map?)?['chunks'] is num
-          ? (((manifest['sets'] as Map)[set] as Map)['chunks'] as num).toInt()
-          : 0;
+          (((manifest['sets'] as Map?)?[set] as Map?)?['chunks'] as num?)
+              ?.toInt() ??
+          0;
       Future<List<Map>> read(String set) async {
-        final rows = <Map>[];
-        // A few chunks at a time, in order.
         final total = chunks(set);
-        for (var n = 0; n < total; n += 4) {
-          final pages = await Future.wait([
-            for (var i = n; i < n + 4 && i < total; i++)
-              repository.mutate('readCatalogChunk', {
-                'id': sourceId,
-                'version': current,
-                'set': set,
-                'n': i,
-              }),
-          ]);
-          for (final page in pages) {
-            rows.addAll(
-              (page['records'] as List? ?? const []).whereType<Map>(),
-            );
+        final pages = List<List<Map>>.filled(total, const []);
+        var next = 0;
+        Future<void> worker() async {
+          while (next < total) {
+            final n = next++;
+            final page = await repository.mutate('readCatalogChunk', {
+              'id': sourceId,
+              'version': current,
+              'set': set,
+              'n': n,
+            });
+            pages[n] = (page['records'] as List? ?? const [])
+                .whereType<Map>()
+                .toList();
           }
         }
-        return rows;
+
+        await Future.wait([
+          for (var i = 0; i < _parallelChunks && i < total; i++) worker(),
+        ]);
+        return [for (final page in pages) ...page];
       }
 
       final [records, categories] = await Future.wait([
         read(itemSet),
         read(categorySet),
       ]);
-      return CatalogSet(
-        [
-          for (final raw in records)
-            if (raw['id'] is String)
-              Entry(raw['id'] as String, Map<String, dynamic>.from(raw)),
-        ],
-        {
-          for (final c in categories)
-            if (c['id'] != null && c['name'] is String)
-              '${c['id']}': c['name'] as String,
-        },
-      );
+      if (file != null) {
+        // Saved after the screen has it; older versions of this set go.
+        unawaited(() async {
+          try {
+            final body = await _background(_encodeSet, (records, categories));
+            await file.writeAsString(body, flush: true);
+            await for (final old in dir!.list()) {
+              final name = old.uri.pathSegments.last;
+              if (old is File &&
+                  name.startsWith('${prefix}_') &&
+                  old.path != file.path) {
+                await old.delete();
+              }
+            }
+          } catch (_) {
+            // Cache only.
+          }
+        }());
+      }
+      return _buildSet(records, categories);
     }, retry: (retryCount, error) => null);
 
 /// One category of a catalog tab: the TV's name, its key and its titles
@@ -125,12 +209,17 @@ List<CatalogGroup> groupCatalog(
     });
     groups.putIfAbsent(key, () => (name, <Entry>[])).$2.add(item);
   }
+  // Each title's key once (not on every comparison).
+  final keys = <Entry, String>{
+    for (final (_, items) in groups.values)
+      for (final item in items) item: _sortKey(item.name),
+  };
   final out = [
     for (final MapEntry(:key, value: (name, items)) in groups.entries)
       CatalogGroup(
         key,
         name,
-        items..sort((a, b) => _sortKey(a.name).compareTo(_sortKey(b.name))),
+        items..sort((a, b) => keys[a]!.compareTo(keys[b]!)),
       ),
   ];
   out.sort((a, b) {
@@ -157,5 +246,6 @@ final catalogGroupsProvider =
           key.adult ? 'adult' : key.kind,
         )).future,
       );
-      return groupCatalog(set, key.kind, adult: key.adult);
+      // Off the interface thread: tens of thousands of titles.
+      return _background(_groupMessage, (set, key.kind, key.adult));
     }, retry: (retryCount, error) => null);

@@ -58,6 +58,24 @@ String failureText(BuildContext context, Object error) {
     'source-protected' => l.sourceProtectedOnTv,
     'episode-required' => l.episodeRequired,
     'subscription-required' => l.playbackSubscriptionRequired,
+    'session-expired' => l.playbackSessionExpired,
+    'invalid-action' => l.errorFeatureUnavailable,
+    'stream-unreachable' => l.playbackStreamUnreachable,
+    'profile-unavailable' ||
+    'profile-disabled' => l.errorProfileUnavailable,
+    'not-found' => l.errorContentUnavailable,
+    'catalog-integrity' => l.playbackFailed,
+    // Provider answers while resolving a stream (same copy as the sync).
+    'invalid-credentials' => l.errorInvalidCredentials,
+    'provider-unavailable' => l.errorCannotConnect,
+    'provider-rate-limited' => l.errorProviderRateLimited,
+    'provider-time-budget' => l.errorProviderTimeBudget,
+    'download-failed' => l.errorDownloadFailed,
+    'adult-pin-required' => l.adultPinBody,
+    'player-required' ||
+    'playback-failed' ||
+    'source-authorization-required' ||
+    'unsafe-provider' => l.playbackFailed,
     'invalid-input' || 'invalid-argument' => l.invalidInput,
     'unavailable' || 'network-request-failed' => l.connectionFailure,
     'deadline-exceeded' => l.requestTimeout,

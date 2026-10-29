@@ -13,6 +13,8 @@ import '../manager/widgets/home_welcome_state.dart';
 import '../manager/widgets/account_avatar.dart';
 import '../manager/widgets/iptv_source_status.dart';
 import '../manager/widgets/profile_library.dart';
+import '../player/mobile_player_page.dart';
+import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'catalog_groups.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
@@ -292,6 +294,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     children: [appBar, tabs],
                   ),
             onOpen: (item) => open(item, home),
+            onPlay: (item) => openMobilePlayer(context, item),
+            onWatchOnTv: (item) => showWatchOnTv(context, item),
           ),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -318,6 +322,26 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
     final home = ref.watch(homeProvider(sourceId));
+    // Once Meu iPlex has its data, the catalog tabs and the profile lists
+    // load in the background (kept while the Home is open), so a tab opens
+    // ready.
+    final profileId = home.asData?.value.profile?.id;
+    if (source != null && home.hasValue) {
+      for (final kind in const ['channel', 'movie', 'series']) {
+        ref.listen(
+          catalogGroupsProvider((
+            sourceId: source.id,
+            version: source.text('version'),
+            kind: kind,
+            adult: false,
+          )),
+          (_, _) {},
+        );
+      }
+      if (profileId != null) {
+        ref.listen(profileLibraryProvider(profileId), (_, _) {});
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
     final barContent = KeyedSubtree(
       key: barKey,

@@ -14,6 +14,7 @@ import {activePlayer,type Identity} from './service';
 import {classifyAudience, isAdultContent} from './content_audience';
 import {CONTENT_KINDS, profileView, ProfileView, spaceAllowed} from './family_profiles';
 import {consumeAdultUnlock} from './parental';
+import {mobileLease, mobileSessionRef} from './mobile_playback';
 import {TitleResolver, type LibraryList} from './library';
 
 type Kind='channel'|'movie'|'series';
@@ -60,10 +61,11 @@ async function resolveViewer(tx:FirebaseFirestore.Transaction,actor:Identity,fid
 
 /** Shared objects are never public or signed into bearer download URLs. */
 const cache=new Map<string,Catalog>();
-export async function authorize(actor:Identity,id:string,playback=false,requestedProfile?:unknown) {
+/** `mobileSession`: the Control's phone player session (playback only; see mobile_playback.ts). */
+export async function authorize(actor:Identity,id:string,playback=false,requestedProfile?:unknown,mobileSession?:unknown) {
   const db=getFirestore();
   return db.runTransaction(async tx=>{
-    let fid:string, familyData:FirebaseFirestore.DocumentData|undefined;
+    let fid:string, familyData:FirebaseFirestore.DocumentData|undefined, phoneProfile:string|undefined;
     if(actor.deviceId) {
       if(actor.uid!==`tv_${actor.deviceId}`||!actor.familyId)throw new DomainError('permission-denied');
       fid=actor.familyId;
@@ -75,9 +77,17 @@ export async function authorize(actor:Identity,id:string,playback=false,requeste
       familyData=family.data();
     }else {
       const scope=await iptvWorkspace(tx,actor,false,false);fid=scope.fid;familyData=scope.data;
-      if(playback)throw new DomainError('player-required');
+      // The Control only plays inside its own phone session (same rules as a TV).
+      if(playback){
+        if(mobileSession===undefined||mobileSession===null)throw new DomainError('player-required');
+        phoneProfile=mobileLease({fid,ref:scope.ref,data:scope.data},actor.uid,mobileSession).profileId;
+        const subscription=await tx.get(db.doc(`families/${fid}/private/subscription`));
+        if(!canStartPlayback(subscription.data() as any,Date.now()))throw new DomainError('subscription-required');
+      }
     }
     const viewer=await resolveViewer(tx,actor,fid,familyData,requestedProfile);
+    // The phone plays with the profile of its lease only.
+    if(phoneProfile!==undefined&&viewer&&viewer.id!==phoneProfile)throw new DomainError('permission-denied');
     const ref=db.doc(`families/${fid}/sources/${id}`), source=await tx.get(ref), data=source.data();
     if(!data||!data.enabled||!data.version)throw new DomainError('not-found');
     await requireSourceAccess(tx,ref,data,actor.uid);
@@ -138,7 +148,7 @@ export async function readSourceCatalog(input:Record<string,unknown>,actor:Ident
  * Player with a current session and fresh provider validation. They are never
  * stored in a shared artifact, notification or Firestore item. */
 export async function resolveSourceStream(input:Record<string,unknown>,actor:Identity,key:string) {
-  const id=idSchema.parse(input.id), itemId=idSchema.parse(input.itemId), access=await authorize(actor,id,true,input.profileId);
+  const id=idSchema.parse(input.id), itemId=idSchema.parse(input.itemId), access=await authorize(actor,id,true,input.profileId,input.sessionId);
   const secret=(await getFirestore().doc(`source_secrets/${access.fid}_${id}`).get()).data();
   if(!secret||secret.revision!==access.data.revision)throw new DomainError('source-conflict');
   const source=sourceSchema.parse(unseal<Source>(secret.encrypted,key));
@@ -146,7 +156,10 @@ export async function resolveSourceStream(input:Record<string,unknown>,actor:Ide
   const item=catalog.items.find(i=>i.id===itemId||hash(`${id}:${i.id}`)===itemId);
   if(!item||!canSee(access.viewer,id,item))throw new DomainError('not-found');
   // Conteúdo adulto só toca depois do PIN parental (desbloqueio de uso único, por perfil e dispositivo).
-  if(isAdultContent(item)&&actor.deviceId)await consumeAdultUnlock(access.fid,actor.deviceId,access.viewer?.id,access.viewer?.pinConfigured===true);
+  if(isAdultContent(item)){
+    const unlock=actor.deviceId?getFirestore().doc(`families/${access.fid}/devices/${actor.deviceId}`):mobileSessionRef(getFirestore().doc(`families/${access.fid}`),actor.uid);
+    await consumeAdultUnlock(unlock,access.viewer?.id,access.viewer?.pinConfigured===true);
+  }
   let url:string|undefined;
   // Series episodes are addressed by their own reference and must belong to the item the profile may see.
   const episodeOf=()=>{
@@ -186,7 +199,7 @@ export async function resolveSourceStream(input:Record<string,unknown>,actor:Ide
   const addresses=await lookup(parsed.hostname.replace(/^\[|\]$/g,''),{all:true});
   if(!addresses.length||(!privateProvidersAllowedForTests()&&addresses.some(a=>!publicAddress(a.address))))throw new DomainError('unsafe-provider');
   // Permissions are revalidated right before the URL leaves the backend.
-  const latest=await authorize(actor,id,true,input.profileId);
+  const latest=await authorize(actor,id,true,input.profileId,input.sessionId);
   if(latest.data.revision!==access.data.revision||latest.data.version!==access.data.version||!canSee(latest.viewer,id,item))throw new DomainError('source-conflict');
   return {url,sourceId:id,validatedAt:Date.now()};
 }

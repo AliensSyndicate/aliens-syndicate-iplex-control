@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
+import '../player/mobile_player_page.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'details_layout.dart';
 import 'home_data.dart';
@@ -441,41 +442,34 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     ];
   }
 
-  /// First linked TV (online first): shown under "Assistir na TV".
-  String? _tvName() {
-    final now = ref.watch(clockProvider).value ?? DateTime.now();
-    final tvs = [
-      for (final d
-          in ref.watch(entriesProvider('devices')).asData?.value ??
-              const <Entry>[])
-        if (d.text('status') != 'unlinked') d,
-    ]..sort((a, b) => (b.onlineAt(now) ? 1 : 0) - (a.onlineAt(now) ? 1 : 0));
-    return tvs.firstOrNull?.name;
-  }
-
   /// Playback fills the content width; resume and restart share it equally.
   Widget _actions(BuildContext context, Entry shown, HomeData? home) {
     final l = context.l;
     final target = _withProgress(home);
     final resume = target?.progress != null && !shown.isChannel;
     final episode = _episode(target);
-    final tv = _tvName();
     const actionHeight = 44.0;
     return Column(
       key: const Key('details-actions'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // On this phone (landscape player), and the restart beside it.
         Row(
           children: [
             Expanded(
               child: AppButton.primary(
-                key: Key(resume ? 'details-continue' : 'details-watch-on-tv'),
+                key: Key(resume ? 'details-continue' : 'details-play'),
                 height: actionHeight,
                 icon: AppIcons.play,
-                label: resume ? l.continueLabel : l.watchOnTv,
+                label: resume ? l.continueLabel : l.playHere,
                 onPressed: target == null
                     ? null
-                    : () => watchOnTv(target, resume: resume),
+                    : () => openMobilePlayer(
+                        context,
+                        target,
+                        episodeId: resume ? target.episodeId : episode?.id,
+                        resume: resume,
+                      ),
               ),
             ),
             if (resume && target != null) ...[
@@ -486,19 +480,26 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
                 width: actionHeight,
                 semanticsLabel: l.restartLabel,
                 icon: AppIcons.refresh,
-                onPressed: () => watchOnTv(
+                onPressed: () => openMobilePlayer(
+                  context,
                   target,
                   episodeId: target.episodeId ?? episode?.id,
                 ),
               ),
             ],
+            const SizedBox(width: AppSpacing.sm),
+            // On a linked TV (continues from the same point when resuming).
+            AppButton(
+              key: const Key('details-watch-on-tv'),
+              height: actionHeight,
+              width: actionHeight,
+              semanticsLabel: l.watchOnTv,
+              icon: AppIcons.devices,
+              onPressed: target == null
+                  ? null
+                  : () => watchOnTv(target, resume: resume),
+            ),
           ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          tv ?? l.noTvConnected,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
         ),
       ],
     );

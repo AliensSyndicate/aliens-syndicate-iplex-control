@@ -20,6 +20,7 @@ class NeumorphicActionButton extends StatefulWidget {
     this.textColor,
     this.height,
     this.width,
+    this.fit = false,
   }) : primary = false;
 
   /// Main action of a screen or sheet: same as the web `.iplex-button-primary`
@@ -36,6 +37,7 @@ class NeumorphicActionButton extends StatefulWidget {
     this.textColor,
     this.height,
     this.width,
+    this.fit = false,
   }) : destructive = false,
        primary = true;
 
@@ -51,6 +53,7 @@ class NeumorphicActionButton extends StatefulWidget {
     this.textColor,
     this.height,
     this.width,
+    this.fit = false,
   }) : destructive = true,
        primary = false;
 
@@ -66,6 +69,7 @@ class NeumorphicActionButton extends StatefulWidget {
     this.textColor,
     this.height,
     this.width,
+    this.fit = false,
   }) : destructive = true,
        primary = false;
 
@@ -81,6 +85,9 @@ class NeumorphicActionButton extends StatefulWidget {
   final Color? textColor;
   final double? height;
   final double? width;
+
+  /// As wide as its content (with a label it otherwise fills the width).
+  final bool fit;
 
   @override
   State<NeumorphicActionButton> createState() => _ActionButtonState();
@@ -126,7 +133,8 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
 
     final hasLabel = widget.label.isNotEmpty;
     final minH = widget.height ?? AppDimensions.button;
-    final minW = widget.width ?? (hasLabel ? double.infinity : minH);
+    final minW =
+        widget.width ?? (hasLabel && !widget.fit ? double.infinity : minH);
     final maxW = widget.width ?? double.infinity;
     final maxH = widget.height ?? double.infinity;
 
@@ -208,9 +216,11 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
                         vertical: widget.height != null ? 0 : AppSpacing.md,
                       ),
                       child: Center(
+                        widthFactor: widget.fit ? 1 : null,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: hasLabel && widget.width == null
+                          mainAxisSize:
+                              hasLabel && widget.width == null && !widget.fit
                               ? MainAxisSize.max
                               : MainAxisSize.min,
                           children: [

@@ -15,6 +15,9 @@ import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pag
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:aliens_syndicate_iplex_control/features/player/playback_engine.dart';
+
+import 'support/fake_playback_engine.dart';
 
 import 'widget_test.dart' as fixtures;
 
@@ -185,6 +188,7 @@ Future<ProviderContainer> launch(
     overrides: [
       repositoryProvider.overrideWithValue(repository),
       initialRouteProvider.overrideWithValue(location),
+      playbackEngineProvider.overrideWithValue(FakePlaybackEngine.new),
     ],
   );
   addTearDown(() {
@@ -791,7 +795,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('home-card-film')));
       await tester.pumpAndSettle();
-      expect(find.text('Watch on TV'), findsOneWidget);
+      expect(find.byKey(const Key('details-watch-on-tv')), findsOneWidget);
       expect(
         find.byKey(const Key('details-favorite')),
         findsNothing,

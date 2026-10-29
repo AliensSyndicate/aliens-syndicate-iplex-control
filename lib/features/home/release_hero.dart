@@ -30,6 +30,8 @@ class ReleaseHero extends ConsumerStatefulWidget {
     required this.storageKey,
     required this.top,
     required this.onOpen,
+    required this.onPlay,
+    required this.onWatchOnTv,
   });
   final List<Entry> candidates;
 
@@ -39,6 +41,12 @@ class ReleaseHero extends ConsumerStatefulWidget {
   /// App bar (or the room for the floating one) drawn over the artwork.
   final Widget top;
   final ValueChanged<Entry> onOpen;
+
+  /// Plays the release on this phone.
+  final ValueChanged<Entry> onPlay;
+
+  /// Sends the release to a linked TV.
+  final ValueChanged<Entry> onWatchOnTv;
   @override
   ConsumerState<ReleaseHero> createState() => _ReleaseHeroState();
 }
@@ -205,11 +213,37 @@ class _ReleaseHeroState extends ConsumerState<ReleaseHero> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.md),
-                AppButton.primary(
-                  key: const Key('home-hero-open'),
-                  width: 180,
-                  label: l.viewDetails,
-                  onPressed: item == null ? null : () => widget.onOpen(item),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppButton.primary(
+                        key: const Key('home-hero-play'),
+                        icon: AppIcons.play,
+                        label: l.playHere,
+                        onPressed: item == null
+                            ? null
+                            : () => widget.onPlay(item),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    CircularButton(
+                      key: const Key('home-hero-open'),
+                      icon: AppIcons.details,
+                      label: l.viewDetails,
+                      onPressed: item == null
+                          ? null
+                          : () => widget.onOpen(item),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    CircularButton(
+                      key: const Key('home-hero-tv'),
+                      icon: AppIcons.devices,
+                      label: l.watchOnTv,
+                      onPressed: item == null
+                          ? null
+                          : () => widget.onWatchOnTv(item),
+                    ),
+                  ],
                 ),
               ],
             ),
