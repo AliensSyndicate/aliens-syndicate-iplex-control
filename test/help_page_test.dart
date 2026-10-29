@@ -61,10 +61,10 @@ void main() {
       matching: find.byType(EditableText),
     );
 
-    // "pin parental" only appears in the parental control questions.
-    await tester.enterText(field, 'pin parental');
+    // "pin pessoal" only appears in the personal PIN question.
+    await tester.enterText(field, 'pin pessoal');
     await tester.pumpAndSettle();
-    expect(find.text('O que é o PIN parental?'), findsOneWidget);
+    expect(find.text('O que é o PIN pessoal?'), findsOneWidget);
     expect(find.text('Como vinculo minha TV?'), findsNothing);
 
     // Matches inside an answer, without accents: "criptografados".

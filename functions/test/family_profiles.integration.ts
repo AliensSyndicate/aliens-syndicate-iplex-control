@@ -5,6 +5,7 @@ import {initializeApp,deleteApp} from 'firebase-admin/app';
 import {getFirestore} from 'firebase-admin/firestore';
 import {getAuth} from 'firebase-admin/auth';
 import {getStorage} from 'firebase-admin/storage';
+import {profileView} from '../src/family_profiles';
 import {execute,Identity} from '../src/service';
 import {hash} from '../src/domain';
 
@@ -69,7 +70,7 @@ test('guest toggle keeps configuration, hides it on the TV and never persists me
  assert.ok(!listed.includes('guest'));
  await assert.rejects(execute('acquireSession',{profileId:'guest'},player),/profile-disabled/);
  const kept=(await profiles(fid).doc('guest').get()).data()!;
- assert.equal(kept.enabled,false);assert.deepEqual(kept.permissions,{allSpaces:false,spaces:['src:movie'],adult:true});
+ assert.equal(kept.enabled,false);assert.deepEqual(kept.permissions,{allSpaces:false,spaces:['src:movie'],adult:true,kinds:['channel','movie','series']});
  for(const c of ['favorites','watch_progress','watched'])assert.equal((await profiles(fid).doc('guest').collection(c).get()).size,0);
 });
 
@@ -85,6 +86,15 @@ test('three independent clears delete Firebase data, block stale offline writes 
  const other=await family();
  await assert.rejects(execute('clearProfileData',{profileId:joao,category:'favorites',requestId:'r1',contextFamilyId:other.fid},other.admin),/not-found/);
  await assert.rejects(execute('clearProfileData',{profileId:joao,category:'favorites',requestId:'r1',contextFamilyId:fid},other.admin),/permission-denied/);
+
+ // A member clears only the profile linked to its own account.
+ const rui=await account('Rui');
+ const {code}=await execute('createProfileLinkCode',{profileId:ana,...ctx},admin) as {code:string};
+ await execute('redeemProfileLink',{code},rui);
+ await assert.rejects(execute('clearProfileData',{profileId:joao,category:'favorites',requestId:'m1'},rui),/permission-denied/);
+ await execute('clearProfileData',{profileId:ana,category:'favorites',requestId:'m2'},rui);
+ assert.equal((await ref(ana,'favorites').get()).size,0);
+ await seed(ref(ana,'favorites'),2,{generation:1});
 
  const result=await execute('clearProfileData',{profileId:joao,category:'favorites',requestId:'r1',...ctx},admin) as {generation:number;deleted:number};
  assert.equal(result.generation,1);assert.equal(result.deleted,451);
@@ -105,7 +115,7 @@ test('three independent clears delete Firebase data, block stale offline writes 
  await execute('clearProfileData',{profileId:joao,category:'progress',requestId:'r3',...ctx},admin);
  assert.equal((await ref(joao,'watch_progress').get()).size,0);assert.equal((await ref(joao,'favorites').get()).size,1);
  const gens=(await profiles(fid).doc(joao).get()).data()!.generations;
- assert.deepEqual(gens,{favorites:1,watched:1,progress:1});
+ assert.deepEqual(gens,{favorites:1,wishlist:0,watched:1,progress:1},'favorites and the wishlist have their own generation');
  // Completion writes "Assistidos" only with the current watched generation.
  await execute('watchProgress',{profileId:joao,contentId:'ep',position:95,duration:100,generation:1,watchedGeneration:0},player);
  assert.equal((await ref(joao,'watched').get()).size,0);
@@ -130,7 +140,7 @@ test('account linking keeps the profile id and data; single-use codes; conflicts
  const linked=await execute('redeemProfileLink',{code:code.toLowerCase()},lia) as {profileId:string;familyId:string};
  assert.deepEqual(linked,{familyId:fid,profileId:pid});
  const after=(await profiles(fid).doc(pid).get()).data()!;
- assert.equal(after.linkedUid,lia.uid);assert.equal(after.type,'kids');assert.deepEqual(after.permissions,{allSpaces:false,spaces:['s1:movie'],adult:false});
+ assert.equal(after.linkedUid,lia.uid);assert.equal(after.type,'kids');assert.deepEqual(after.permissions,{allSpaces:false,spaces:['s1:movie'],adult:false,kinds:['channel','movie','series']});
  assert.equal((await profiles(fid).doc(pid).collection('favorites').get()).size,1);
  assert.equal((await profiles(fid).doc(pid).collection('watch_progress').get()).size,1);
  assert.equal((await profiles(fid).get()).size,2);
@@ -248,24 +258,37 @@ test('adult content and member preferences: limits by the administrator, narrowe
  const rui=await account('Rui');
  const {code}=await execute('createProfileLinkCode',{profileId:pid,...ctx},admin) as {code:string};
  await execute('redeemProfileLink',{code},rui);
- const read=async()=>(await execute('readSourceCatalog',{id:'src1',contextFamilyId:fid},rui) as {items:{catalogItemId:string}[]}).items.map(i=>i.catalogItemId).sort();
+ // A source with nothing visible to the profile answers not-found: read as an empty list.
+ const visible=async(actor:Identity)=>{try{return (await execute('readSourceCatalog',{id:'src1',contextFamilyId:fid},actor) as {items:{catalogItemId:string}[]}).items.map(i=>i.catalogItemId).sort();}catch(e){if(/not-found/.test(String(e)))return [];throw e;}};
+ const read=()=>visible(rui);
  assert.deepEqual(await read(),['c1','m1','m2']);
  // Administrator turns adult content off: hidden for the member, kept for the administrator.
  await execute('setProfilePermissions',{profileId:pid,allSpaces:true,spaces:[],adult:false,...ctx},admin);
  assert.deepEqual(await read(),['c1','m1']);
  assert.equal((await execute('readSourceCatalog',{id:'src1',contextFamilyId:fid},admin) as {items:unknown[]}).items.length,3);
- // The member cannot widen it…
+ // Adult content is the administrator's decision only: the member can neither widen nor change it.
  await assert.rejects(execute('setProfilePreferences',{adult:true,spaces:null},rui),/beyond-limit/);
- // …but can narrow its own access further (only the channels), and undo it.
- await execute('setProfilePreferences',{adult:false,spaces:['src1:channel']},rui);
+ await assert.rejects(execute('setProfilePreferences',{adult:false},rui),/permission-denied/);
+ // The member narrows its own content types (Canais, Filmes, Séries) in every source, and undoes it.
+ await execute('setProfilePreferences',{kinds:['channel']},rui);
  assert.deepEqual(await read(),['c1']);
- await execute('setProfilePermissions',{profileId:pid,allSpaces:false,spaces:['src1:movie'],adult:true,...ctx},admin);
- await assert.rejects(execute('setProfilePreferences',{adult:true,spaces:['src1:channel']},rui),/beyond-limit/);
- await execute('setProfilePreferences',{adult:false,spaces:null},rui);
- assert.deepEqual(await read(),['m1'],'effective = administrator limits ∩ member preferences');
+ await execute('setProfilePermissions',{profileId:pid,kinds:['movie'],adult:true,...ctx},admin);
+ assert.deepEqual(await read(),[],'effective = administrator limits ∩ member preferences');
+ await assert.rejects(execute('setProfilePreferences',{kinds:['channel']},rui),/beyond-limit/);
+ await execute('setProfilePreferences',{kinds:null},rui);
+ assert.deepEqual(await read(),['m1','m2']);
+ // Legacy per-source spaces still narrow on top of the types.
+ await execute('setProfilePermissions',{profileId:pid,allSpaces:false,spaces:['src1:channel'],...ctx},admin);
+ assert.deepEqual(await read(),[]);
+ await execute('setProfilePermissions',{profileId:pid,allSpaces:true,kinds:['channel','movie','series'],...ctx},admin);
  // Preferences belong to the linked account: the administrator's call changes its own profile only.
- await execute('setProfilePreferences',{adult:true,spaces:null,...ctx},admin);
- assert.equal((await profiles(fid).doc(pid).get()).data()!.preferences.adult,false);
+ await execute('setProfilePreferences',{kinds:['series'],...ctx},admin);
+ assert.equal((await profiles(fid).doc(pid).get()).data()!.preferences.kinds,null);
+ assert.deepEqual((await profiles(fid).doc('admin').get()).data()!.preferences.kinds,['series']);
+ // The administrator still manages everything in the Control; its own choice applies to its TV profile.
+ assert.deepEqual(await visible(admin),['c1','m1','m2']);
+ assert.deepEqual(profileView('admin',(await profiles(fid).doc('admin').get()).data()!).permissions.kinds,['series']);
+ await execute('setProfilePreferences',{kinds:null,...ctx},admin);
 
  // Personal PIN: only the account linked to the profile; current PIN required to change or remove.
  await execute('setPersonalPin',{pin:'1234',confirmPin:'1234'},rui);

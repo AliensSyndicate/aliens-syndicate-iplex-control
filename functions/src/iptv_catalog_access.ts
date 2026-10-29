@@ -12,7 +12,7 @@ import {xtreamBase} from './iptv_server';
 import {lookup} from 'node:dns/promises';
 import {activePlayer,type Identity} from './service';
 import {classifyAudience, isAdultContent} from './content_audience';
-import {profileView, ProfileView} from './family_profiles';
+import {profileView, ProfileView, spaceAllowed} from './family_profiles';
 import {consumeAdultUnlock} from './parental';
 import {TitleResolver, type LibraryList} from './library';
 
@@ -23,8 +23,9 @@ export type Viewer = ProfileView | null;
 export function canSee(viewer:Viewer,sourceId:string,item:{kind:Kind;title?:string;category?:string;ageRating?:string;isAdult?:boolean}) {
   if(!viewer)return true;
   // O administrador vê tudo, exceto conteúdo adulto quando ele mesmo desligou o próprio "Conteúdo adulto".
-  if(viewer.type==='admin')return viewer.permissions.adult||!isAdultContent(item);
-  if(!viewer.permissions.allSpaces&&!viewer.permissions.spaces.includes(`${sourceId}:${item.kind}`))return false;
+  // Content types (Canais, Filmes, Séries) apply to every profile, the administrator's own choice included.
+  if(viewer.type==='admin')return viewer.permissions.kinds.includes(item.kind)&&(viewer.permissions.adult||!isAdultContent(item));
+  if(!spaceAllowed(viewer.permissions,sourceId,item.kind))return false;
   // Adult content off (administrator limit or the member's own, narrower preference).
   if(!viewer.permissions.adult&&isAdultContent(item))return false;
   // Mandatory and not configurable: kids profiles only receive positively identified children's content.
@@ -136,7 +137,7 @@ export async function resolveSourceStream(input:Record<string,unknown>,actor:Ide
   const item=catalog.items.find(i=>i.id===itemId||hash(`${id}:${i.id}`)===itemId);
   if(!item||!canSee(access.viewer,id,item))throw new DomainError('not-found');
   // Conteúdo adulto só toca depois do PIN parental (desbloqueio de uso único, por perfil e dispositivo).
-  if(isAdultContent(item)&&actor.deviceId)await consumeAdultUnlock(access.fid,actor.deviceId,access.viewer?.id);
+  if(isAdultContent(item)&&actor.deviceId)await consumeAdultUnlock(access.fid,actor.deviceId,access.viewer?.id,access.viewer?.pinConfigured===true);
   let url:string|undefined;
   // Series episodes are addressed by their own reference and must belong to the item the profile may see.
   const episodeOf=()=>{
@@ -408,7 +409,7 @@ async function profileLibrary(family:FirebaseFirestore.DocumentReference,profile
       const seen=new Set<string>();
       for(const doc of rows.docs){
         const d=doc.data();
-        if(d.generation!==profile.generations.favorites||typeof d.contentId!=='string')continue;
+        if(d.generation!==profile.generations[list]||typeof d.contentId!=='string')continue;
         const link=resolver.resolve(d);
         if(link.hidden)continue;
         const item=link.id?resolved(link.id):null;

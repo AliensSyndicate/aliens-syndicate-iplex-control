@@ -1707,4 +1707,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpNoResultsBody =>
       'Try other words or clear the search to see every question.';
+
+  @override
+  String get contentSection => 'Content';
+
+  @override
+  String get contentChannels => 'Channels';
+
+  @override
+  String get lastSyncTitle => 'Last sync';
+
+  @override
+  String clearFavoritesBody(String name) {
+    return 'All of $name\'s favorites will be permanently deleted. This cannot be undone. The deletion is synced to every device.';
+  }
+
+  @override
+  String get clearWishlist => 'Clear wishlist';
+
+  @override
+  String get clearWishlistTitle => 'Clear wishlist?';
+
+  @override
+  String clearWishlistBody(String name) {
+    return '$name\'s whole wishlist will be permanently deleted. This cannot be undone. The deletion is synced to every device.';
+  }
 }

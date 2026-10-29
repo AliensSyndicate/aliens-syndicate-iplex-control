@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
@@ -6,10 +7,14 @@ import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/public_identity.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/repository.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/profile_manage_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/manager/widgets/profile_library.dart';
 import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/fake_network_image.dart';
+import 'widget_test.dart' as fixtures;
 
 class _Repo implements ManagerRepository {
   _Repo(this.profile, {this.admin = true}) : library = _library;
@@ -182,316 +187,230 @@ void main() {
       },
     );
   }
-  testWidgets('member cannot change its own classification', (tester) async {
+  testWidgets('member sees its classification but cannot change it', (
+    tester,
+  ) async {
     final repo = _Repo({
       ..._regular,
       'type': 'kids',
       'linkedUid': 'u',
     }, admin: false);
     await _open(tester, repo);
-    expect(find.byKey(const Key('kids-account-toggle')), findsNothing);
-  });
-  Finder inSection(String section, Finder f) => find.descendant(
-    of: find.byKey(ValueKey('library-$section')),
-    matching: f,
-  );
-
-  testWidgets(
-    'content sections: Busca tabs, images, progress, episodes and real data only',
-    (tester) async {
-      final repo = _Repo(Map.of(_regular));
-      await _open(tester, repo);
-      expect(repo.calls.first.$2, {'profileId': 'p1'});
-      // Renamed: "Continuar assistindo" (no "na TV").
-      expect(find.text('Continuar assistindo'), findsOneWidget);
-      expect(find.textContaining('na TV'), findsNothing);
-      for (final section in [
-        'continueWatching',
-        'favorites',
-        'wishlist',
-        'watched',
-      ]) {
-        final tabs = find.byKey(ValueKey('library-$section-tabs'));
-        expect(tabs, findsOneWidget);
-        expect(tester.widget(tabs), isA<AppTabs<String>>());
-        for (final t in ['Ao vivo', 'Filmes', 'Séries']) {
-          expect(
-            find.descendant(of: tabs, matching: find.text(t)),
-            findsOneWidget,
-          );
-        }
-      }
-      // Continuar assistindo opens on the first kind with content (Ao vivo):
-      // the channel, no invented duration.
-      expect(
-        inSection(
-          'continueWatching',
-          find.byKey(const ValueKey('home-card-c1')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        inSection('continueWatching', find.textContaining('restantes')),
-        findsNothing,
-      );
-      await _tap(tester, inSection('continueWatching', find.text('Filmes')));
-      expect(
-        inSection(
-          'continueWatching',
-          find.byKey(const ValueKey('home-card-m1')),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        inSection('continueWatching', find.text('70 min restantes')),
-        findsOneWidget,
-      );
-      expect(
-        inSection('continueWatching', find.byType(AppProgressBar)),
-        findsOneWidget,
-      );
-      // Favoritos by kind; titles out of the IPTV are kept.
-      expect(
-        inSection('favorites', find.byKey(const ValueKey('home-card-c2'))),
-        findsOneWidget,
-      );
-      await _tap(tester, inSection('favorites', find.text('Filmes')));
-      expect(
-        inSection('favorites', find.text('Filme Favorito')),
-        findsOneWidget,
-      );
-      expect(inSection('favorites', find.text('Fora do IPTV')), findsOneWidget);
-      expect(inSection('favorites', find.text('Canal Esportes')), findsNothing);
-      await _tap(tester, inSection('favorites', find.text('Séries')));
-      expect(
-        inSection('favorites', find.text('Série Favorita')),
-        findsOneWidget,
-      );
-      // Lista de desejos: same layout; empty kinds say so.
-      expect(inSection('wishlist', find.text('Desejo')), findsOneWidget);
-      await _tap(tester, inSection('wishlist', find.text('Ao vivo')));
-      expect(
-        inSection(
-          'wishlist',
-          find.byKey(const ValueKey('library-wishlist-empty')),
-        ),
-        findsOneWidget,
-      );
-      // Assistidos: date of the playback.
-      expect(inSection('watched', find.text('Já Visto')), findsOneWidget);
-      expect(inSection('watched', find.textContaining('às')), findsOneWidget);
-      // No clear of its own for the wishlist (shared favorites generation).
-      expect(find.byKey(const ValueKey('clear-wishlist')), findsNothing);
-    },
-  );
-
-  testWidgets('cancelling a clear changes nothing', (tester) async {
-    final repo = _Repo(Map.of(_regular));
-    await _open(tester, repo);
-    await _tap(tester, find.byKey(const ValueKey('clear-favorites')));
-    expect(find.text('Limpar favoritos?'), findsOneWidget);
-    expect(
-      find.textContaining('Todos os favoritos e a lista de desejos de João'),
-      findsOneWidget,
-    );
-    await _tap(tester, find.text('Cancelar'));
-    expect(repo.actions.where((c) => c.$1 == 'clearProfileData'), isEmpty);
+    final toggle = find.byKey(const Key('kids-account-toggle'));
+    expect(tester.widget<NeumorphicSwitchTile>(toggle).disabled, isTrue);
   });
 
-  testWidgets(
-    'each clear: text only, confirmation, its own category, no double send, closes after backend success',
-    (tester) async {
-      final repo = _Repo(Map.of(_regular));
-      await _open(tester, repo);
-      for (final (key, category, title, confirm) in [
-        (
-          'clear-favorites',
-          'favorites',
-          'Limpar favoritos?',
-          'Limpar favoritos',
-        ),
-        ('clear-watched', 'watched', 'Limpar assistidos?', 'Limpar histórico'),
-        (
-          'clear-continueWatching',
-          'progress',
-          'Limpar Continuar assistindo?',
-          'Limpar Continuar assistindo',
-        ),
-      ]) {
-        final button = tester.widget<AppButton>(find.byKey(ValueKey(key)));
-        expect(
-          [button.icon, button.leading],
-          [null, null],
-          reason: 'text only',
-        );
-        repo.calls.clear();
-        repo.gate = Completer<void>();
-        await _tap(tester, find.byKey(ValueKey(key)));
-        expect(find.text(title), findsOneWidget);
-        final confirmButton = find.descendant(
-          of: find.byType(AppModalSheet),
-          matching: find.text(confirm),
-        );
-        await tester.tap(confirmButton);
-        await tester.pump();
-        await tester.tap(confirmButton, warnIfMissed: false);
-        await tester.pump();
-        expect(repo.actions.length, 1);
-        expect(repo.actions.single.$2['category'], category);
-        expect(
-          find.text(title),
-          findsOneWidget,
-          reason: 'stays open until the backend confirms',
-        );
-        repo.gate!.complete();
-        repo.gate = null;
-        await tester.pumpAndSettle();
-        expect(find.text(title), findsNothing);
-        expect(find.text('Dados excluídos.'), findsOneWidget);
-        await _tap(tester, find.text('Fechar'));
-      }
-    },
-  );
-
-  testWidgets(
-    'a failed clear keeps the sheet open with the error and allows retry',
-    (tester) async {
-      final repo = _Repo(Map.of(_regular))
-        ..failure = const AppFailure('clear-failed');
-      await _open(tester, repo);
-      await _tap(tester, find.byKey(const ValueKey('clear-watched')));
-      await _tap(
-        tester,
-        find.descendant(
-          of: find.byType(AppModalSheet),
-          matching: find.text('Limpar histórico'),
-        ),
-      );
-      expect(find.text('Limpar assistidos?'), findsOneWidget);
-      expect(find.byKey(const Key('confirm-and-run-error')), findsOneWidget);
-      expect(find.text('Dados excluídos.'), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'guest: toggle and permissions, no content; kids: mandatory restriction, no adult switch',
-    (tester) async {
-      final guest = _Repo({
-        'name': 'Visitante',
-        'type': 'guest',
-        'enabled': true,
-      });
-      await _open(tester, guest);
-      expect(find.text('Visitante'), findsWidgets);
-      expect(find.byKey(const Key('guest-enabled')), findsOneWidget);
-      expect(find.byKey(const Key('limits-adult')), findsOneWidget);
-      expect(find.byKey(const ValueKey('library-favorites')), findsNothing);
-      expect(guest.calls.where((c) => c.$1 == 'readProfileLibrary'), isEmpty);
-      await _tap(tester, find.byKey(const Key('guest-enabled')));
-      expect(guest.actions.single.$1, 'setGuestEnabled');
-      expect(guest.actions.single.$2['enabled'], false);
-
-      final kids = _Repo({
-        'name': 'Lia',
-        'type': 'kids',
-        'linkedUid': null,
-        'permissions': {'allSpaces': false, 'spaces': []},
-      });
-      await tester.pumpWidget(const SizedBox());
-      await _open(tester, kids);
-      expect(find.text('Infantil'), findsOneWidget);
-      expect(
-        find.textContaining('Perfis infantis recebem somente'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('limits-adult')), findsNothing);
-      await _tap(tester, find.byKey(const Key('space-s1-movie')));
-      expect(kids.actions.single.$1, 'setProfilePermissions');
-      expect(kids.actions.single.$2['spaces'], ['s1:movie']);
-    },
-  );
-
-  testWidgets(
-    'administrator: adult content limit and sections; no PIN of another member',
-    (tester) async {
-      final repo = _Repo(Map.of(_regular))
-        ..members = [
-          Entry('m9', const {'name': 'João', 'lastActiveAt': 1767349800000}),
-        ];
-      repo.profile = {...repo.profile, 'linkedUid': 'm9'};
-      await _open(tester, repo);
-      // Header: last sync of the linked account, only here.
-      expect(find.byKey(const Key('member-last-sync')), findsOneWidget);
-      expect(find.textContaining('Última sincronização:'), findsOneWidget);
-      expect(find.text('Membro'), findsOneWidget);
-      await _tap(tester, find.byKey(const Key('limits-adult')));
-      expect(repo.actions.single.$1, 'setProfilePermissions');
-      expect(repo.actions.single.$2['adult'], false);
-      expect(find.byKey(const Key('personal-pin')), findsNothing);
-      expect(find.byKey(const Key('remove-from-family')), findsOneWidget);
-    },
-  );
-
-  testWidgets('administrator on the own profile: only the adult content switch', (
+  testWidgets('header: no account link text; last sync inside a card', (
     tester,
   ) async {
-    final repo = _Repo({
-      'name': 'Admin',
-      'type': 'admin',
-      'linkedUid': 'u',
-      'permissions': {'allSpaces': true, 'spaces': [], 'adult': true},
-    });
+    final repo = _Repo({..._regular, 'linkedUid': 'm1'})
+      ..members = [
+        Entry('m1', const {'name': 'João', 'lastActiveAt': 1767349800000}),
+      ];
     await _open(tester, repo);
-    final adult = tester.widget<NeumorphicSwitchTile>(
-      find.byKey(const Key('limits-adult')),
+    expect(find.byKey(const Key('profile-link-status')), findsNothing);
+    expect(find.text('Conta vinculada'), findsNothing);
+    expect(find.text('Sem conta vinculada'), findsNothing);
+    final sync = find.byKey(const Key('member-last-sync'));
+    expect(sync, findsOneWidget);
+    expect(tester.widget<EntryTile>(sync).title, 'Última sincronização');
+    expect(find.text('Administrador acessa todos os espaços'), findsNothing);
+    expect(find.byKey(const Key('parental-control')), findsNothing);
+  });
+
+  testWidgets('one card per list, in order, with only its name and count', (
+    tester,
+  ) async {
+    final repo = _Repo({..._regular, 'linkedUid': 'u'});
+    await _open(tester, repo);
+    final cards = [
+      for (final k in ['continueWatching', 'favorites', 'wishlist', 'watched'])
+        find.byKey(ValueKey('library-$k')),
+    ];
+    final tops = [for (final c in cards) tester.getTopLeft(c).dy];
+    expect(tops, [...tops]..sort(), reason: 'mandatory order');
+    expect(
+      [for (final c in cards) tester.widget<EntryTile>(c).title],
+      ['Continuar assistindo', 'Favoritos', 'Lista de desejos', 'Assistidos'],
     );
-    expect([adult.value, adult.disabled], [true, false]);
-    // Fontes e seções seguem protegidas para o administrador.
-    expect(find.byKey(const Key('all-spaces')), findsNothing);
-    await _tap(tester, find.byKey(const Key('limits-adult')));
-    expect(repo.actions.single.$1, 'setProfilePermissions');
-    expect(repo.actions.single.$2['adult'], false);
+    for (final (k, n) in [
+      ('continueWatching', '2'),
+      ('favorites', '4'),
+      ('wishlist', '1'),
+      ('watched', '1'),
+    ]) {
+      expect(
+        tester.widget<Text>(find.byKey(ValueKey('library-$k-count'))).data,
+        n,
+      );
+    }
+    // The titles themselves only appear on the list page.
+    expect(find.text('Missão Fictícia'), findsNothing);
+  });
+
+  testWidgets('order: lists, then the PIN card, then Conteúdo', (tester) async {
+    final repo = _Repo({..._regular, 'linkedUid': 'u'});
+    await _open(tester, repo);
+    double y(Finder f) => tester.getTopLeft(f).dy;
+    final watched = y(find.byKey(const ValueKey('library-watched')));
+    final pin = y(find.byKey(const Key('personal-pin')));
+    final content = y(find.text('Conteúdo'));
+    final kids = y(find.byKey(const Key('kids-account-toggle')));
+    final channel = y(find.byKey(const Key('content-channel')));
+    expect(watched < pin && pin < content && content < kids, isTrue);
+    expect(kids < channel, isTrue, reason: 'Conta infantil comes first');
+    expect(find.byKey(const Key('personal-pin-set')), findsNothing);
+  });
+
+  testWidgets('administrator sets the types and adult content of a member', (
+    tester,
+  ) async {
+    final repo = _Repo(Map.of(_regular));
+    await _open(tester, repo);
+    for (final k in ['channel', 'movie', 'series', 'adult']) {
+      final t = tester.widget<NeumorphicSwitchTile>(
+        find.byKey(Key('content-$k')),
+      );
+      expect(t.value, isTrue, reason: k);
+      expect(t.disabled, isFalse, reason: k);
+    }
+    await _tap(tester, find.byKey(const Key('content-movie')));
+    expect(repo.actions.last.$1, 'setProfilePermissions');
+    expect(repo.actions.last.$2, {
+      'profileId': 'p1',
+      'kinds': ['channel', 'series'],
+    });
+    await _tap(tester, find.byKey(const Key('content-adult')));
+    expect(repo.actions.last.$1, 'setProfilePermissions');
+    expect(repo.actions.last.$2, {'profileId': 'p1', 'adult': false});
+    // No PIN card for another member's profile.
+    expect(find.byKey(const Key('personal-pin')), findsNothing);
   });
 
   testWidgets(
-    'member on its own profile: preferences within the limits, its own PIN, no administration',
+    'member on its own profile: narrows its types, never the adult content',
     (tester) async {
       final repo = _Repo({
         'name': 'Rui',
         'type': 'regular',
         'linkedUid': 'u',
-        'permissions': {'allSpaces': true, 'spaces': [], 'adult': false},
+        'permissions': {
+          'allSpaces': true,
+          'spaces': [],
+          'kinds': ['channel', 'movie'],
+        },
       }, admin: false);
       await _open(tester, repo);
-      expect(find.byKey(const Key('limits-adult')), findsNothing);
-      expect(find.byKey(const ValueKey('clear-favorites')), findsNothing);
+      NeumorphicSwitchTile tile(String k) =>
+          tester.widget(find.byKey(Key('content-$k')));
+      expect(tile('series').value, isFalse);
+      expect(tile('series').disabled, isTrue);
+      expect(tile('series').subtitle, 'Não permitido pelo administrador');
+      expect(tile('adult').disabled, isTrue);
+      await _tap(tester, find.byKey(const Key('content-channel')));
+      expect(repo.actions.last.$1, 'setProfilePreferences');
+      expect(repo.actions.last.$2, {
+        'kinds': ['movie'],
+      });
+      // Its own lists and PIN; no administration; can leave.
+      expect(find.byKey(const ValueKey('library-favorites')), findsOneWidget);
+      expect(find.byKey(const Key('personal-pin')), findsOneWidget);
       expect(find.byKey(const Key('remove-profile')), findsNothing);
-      // Adult content not allowed by the administrator: cannot be turned on.
-      final adult = tester.widget<NeumorphicSwitchTile>(
-        find.byKey(const Key('preferences-adult')),
-      );
-      expect([adult.value, adult.disabled], [false, true]);
-      expect(find.text('Não permitido pelo administrador'), findsOneWidget);
-      // Narrowing the sections: only its own preferences.
-      await _tap(tester, find.byKey(const Key('pref-s1-channel')));
-      expect(repo.actions.single.$1, 'setProfilePreferences');
-      expect(repo.actions.single.$2['spaces'], ['s1:movie', 's1:series']);
-      // Personal PIN: only here, set by the account itself.
-      repo.calls.clear();
-      await _tap(tester, find.byKey(const Key('personal-pin-set')));
-      await tester.enterText(find.byKey(const Key('personal-pin-new')), '1234');
-      await tester.enterText(
-        find.byKey(const Key('personal-pin-confirm')),
-        '1234',
-      );
-      await _tap(tester, find.byKey(const Key('personal-pin-save')));
-      expect(repo.actions.single.$1, 'setPersonalPin');
-      expect(repo.actions.single.$2, {'pin': '1234', 'confirmPin': '1234'});
       expect(find.byKey(const Key('leave-family')), findsOneWidget);
     },
   );
 
-  testWidgets('changing an existing PIN asks for the current one', (
+  testWidgets('member viewing another member: everything read-only', (
+    tester,
+  ) async {
+    final repo = _Repo({
+      ..._regular,
+      'linkedUid': 'someone-else',
+    }, admin: false);
+    await _open(tester, repo);
+    for (final k in ['channel', 'movie', 'series', 'adult']) {
+      expect(
+        tester
+            .widget<NeumorphicSwitchTile>(find.byKey(Key('content-$k')))
+            .disabled,
+        isTrue,
+        reason: k,
+      );
+    }
+    expect(
+      tester
+          .widget<NeumorphicSwitchTile>(
+            find.byKey(const Key('kids-account-toggle')),
+          )
+          .disabled,
+      isTrue,
+    );
+    expect(find.byKey(const ValueKey('library-favorites')), findsNothing);
+    expect(find.byKey(const Key('personal-pin')), findsNothing);
+    expect(find.byKey(const Key('remove-profile')), findsNothing);
+    expect(find.byKey(const Key('leave-family')), findsNothing);
+    expect(repo.actions, isEmpty);
+  });
+
+  testWidgets('kids profile never shows the adult content switch', (
+    tester,
+  ) async {
+    final repo = _Repo({..._regular, 'type': 'kids'});
+    await _open(tester, repo);
+    expect(find.byKey(const Key('content-adult')), findsNothing);
+    expect(find.byKey(const Key('content-channel')), findsOneWidget);
+  });
+
+  testWidgets('guest: on/off switch and content, no lists nor kids switch', (
+    tester,
+  ) async {
+    final repo = _Repo({
+      'name': 'Visitante',
+      'type': 'guest',
+      'enabled': true,
+      'permissions': {'allSpaces': true, 'spaces': []},
+    });
+    await _open(tester, repo);
+    expect(find.byKey(const Key('guest-enabled')), findsOneWidget);
+    expect(find.byKey(const Key('kids-account-toggle')), findsNothing);
+    expect(find.byKey(const ValueKey('library-favorites')), findsNothing);
+    expect(find.byKey(const Key('content-adult')), findsOneWidget);
+  });
+
+  testWidgets('administrator on its own profile: own types and adult content', (
+    tester,
+  ) async {
+    final repo = _Repo({'name': 'Admin', 'type': 'admin', 'linkedUid': 'u'});
+    await _open(tester, repo);
+    expect(find.byKey(const Key('kids-account-toggle')), findsNothing);
+    await _tap(tester, find.byKey(const Key('content-series')));
+    expect(repo.actions.last.$1, 'setProfilePreferences');
+    expect(repo.actions.last.$2, {
+      'kinds': ['channel', 'movie'],
+    });
+    await _tap(tester, find.byKey(const Key('content-adult')));
+    expect(repo.actions.last.$1, 'setProfilePermissions');
+    expect(repo.actions.last.$2, {'profileId': 'p1', 'adult': false});
+    expect(find.byKey(const Key('personal-pin')), findsOneWidget);
+  });
+
+  testWidgets('PIN card: off opens the form to turn it on', (tester) async {
+    final repo = _Repo({..._regular, 'linkedUid': 'u'}, admin: false);
+    await _open(tester, repo);
+    expect(find.text('Desativado'), findsOneWidget);
+    await _tap(tester, find.byKey(const Key('personal-pin')));
+    expect(find.byKey(const Key('personal-pin-current')), findsNothing);
+    await tester.enterText(find.byKey(const Key('personal-pin-new')), '2468');
+    await tester.enterText(
+      find.byKey(const Key('personal-pin-confirm')),
+      '2468',
+    );
+    await _tap(tester, find.byKey(const Key('personal-pin-save')));
+    expect(repo.actions.single.$1, 'setPersonalPin');
+    expect(repo.actions.single.$2, {'pin': '2468', 'confirmPin': '2468'});
+  });
+
+  testWidgets('PIN card: on offers change or turn off; both ask the current', (
     tester,
   ) async {
     final repo = _Repo({
@@ -502,6 +421,8 @@ void main() {
     }, admin: false);
     await _open(tester, repo);
     expect(find.text('Ativado'), findsOneWidget);
+    await _tap(tester, find.byKey(const Key('personal-pin')));
+    expect(find.byKey(const Key('personal-pin-change')), findsOneWidget);
     await _tap(tester, find.byKey(const Key('personal-pin-remove')));
     await tester.enterText(
       find.byKey(const Key('personal-pin-current')),
@@ -517,7 +438,6 @@ void main() {
     (tester) async {
       final repo = _Repo(Map.of(_regular));
       await _open(tester, repo);
-      expect(find.text('Sem conta vinculada'), findsOneWidget);
       await _tap(tester, find.text('Vincular com conta'));
       expect(repo.actions.single.$1, 'createProfileLinkCode');
       expect(find.byKey(const Key('profile-link-code')), findsOneWidget);
@@ -529,4 +449,141 @@ void main() {
       );
     },
   );
+
+  group('list page', () {
+    Future<void> openList(
+      WidgetTester tester,
+      _Repo repo,
+      LibraryKind kind,
+    ) async {
+      tester.view.physicalSize = const Size(1170, 4000);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      HttpOverrides.global = FakeImageHttpOverrides();
+      addTearDown(() => HttpOverrides.global = null);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [repositoryProvider.overrideWithValue(repo)],
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            locale: const Locale('pt', 'BR'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ProfileLibraryPage(profileId: 'p1', kind: kind),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('titles as a grid with the content type tabs', (tester) async {
+      final repo = _Repo({..._regular, 'linkedUid': 'u'});
+      await openList(tester, repo, LibraryKind.favorites);
+      expect(find.text('Favoritos'), findsOneWidget);
+      expect(find.byKey(const Key('library-grid')), findsOneWidget);
+      // First type with content: channels.
+      expect(find.text('Canal Esportes'), findsOneWidget);
+      await _tap(tester, find.text('Filmes'));
+      expect(find.text('Filme Favorito'), findsOneWidget);
+      expect(find.text('Fora do IPTV'), findsOneWidget);
+      await _tap(tester, find.text('Séries'));
+      expect(find.text('Série Favorita'), findsOneWidget);
+    });
+
+    for (final (kind, category, title) in [
+      (
+        LibraryKind.continueWatching,
+        'progress',
+        'Limpar Continuar assistindo?',
+      ),
+      (LibraryKind.favorites, 'favorites', 'Limpar favoritos?'),
+      (LibraryKind.wishlist, 'wishlist', 'Limpar lista de desejos?'),
+      (LibraryKind.watched, 'watched', 'Limpar assistidos?'),
+    ]) {
+      testWidgets('${kind.name}: app bar clear with confirmation', (
+        tester,
+      ) async {
+        final repo = _Repo({..._regular, 'linkedUid': 'u'})
+          ..gate = Completer<void>();
+        await openList(tester, repo, kind);
+        await _tap(tester, find.byKey(const Key('library-clear')));
+        expect(find.text(title), findsOneWidget);
+        final confirm = find.descendant(
+          of: find.byType(AppModalSheet),
+          matching: find.byType(AppButton),
+        );
+        await tester.tap(confirm.first);
+        await tester.pump();
+        await tester.tap(confirm.first, warnIfMissed: false);
+        await tester.pump();
+        expect(repo.actions.length, 1, reason: 'no double send');
+        expect(repo.actions.single.$1, 'clearProfileData');
+        expect(repo.actions.single.$2['category'], category);
+        expect(find.text(title), findsOneWidget, reason: 'waits the backend');
+        repo.gate!.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('Dados excluídos.'), findsOneWidget);
+      });
+    }
+
+    testWidgets('cancelling a clear changes nothing', (tester) async {
+      final repo = _Repo({..._regular, 'linkedUid': 'u'});
+      await openList(tester, repo, LibraryKind.watched);
+      await _tap(tester, find.byKey(const Key('library-clear')));
+      await _tap(tester, find.text('Cancelar'));
+      expect(repo.actions, isEmpty);
+    });
+
+    testWidgets('a failed clear keeps the sheet open with the error', (
+      tester,
+    ) async {
+      final repo = _Repo({..._regular, 'linkedUid': 'u'})
+        ..failure = const AppFailure('clear-in-progress');
+      await openList(tester, repo, LibraryKind.favorites);
+      await _tap(tester, find.byKey(const Key('library-clear')));
+      final confirm = find.descendant(
+        of: find.byType(AppModalSheet),
+        matching: find.byType(AppButton),
+      );
+      await _tap(tester, confirm.first);
+      expect(find.byKey(const Key('confirm-and-run-error')), findsOneWidget);
+      expect(find.text('Limpar favoritos?'), findsOneWidget);
+    });
+
+    testWidgets('another member’s list: no clear button', (tester) async {
+      final repo = _Repo({
+        ..._regular,
+        'linkedUid': 'someone-else',
+      }, admin: false);
+      await openList(tester, repo, LibraryKind.favorites);
+      expect(find.byKey(const Key('library-clear')), findsNothing);
+    });
+  });
+
+  testWidgets('screenshot: member on its own profile', (tester) async {
+    if (!const bool.fromEnvironment('SCREENSHOTS')) return;
+    tester.view.physicalSize = const Size(1170, 4200);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final repo =
+        _Repo({
+            'name': 'Rui',
+            'type': 'regular',
+            'linkedUid': 'u',
+            'personalPin': {'configured': true},
+            'permissions': {
+              'allSpaces': true,
+              'spaces': [],
+              'kinds': ['channel', 'movie'],
+            },
+          }, admin: false)
+          ..members = [
+            Entry('u', const {'name': 'Rui', 'lastActiveAt': 1767349800000}),
+          ];
+    await tester.pumpWidget(
+      RepaintBoundary(key: const Key('screen'), child: _host(repo)),
+    );
+    await tester.pumpAndSettle();
+    await fixtures.screenshot(tester, 'member-own');
+  });
 }

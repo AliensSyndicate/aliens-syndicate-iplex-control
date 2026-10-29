@@ -388,9 +388,9 @@ void main() {
     final c = await launch(
       tester,
       SessionRepository(uid: 'u', linked: true),
-      location: '/users/u/favorites?sort=recent',
+      location: '/users/u/library/favorites?sort=recent',
     );
-    expect(path(c), '/users/u/favorites');
+    expect(path(c), '/users/u/library/favorites');
     expect(find.text('Favorites'), findsWidgets);
   });
   testWidgets('member deep link cannot bypass administrative permission', (

@@ -4,7 +4,6 @@ import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/repository.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/parental_control_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/watch_on_tv/watch_on_tv_sheet.dart';
 import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -13,13 +12,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Contract v1 fake: devices, play request status written by the "backend".
 class _Repo implements ManagerRepository {
-  _Repo({
-    this.devices = const [],
-    this.admin = true,
-    this.pinConfigured = false,
-  });
+  _Repo({this.devices = const []});
   final List<Entry> devices;
-  final bool admin, pinConfigured;
   final calls = <(String, Map<String, dynamic>)>[];
   final request = StreamController<Entry?>.broadcast();
   Object? failure;
@@ -34,14 +28,8 @@ class _Repo implements ManagerRepository {
     Account(uid: uid, name: 'Ana', email: 'a@example.invalid', familyId: 'f'),
   );
   @override
-  Stream<Family?> watchFamily(String id) => Stream.value(
-    Family(
-      id: id,
-      adminId: admin ? 'u' : 'x',
-      members: {'u': admin ? 'admin' : 'member'},
-      parentalPinConfigured: pinConfigured,
-    ),
-  );
+  Stream<Family?> watchFamily(String id) =>
+      Stream.value(Family(id: id, adminId: 'u', members: const {'u': 'admin'}));
   @override
   Stream<List<Entry>> watchEntries(String familyId, String collection) =>
       Stream.value(
@@ -283,58 +271,5 @@ void main() {
       }).map((e) => '${e.season}:${e.id}'),
       ['1:1', '2:5'],
     );
-  });
-
-  testWidgets(
-    'parental control: admin sets a 4-digit PIN checked by the backend',
-    (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(430, 1600);
-      addTearDown(tester.view.reset);
-      final repo = _Repo();
-      await tester.pumpWidget(
-        _host(const ParentalControlPage(), repo, page: true),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('PIN parental não definido'), findsOneWidget);
-      expect(find.textContaining('Há um perfil infantil'), findsOneWidget);
-      expect(find.byKey(const Key('parental-set')), findsOneWidget);
-      await tester.ensureVisible(find.byKey(const Key('parental-set')));
-      await tester.tap(find.byKey(const Key('parental-set')));
-      await tester.pumpAndSettle();
-      expect(find.byType(TextFormField), findsNWidgets(2));
-      await tester.enterText(find.byType(TextFormField).at(0), '12');
-      await tester.enterText(find.byType(TextFormField).at(1), '12');
-      await tester.tap(find.byKey(const Key('parental-save')));
-      await tester.pumpAndSettle();
-      expect(find.text('Use 4 dígitos.'), findsWidgets);
-      expect(repo.calls.where((c) => c.$1 == 'setParentalPin'), isEmpty);
-      await tester.enterText(find.byType(TextFormField).at(0), '2468');
-      await tester.enterText(find.byType(TextFormField).at(1), '2468');
-      await tester.tap(find.byKey(const Key('parental-save')));
-      await tester.pumpAndSettle();
-      expect(repo.calls.last.$1, 'setParentalPin');
-      expect(repo.calls.last.$2, {'pin': '2468', 'confirmPin': '2468'});
-      expect(find.text('PIN parental salvo.'), findsOneWidget);
-    },
-  );
-
-  testWidgets('parental control: members see the status but cannot change it', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(430, 1600);
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      _host(
-        const ParentalControlPage(),
-        _Repo(admin: false, pinConfigured: true),
-        page: true,
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('PIN parental definido'), findsOneWidget);
-    expect(find.byKey(const Key('parental-set')), findsNothing);
-    expect(find.byKey(const Key('parental-remove')), findsNothing);
   });
 }

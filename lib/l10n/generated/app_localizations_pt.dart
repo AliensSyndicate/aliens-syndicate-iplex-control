@@ -1722,4 +1722,29 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get helpNoResultsBody =>
       'Tente outras palavras ou limpe a busca para ver todas as perguntas.';
+
+  @override
+  String get contentSection => 'Conteúdo';
+
+  @override
+  String get contentChannels => 'Canais';
+
+  @override
+  String get lastSyncTitle => 'Última sincronização';
+
+  @override
+  String clearFavoritesBody(String name) {
+    return 'Todos os favoritos de $name serão excluídos permanentemente. Esta ação não pode ser desfeita. A exclusão será sincronizada com todos os dispositivos.';
+  }
+
+  @override
+  String get clearWishlist => 'Limpar lista de desejos';
+
+  @override
+  String get clearWishlistTitle => 'Limpar lista de desejos?';
+
+  @override
+  String clearWishlistBody(String name) {
+    return 'Toda a lista de desejos de $name será excluída permanentemente. Esta ação não pode ser desfeita. A exclusão será sincronizada com todos os dispositivos.';
+  }
 }

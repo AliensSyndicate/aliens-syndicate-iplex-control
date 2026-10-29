@@ -7,6 +7,7 @@
 import {z} from 'zod';
 import {DomainError, hash, idSchema} from './domain';
 import {isAdultContent} from './content_audience';
+import {spaceAllowed} from './family_profiles';
 import {authorize, canSee, load, type Viewer} from './iptv_catalog_access';
 import {ITEM_SETS, MAX_DELTA_CHAIN, SET_NAMES, persistCatalogSets, readChunk, readDeltaChunk, readManifest, type CatalogManifest, type SetName, type SetRecord} from './catalog_sets';
 import type {Identity} from './service';
@@ -26,14 +27,14 @@ function visibleRecords(viewer: Viewer, sourceId: string, set: SetName, records:
   if (set === 'adult_categories') {
     if (!adultEnabled(viewer)) return [];
     if (!viewer) return records;
-    return records.filter(r => viewer.permissions.allSpaces || viewer.permissions.spaces.includes(`${sourceId}:${String(r.kind)}`));
+    return records.filter(r => spaceAllowed(viewer.permissions, sourceId, String(r.kind)));
   }
   if (isItemSet(set)) return records.filter(r => canSee(viewer, sourceId, r as unknown as Parameters<typeof canSee>[2]));
   // Categorias: sem permissão para o tipo/adulto, o nome nem é enviado (vazias são ocultadas pelo cliente).
   if (!viewer) return records;
   return records.filter(r => {
     const kind = String(r.kind);
-    if (!viewer.permissions.allSpaces && !viewer.permissions.spaces.includes(`${sourceId}:${kind}`)) return false;
+    if (!spaceAllowed(viewer.permissions, sourceId, kind)) return false;
     return viewer.permissions.adult || !isAdultContent({category: String(r.name ?? '')});
   });
 }
@@ -44,7 +45,7 @@ const shape = (viewer: Viewer, sourceId: string, version: string, set: SetName, 
 
 /** Impressão digital do que este perfil pode ver: se mudar (adulto, espaços, tipo), o cache da TV é refeito. */
 const viewerFingerprint = (viewer: Viewer) =>
-  hash(JSON.stringify(viewer ? {t: viewer.type, a: viewer.permissions.adult, all: viewer.permissions.allSpaces, s: [...viewer.permissions.spaces].sort()} : null));
+  hash(JSON.stringify(viewer ? {t: viewer.type, a: viewer.permissions.adult, all: viewer.permissions.allSpaces, s: [...viewer.permissions.spaces].sort(), k: viewer.permissions.kinds} : null));
 
 async function currentManifest(actor: Identity, input: Record<string, unknown>) {
   const id = idSchema.parse(input.id), access = await authorize(actor, id, false, input.profileId);

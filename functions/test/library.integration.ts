@@ -115,7 +115,8 @@ test('library: editorial titles saved without IPTV, no duplicates across sources
   assert.ok((await tvCall('readPlayerLibrary',{profileId:'admin'},tv)).wishlist.some((i:any)=>i.contentId===linked));
   assert.ok((await home()).library.wishlist.some((i:any)=>i.id===linked));
   await assert.rejects(tvCall('wishlist',{...wish,generation:99},tv),/stale-generation/);
-  await assert.rejects(tvCall('wishlist',{...wish,profileId:'guest'},tv),/session-expired|profile/);
+  // Another profile than the TV session's: refused before reaching the list.
+  await assert.rejects(tvCall('wishlist',{...wish,profileId:'guest'},tv),/session-expired|profile|permission-denied/);
   await assert.rejects(tvCall('wishlist',{...wish,kind:'channel'},tv),/invalid/);
   await assert.rejects(tvCall('wishlist',{...wish,contentId:'not-authorized'},tv),/not-found/);
   await tvCall('wishlist',{...wish,remove:true},tv);
@@ -140,10 +141,16 @@ test('library: editorial titles saved without IPTV, no duplicates across sources
   assert.equal((await execute('resolveTitle', {...ctx, kind: 'movie', tmdbId: 999, title: 'Missão Fictícia', year: 2021}, admin) as any).item, null, 'another provider tmdb id wins over the title');
   assert.equal((await execute('resolveTitle', {...ctx, kind: 'movie', tmdbId: 1001, title: 'X'}, admin) as any).item.title, 'Missão Fictícia');
 
-  // 9) "Limpar favoritos" in the Gestor clears both lists (one personal library).
+  // 9) Favoritos and Lista de desejos are cleared separately (one generation per list).
+  const wishlistBefore = (await db().collection(`families/${fid}/profiles/admin/wishlist`).get()).size;
+  assert.ok(wishlistBefore > 0);
   await execute('clearProfileData', {...ctx, profileId: 'admin', category: 'favorites', requestId: 'clear-lib-1'}, admin);
   h = await home();
-  assert.deepEqual([h.library.favorites, h.library.wishlist], [[], []]);
+  assert.deepEqual(h.library.favorites, []);
+  assert.equal((await db().collection(`families/${fid}/profiles/admin/wishlist`).get()).size, wishlistBefore, 'the wishlist is kept');
+  await execute('clearProfileData', {...ctx, profileId: 'admin', category: 'wishlist', requestId: 'clear-lib-2'}, admin);
+  h = await home();
+  assert.deepEqual(h.library.wishlist, []);
   assert.equal((await db().collection(`families/${fid}/profiles/admin/wishlist`).get()).size, 0);
   await assert.rejects(lib({list: 'wishlist', kind: 'movie', tmdbId: 1, title: 'Velho'}), /stale-generation/);
 

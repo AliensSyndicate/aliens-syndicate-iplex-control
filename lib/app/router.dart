@@ -16,13 +16,12 @@ import '../core/domain/models.dart';
 import '../features/manager/detail_page.dart';
 import '../features/manager/profile_link_redeem_page.dart';
 import '../features/manager/profile_manage_page.dart';
+import '../features/manager/widgets/profile_library.dart';
 import '../features/devices/presentation/pages/device_list_page.dart';
 import '../features/manager/about/about_page.dart';
 import '../features/manager/help/help_page.dart';
 import '../features/manager/invite_page.dart';
 import '../features/manager/name_form.dart';
-import '../features/manager/parental_control_page.dart';
-import '../features/manager/profile_data_page.dart';
 import '../features/manager/scan_page.dart';
 import '../features/manager/iptv_page.dart';
 import '../features/manager/iptv_source_form.dart';
@@ -337,13 +336,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   GoRoute(
-                    path: 'parental',
-                    pageBuilder: (c, s) => _appPage(
-                      key: s.pageKey,
-                      child: const ParentalControlPage(),
-                    ),
-                  ),
-                  GoRoute(
                     path: 'member/:id',
                     pageBuilder: (c, s) => _appPage(
                       key: s.pageKey,
@@ -373,21 +365,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                       ),
                       GoRoute(
-                        path: 'favorites',
+                        path: 'library/:kind',
+                        redirect: (c, s) =>
+                            LibraryKind.values.any(
+                              (k) => k.name == s.pathParameters['kind'],
+                            )
+                            ? null
+                            : '/users/${s.pathParameters['id']}',
                         pageBuilder: (c, s) => _appPage(
                           key: s.pageKey,
-                          child: ProfileDataPage(
+                          child: ProfileLibraryPage(
                             profileId: s.pathParameters['id']!,
-                          ),
-                        ),
-                      ),
-                      GoRoute(
-                        path: 'progress',
-                        pageBuilder: (c, s) => _appPage(
-                          key: s.pageKey,
-                          child: ProfileDataPage(
-                            profileId: s.pathParameters['id']!,
-                            progress: true,
+                            kind: LibraryKind.values.byName(
+                              s.pathParameters['kind']!,
+                            ),
                           ),
                         ),
                       ),

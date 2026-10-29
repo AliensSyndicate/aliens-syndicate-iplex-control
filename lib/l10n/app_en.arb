@@ -713,5 +713,26 @@
   "errorAlreadyLifetime": "This family already has lifetime access.",
   "helpSearchHint": "Search questions and answers",
   "helpNoResultsTitle": "No answers found",
-  "helpNoResultsBody": "Try other words or clear the search to see every question."
+  "helpNoResultsBody": "Try other words or clear the search to see every question.",
+  "contentSection": "Content",
+  "contentChannels": "Channels",
+  "lastSyncTitle": "Last sync",
+  "clearFavoritesBody": "All of {name}'s favorites will be permanently deleted. This cannot be undone. The deletion is synced to every device.",
+  "@clearFavoritesBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clearWishlist": "Clear wishlist",
+  "clearWishlistTitle": "Clear wishlist?",
+  "clearWishlistBody": "{name}'s whole wishlist will be permanently deleted. This cannot be undone. The deletion is synced to every device.",
+  "@clearWishlistBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

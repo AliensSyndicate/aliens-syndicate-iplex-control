@@ -3153,6 +3153,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try other words or clear the search to see every question.'**
   String get helpNoResultsBody;
+
+  /// No description provided for @contentSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get contentSection;
+
+  /// No description provided for @contentChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'Channels'**
+  String get contentChannels;
+
+  /// No description provided for @lastSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync'**
+  String get lastSyncTitle;
+
+  /// No description provided for @clearFavoritesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All of {name}\'s favorites will be permanently deleted. This cannot be undone. The deletion is synced to every device.'**
+  String clearFavoritesBody(String name);
+
+  /// No description provided for @clearWishlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear wishlist'**
+  String get clearWishlist;
+
+  /// No description provided for @clearWishlistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear wishlist?'**
+  String get clearWishlistTitle;
+
+  /// No description provided for @clearWishlistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s whole wishlist will be permanently deleted. This cannot be undone. The deletion is synced to every device.'**
+  String clearWishlistBody(String name);
 }
 
 class _AppLocalizationsDelegate

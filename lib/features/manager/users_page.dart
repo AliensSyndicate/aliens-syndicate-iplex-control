@@ -185,7 +185,6 @@ class _FamilyMembers extends ConsumerWidget {
           ? 'regular'
           : profile.text('type');
       final linked = byUid[profile.data['linkedUid']];
-      final own = profile.data['linkedUid'] == account?.uid;
       return EntryTile(
         key: ValueKey('profile-${profile.id}'),
         leading: AppAvatar(
@@ -195,8 +194,9 @@ class _FamilyMembers extends ConsumerWidget {
         ),
         title: profile.name,
         subtitle: roleLabel(context, type),
-        // Administrators open every member; a member only its own details.
-        onTap: admin || own ? () => context.push('/users/${profile.id}') : null,
+        // Everyone opens any card; only the administrator (and the member on
+        // its own profile) can change something there.
+        onTap: () => context.push('/users/${profile.id}'),
       );
     }
 
@@ -214,9 +214,7 @@ class _FamilyMembers extends ConsumerWidget {
             ),
             title: m.name,
             subtitle: l.roleMember,
-            onTap: admin || m.id == account?.uid
-                ? () => context.push('/users/member/${m.id}')
-                : null,
+            onTap: () => context.push('/users/member/${m.id}'),
           ),
         ),
     ]..sort((a, b) => a.$1.compareTo(b.$1));

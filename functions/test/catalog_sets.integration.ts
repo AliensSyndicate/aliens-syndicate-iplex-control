@@ -54,7 +54,8 @@ test('sincroniza → seis conjuntos no Firestore → leitura por callable → de
   assert.equal(first.status, 'ready');
   const m1 = (await readManifest(first.version))!;
   assert.ok(m1.ready); assert.equal(m1.previousVersion, null); assert.equal(m1.delta, null);
-  for (const name of SET_NAMES) assert.ok(m1.sets[name].chunks >= 1, name);
+  // The adult sets stay empty when the list has no adult content.
+  for (const name of SET_NAMES) if (!name.startsWith('adult')) assert.ok(m1.sets[name].chunks >= 1, name);
   assert.equal(m1.sets.live.count, 2); assert.equal(m1.sets.vod.count, 3); assert.equal(m1.sets.series.count, 1);
   // Categorias de M3U: ids derivados, vínculo item → categoria preservado.
   const vodRows = await readChunk(first.version, 'vod', 0), cats = await readChunk(first.version, 'vod_categories', 0);

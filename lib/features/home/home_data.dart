@@ -133,9 +133,18 @@ class HomeProgress {
 /// The account's own profile in the current scope (writes carry its generation).
 @immutable
 class HomeProfile {
-  const HomeProfile(this.id, this.name, this.type, this.favoritesGeneration);
+  const HomeProfile(
+    this.id,
+    this.name,
+    this.type,
+    this.favoritesGeneration, [
+    int? wishlistGeneration,
+  ]) : wishlistGeneration = wishlistGeneration ?? favoritesGeneration;
   final String id, name, type;
-  final int favoritesGeneration;
+
+  /// Each list has its own generation (older backends: the wishlist follows
+  /// the favorites one).
+  final int favoritesGeneration, wishlistGeneration;
   bool get persistent => type != 'guest';
 
   /// Kids profiles only see catalog items classified as children's content:
@@ -185,6 +194,7 @@ class HomeData {
               ((profile['generations'] as Map?)?['favorites'] as num?)
                       ?.toInt() ??
                   0,
+              ((profile['generations'] as Map?)?['wishlist'] as num?)?.toInt(),
             )
           : null,
       favoriteIds: {

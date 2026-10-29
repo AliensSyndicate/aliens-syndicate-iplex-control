@@ -47,7 +47,9 @@ Future<void> saveToLibrary(
   final year = metadata?.year ?? item.year;
   await ref.read(repositoryProvider).mutate('saveLibraryItem', {
     'profileId': profile.id,
-    'generation': profile.favoritesGeneration,
+    'generation': list == LibraryList.wishlist
+        ? profile.wishlistGeneration
+        : profile.favoritesGeneration,
     'list': list.name,
     'kind': item.kind,
     if (!item.isEditorial) ...{'contentId': item.id, 'sourceId': item.sourceId},

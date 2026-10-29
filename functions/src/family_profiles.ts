@@ -15,9 +15,10 @@ import {hashParentalPin, matchesParentalPin, PARENTAL_PIN} from './parental';
  * profiles count as regular) and one optional guest with the fixed id "guest".
  */
 export type ProfileType = 'admin' | 'regular' | 'kids' | 'guest';
-export type DataCategory = 'favorites' | 'watched' | 'progress';
-export const DATA_CATEGORIES: DataCategory[] = ['favorites', 'watched', 'progress'];
-export const CATEGORY_COLLECTION: Record<DataCategory, string> = {favorites: 'favorites', watched: 'watched', progress: 'watch_progress'};
+/** Each list has its own generation; `wishlist` falls back to `favorites` on profiles written before it existed. */
+export type DataCategory = 'favorites' | 'wishlist' | 'watched' | 'progress';
+export const DATA_CATEGORIES: DataCategory[] = ['favorites', 'wishlist', 'watched', 'progress'];
+export const CATEGORY_COLLECTION: Record<DataCategory, string> = {favorites: 'favorites', wishlist: 'wishlist', watched: 'watched', progress: 'watch_progress'};
 const LEGACY_TOP_LEVEL: Partial<Record<DataCategory, string>> = {favorites: 'profile_favorites', progress: 'profile_progress'};
 export const MAX_ASSOCIATES = 4;
 export const GUEST_ID = 'guest';
@@ -28,33 +29,53 @@ const PAGE = 400;
 export const LINK_CODE = /^[A-Z0-9]{8}$/;
 export const spaceSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}:(channel|movie|series)$/);
 
-export type Permissions = {allSpaces: boolean; spaces: string[]; adult: boolean};
+export type ContentKind = 'channel' | 'movie' | 'series';
+export const CONTENT_KINDS: ContentKind[] = ['channel', 'movie', 'series'];
+const kindsSchema = z.array(z.enum(['channel', 'movie', 'series'])).max(3);
+/** `kinds`: content types allowed in every IPTV source (Canais, Filmes, Séries); `spaces` narrows per source (legacy). */
+export type Permissions = {allSpaces: boolean; spaces: string[]; adult: boolean; kinds: ContentKind[]};
 /** The member's own restrictions (never wider than the administrator's limits). */
-export type Preferences = {adult: boolean; spaces: string[] | null};
+export type Preferences = {adult: boolean; spaces: string[] | null; kinds: ContentKind[] | null};
 export type ProfileView = {id: string; name: string; type: ProfileType; linkedUid: string | null; enabled: boolean;
   /** Effective permissions: administrator limits combined with the member's preferences. */
   permissions: Permissions; limits: Permissions; preferences: Preferences;
-  generations: Record<DataCategory, number>; permissionsVersion: number};
+  generations: Record<DataCategory, number>; permissionsVersion: number;
+  /** The profile has a personal PIN: the TV asks for it to open the profile and to play adult content. */
+  pinConfigured: boolean};
+
+/** Whether [permissions] let a profile see [kind] content of [sourceId]. */
+export function spaceAllowed(permissions: Permissions, sourceId: string, kind: string) {
+  return permissions.kinds.includes(kind as ContentKind) && (permissions.allSpaces || permissions.spaces.includes(`${sourceId}:${kind}`));
+}
 
 /** Effective = limits ∩ preferences: a preference can only narrow what the administrator allows. */
 export function effectivePermissions(limits: Permissions, preferences: Preferences): Permissions {
   const adult = limits.adult && preferences.adult;
-  if (!preferences.spaces) return {...limits, adult};
-  if (limits.allSpaces) return {allSpaces: false, spaces: [...preferences.spaces], adult};
-  return {allSpaces: false, spaces: limits.spaces.filter(s => preferences.spaces!.includes(s)), adult};
+  const kinds = limits.kinds.filter(k => !preferences.kinds || preferences.kinds.includes(k));
+  if (!preferences.spaces) return {...limits, adult, kinds};
+  if (limits.allSpaces) return {allSpaces: false, spaces: [...preferences.spaces], adult, kinds};
+  return {allSpaces: false, spaces: limits.spaces.filter(s => preferences.spaces!.includes(s)), adult, kinds};
 }
+
+const storedKinds = (value: unknown): ContentKind[] | null =>
+  Array.isArray(value) ? CONTENT_KINDS.filter(k => value.includes(k)) : null;
 
 export function profileView(id: string, data: FirebaseFirestore.DocumentData): ProfileView {
   const type = (['admin', 'regular', 'kids', 'guest'] as const).includes(data.type) ? data.type as ProfileType : 'regular';
   const limits: Permissions = {allSpaces: data.permissions?.allSpaces !== false, spaces: Array.isArray(data.permissions?.spaces) ? data.permissions.spaces : [],
-    adult: type !== 'kids' && data.permissions?.adult !== false};
+    adult: type !== 'kids' && data.permissions?.adult !== false,
+    // The administrator's own profile is never limited by type (only its own preferences narrow it).
+    kinds: type === 'admin' ? [...CONTENT_KINDS] : storedKinds(data.permissions?.kinds) ?? [...CONTENT_KINDS]};
   const preferences: Preferences = {adult: data.preferences?.adult !== false,
-    spaces: Array.isArray(data.preferences?.spaces) ? data.preferences.spaces : null};
+    spaces: Array.isArray(data.preferences?.spaces) ? data.preferences.spaces : null,
+    kinds: storedKinds(data.preferences?.kinds)};
+  const favorites = data.generations?.favorites ?? 0;
   return {
     id, name: String(data.name ?? ''), type, linkedUid: data.linkedUid ?? null, enabled: data.enabled !== false,
     permissions: effectivePermissions(limits, preferences), limits, preferences,
-    generations: {favorites: data.generations?.favorites ?? 0, watched: data.generations?.watched ?? 0, progress: data.generations?.progress ?? 0},
+    generations: {favorites, wishlist: data.generations?.wishlist ?? favorites, watched: data.generations?.watched ?? 0, progress: data.generations?.progress ?? 0},
     permissionsVersion: data.permissionsVersion ?? 0,
+    pinConfigured: data.personalPin?.configured === true,
   };
 }
 /** Profile linked to the calling account in this family (own data, preferences, PIN). */
@@ -82,7 +103,7 @@ export async function associateCount(tx: Transaction, family: DocumentReference)
 export function writeAdminProfile(tx: Transaction, family: DocumentReference, uid: string, name: string, now: number) {
   tx.set(family.collection('profiles').doc(ADMIN_PROFILE_ID), {
     name: name || 'Admin', type: 'admin', linkedUid: uid, enabled: true, familyId: family.id,
-    permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now,
+    permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, wishlist: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now,
   });
   tx.set(family.collection('profile_links').doc(uid), {profileId: ADMIN_PROFILE_ID, linkedAt: now});
 }
@@ -95,7 +116,7 @@ export async function linkedAssociateForAccount(tx: Transaction, family: Documen
   return () => {
     const ref = family.collection('profiles').doc();
     tx.set(ref, {name: name || 'Associado', type, linkedUid: uid, linkedAt: now, enabled: true, familyId: family.id,
-      permissions: {allSpaces: true, spaces: [], adult: type !== 'kids'}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
+      permissions: {allSpaces: true, spaces: [], adult: type !== 'kids'}, generations: {favorites: 0, wishlist: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
     tx.set(family.collection('profile_links').doc(uid), {profileId: ref.id, linkedAt: now});
   };
 }
@@ -139,7 +160,7 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     require_((await associateCount(tx, f.ref)) < MAX_ASSOCIATES, 'profile-limit');
     f.initialize();
     tx.set(ref, {name, type: requested ?? 'regular', linkedUid: null, enabled: true, familyId: f.fid, ownerId: f.data.ownerId ?? f.data.adminId,
-      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
+      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, wishlist: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
     return {id};
   });
 
@@ -148,7 +169,7 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     const enabled = z.boolean().parse(p.enabled), ref = f.ref.collection('profiles').doc(GUEST_ID), snap = await tx.get(ref);
     if (snap.exists) tx.update(ref, {enabled, updatedAt: now});
     else tx.set(ref, {name: nameSchema.parse(p.name), type: 'guest', linkedUid: null, enabled, familyId: f.fid,
-      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
+      permissions: {allSpaces: true, spaces: []}, generations: {favorites: 0, wishlist: 0, watched: 0, progress: 0}, createdAt: now, updatedAt: now});
     return {id: GUEST_ID, enabled};
   });
 
@@ -176,10 +197,12 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
       accessMarkers(tx, devices, ref.id, current.permissionsVersion + 1, now);
       return {ok: true, permissionsVersion: current.permissionsVersion + 1};
     }
-    const allSpaces = z.boolean().parse(p.allSpaces), spaces = Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces ?? [])));
-    // "Conteúdo adulto": kept when not sent (older clients).
+    // Each field is kept when not sent (older clients, or a single toggle changed).
+    const allSpaces = p.allSpaces === undefined ? current.limits.allSpaces : z.boolean().parse(p.allSpaces);
+    const spaces = p.spaces === undefined ? current.limits.spaces : Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces)));
     const adult = p.adult === undefined ? current.limits.adult : z.boolean().parse(p.adult);
-    tx.update(ref, {permissions: {allSpaces, spaces, adult}, permissionsVersion: current.permissionsVersion + 1, updatedAt: now});
+    const kinds = p.kinds === undefined ? current.limits.kinds : CONTENT_KINDS.filter(k => kindsSchema.parse(p.kinds).includes(k));
+    tx.update(ref, {permissions: {allSpaces, spaces, adult, kinds}, permissionsVersion: current.permissionsVersion + 1, updatedAt: now});
     accessMarkers(tx, devices, ref.id, current.permissionsVersion + 1, now);
     return {ok: true, permissionsVersion: current.permissionsVersion + 1};
   });
@@ -190,12 +213,19 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     const f = await resolve(tx, false, false);
     const {ref, profile} = await ownProfile(tx, f, uid);
     require_(profile.type !== 'guest', 'guest-not-persisted');
-    const adult = z.boolean().parse(p.adult);
-    const spaces = p.spaces === null || p.spaces === undefined ? null : Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces)));
+    // Each field is kept when not sent; `null` removes the member's own restriction.
+    const adult = p.adult === undefined ? profile.preferences.adult : z.boolean().parse(p.adult);
+    const spaces = p.spaces === undefined ? profile.preferences.spaces
+      : p.spaces === null ? null : Array.from(new Set(z.array(spaceSchema).max(300).parse(p.spaces)));
+    const kinds = p.kinds === undefined ? profile.preferences.kinds
+      : p.kinds === null ? null : CONTENT_KINDS.filter(k => kindsSchema.parse(p.kinds).includes(k));
     const devices = await tx.get(f.ref.collection('devices'));
-    require_(!adult || profile.limits.adult, 'beyond-limit');
+    // Adult content is decided by the administrator only: the member cannot change it.
+    require_(adult === profile.preferences.adult || profile.type === 'admin', 'permission-denied');
+    require_(p.adult === undefined || !adult || profile.limits.adult, 'beyond-limit');
     require_(!spaces || profile.limits.allSpaces || spaces.every(s => profile.limits.spaces.includes(s)), 'beyond-limit');
-    tx.update(ref, {preferences: {adult, spaces}, permissionsVersion: profile.permissionsVersion + 1, updatedAt: now});
+    require_(!kinds || kinds.every(k => profile.limits.kinds.includes(k)), 'beyond-limit');
+    tx.update(ref, {preferences: {adult, spaces, kinds}, permissionsVersion: profile.permissionsVersion + 1, updatedAt: now});
     accessMarkers(tx, devices, ref.id, profile.permissionsVersion + 1, now);
     return {ok: true, permissionsVersion: profile.permissionsVersion + 1};
   });
@@ -283,7 +313,7 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
     return {ok: true};
   });
 
-  if (action === 'clearProfileData') return clearProfileData(p, resolve);
+  if (action === 'clearProfileData') return clearProfileData(p, uid, resolve);
   throw new DomainError('invalid-action');
 }
 
@@ -293,15 +323,17 @@ export async function familyProfiles(action: string, p: Record<string, unknown>,
  * and cannot restore the data. Deletion is paginated; a job document blocks
  * concurrent clears and lets a retry with the same requestId resume or no-op.
  */
-async function clearProfileData(p: Record<string, unknown>, resolve: ScopeResolver) {
+async function clearProfileData(p: Record<string, unknown>, uid: string, resolve: ScopeResolver) {
   const db = getFirestore(), now = Date.now();
-  const profileId = idSchema.parse(p.profileId), category = z.enum(['favorites', 'watched', 'progress']).parse(p.category);
+  const profileId = idSchema.parse(p.profileId), category = z.enum(['favorites', 'wishlist', 'watched', 'progress']).parse(p.category);
   const requestId = idSchema.parse(p.requestId);
   const started = await db.runTransaction(async tx => {
-    const f = await resolve(tx, true, false);
+    const f = await resolve(tx, false, false);
     const profileRef = f.ref.collection('profiles').doc(profileId), jobRef = f.ref.collection('profile_clear_jobs').doc(`${profileId}_${category}`);
-    const [snap, job] = await tx.getAll(profileRef, jobRef);
+    const [snap, job, link] = await tx.getAll(profileRef, jobRef, f.ref.collection('profile_links').doc(uid));
     require_(snap!.exists, 'not-found');
+    // The administrator clears any profile; a member only the profile linked to its own account.
+    require_((f.data.adminUid ?? f.data.adminId) === uid || link!.data()?.profileId === profileId);
     const profile = profileView(profileId, snap!.data()!), current = job!.data();
     require_(profile.type !== 'guest', 'guest-not-persisted');
     if (current?.requestId === requestId) {
@@ -311,15 +343,14 @@ async function clearProfileData(p: Record<string, unknown>, resolve: ScopeResolv
     }
     require_(!(current?.status === 'running' && current.updatedAt > now - CLEAR_STALE_MS), 'clear-in-progress');
     const generation = profile.generations[category] + 1;
-    tx.update(profileRef, {[`generations.${category}`]: generation, updatedAt: now});
+    // Profiles older than the wishlist generation keep its current value when favorites move on.
+    tx.update(profileRef, {[`generations.${category}`]: generation, 'generations.wishlist': category === 'wishlist' ? generation : profile.generations.wishlist, updatedAt: now});
     tx.set(jobRef, {requestId, profileId, category, generation, status: 'running', startedAt: now, updatedAt: now, deleted: 0});
     return {fid: f.fid, profileRef, jobRef, generation, done: false};
   });
   if (started.done) return {ok: true, generation: started.generation};
   try {
     let deleted = await deleteOlder(started.profileRef.collection(CATEGORY_COLLECTION[category]), started.generation);
-    // Favoritos and Lista de desejos share the `favorites` generation: one personal library.
-    if (category === 'favorites') deleted += await deleteOlder(started.profileRef.collection('wishlist'), started.generation);
     const legacy = LEGACY_TOP_LEVEL[category];
     if (legacy) deleted += await deleteOlder(db.collection(legacy).where('familyId', '==', started.fid).where('profileId', '==', profileId), started.generation);
     await started.jobRef.update({status: 'completed', completedAt: Date.now(), updatedAt: Date.now(), deleted: FieldValue.increment(deleted)});

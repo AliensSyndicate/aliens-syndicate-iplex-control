@@ -15,7 +15,7 @@
  *   kind             channel | movie | series
  *   tmdbId, tmdbKey  editorial identity (optional for channels/legacy entries)
  *   title, originalTitle, year, poster (https://image.tmdb.org only)
- *   generation       profile `generations.favorites` (shared by both lists)
+ *   generation       profile `generations.favorites` or `generations.wishlist` (one per list)
  */
 import {z} from 'zod';
 import type {Transaction, DocumentReference, DocumentSnapshot} from 'firebase-admin/firestore';
@@ -88,7 +88,7 @@ export async function writeLibraryItem(tx: Transaction, profile: DocumentReferen
     for (const d of existing) tx.delete(d.ref);
     return {ok: true, saved: false};
   }
-  const current = requireWritableGeneration(view, 'favorites', generation);
+  const current = requireWritableGeneration(view, input.list === 'wishlist' ? 'wishlist' : 'favorites', generation);
   const primary = existing.find(d => d.data()?.tmdbKey === key && key) ?? existing[0];
   const docId = primary?.id ?? (key ? editorialDocId(input.kind as TitleKind, tmdbId!) : input.contentId!);
   const previous = primary?.data() ?? {};

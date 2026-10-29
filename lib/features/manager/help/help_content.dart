@@ -128,7 +128,7 @@ const _pt = [
       'Um perfil extra para convidados, ligado e desligado pelo botão no topo da aba Família. Ele não ocupa vaga de membro e não guarda favoritos, assistidos nem progresso.',
     ),
   ]),
-  HelpTopic('Infantil e controle parental', [
+  HelpTopic('Infantil e PIN', [
     HelpItem(
       'O que é um perfil Infantil?',
       'Um perfil que recebe somente conteúdo classificado como infantil pelo servidor do iPlex. Conteúdo adulto nunca aparece nele. A classificação depende das informações enviadas pelo provedor da lista.',
@@ -138,16 +138,12 @@ const _pt = [
       'Somente o administrador pode fazer isso: na aba Família, abra o cartão do membro e ative Conta infantil. Favoritos, histórico e vínculos são mantidos.',
     ),
     HelpItem(
-      'O que é o PIN parental?',
-      'Um PIN de 4 dígitos definido pelo administrador em Família › seu perfil › Controle parental. Quando existe um perfil infantil, os perfis adultos só abrem na TV com esse PIN, e ficam bloqueados até que ele seja definido.',
-    ),
-    HelpItem(
       'O que é o PIN pessoal?',
-      'Um PIN que protege o seu próprio perfil na TV. Somente você pode definir, alterar ou desativar.',
+      'Um PIN de 4 dígitos que protege o seu perfil. Na aba Família, abra o seu cartão e toque em PIN pessoal para ativar, alterar ou desativar. Com ele ativo, a TV pede o PIN para abrir o seu perfil e para tocar conteúdo adulto. Somente você pode definir.',
     ),
     HelpItem(
       'Como escolho o que cada membro pode ver?',
-      'Na aba Família, abra o cartão do membro. O administrador libera listas e tipos de conteúdo (Ao vivo, Filmes e Séries) e define se o conteúdo adulto aparece.',
+      'Na aba Família, abra o cartão do membro. Em Conteúdo, o administrador liga ou desliga Canais, Filmes, Séries e Conteúdo adulto, valendo para todas as listas. O próprio membro pode desligar Canais, Filmes ou Séries para si, mas só o administrador decide sobre o conteúdo adulto.',
     ),
   ]),
   HelpTopic('Favoritos e histórico', [
@@ -157,7 +153,7 @@ const _pt = [
     ),
     HelpItem(
       'Como apago favoritos, assistidos ou o progresso?',
-      'O administrador abre o cartão do perfil na aba Família e escolhe o que limpar: favoritos, assistidos ou Continuar assistindo. A exclusão é definitiva e chega a todas as TVs.',
+      'Na aba Família, abra o cartão do perfil e toque na lista: Continuar assistindo, Favoritos, Lista de desejos ou Assistidos. No topo, toque no botão de limpar e confirme. O administrador limpa as listas de qualquer perfil, e cada membro limpa as próprias. A exclusão é definitiva e chega a todas as TVs.',
     ),
   ]),
   HelpTopic('Assinatura', [
@@ -315,7 +311,7 @@ const _en = [
       'An extra profile for visitors, turned on and off with the button at the top of the Family tab. It does not use a member slot and never saves favorites, watched titles or progress.',
     ),
   ]),
-  HelpTopic('Kids and parental control', [
+  HelpTopic('Kids and PIN', [
     HelpItem(
       'What is a Kids profile?',
       'A profile that only receives content classified as children’s content by the iPlex server. Adult content never appears there. The classification depends on the information sent by the list provider.',
@@ -325,16 +321,12 @@ const _en = [
       'Only the administrator can: in the Family tab, open the member’s card and turn on Child account. Favorites, history and links are kept.',
     ),
     HelpItem(
-      'What is the parental PIN?',
-      'A 4-digit PIN the administrator sets in Family › your profile › Parental control. When there is a Kids profile, adult profiles only open on the TV with this PIN and stay locked until it is set.',
-    ),
-    HelpItem(
       'What is the personal PIN?',
-      'A PIN that protects your own profile on the TV. Only you can set, change or turn it off.',
+      'A 4-digit PIN that protects your profile. In the Family tab, open your card and tap Personal PIN to turn it on, change it or turn it off. When it is on, the TV asks for it to open your profile and to play adult content. Only you can set it.',
     ),
     HelpItem(
       'How do I choose what each member can see?',
-      'In the Family tab, open the member’s card. The administrator allows lists and content types (Live, Movies and Series) and decides whether adult content appears.',
+      'In the Family tab, open the member’s card. Under Content, the administrator turns Channels, Movies, Series and Adult content on or off, for every list. Members can turn Channels, Movies or Series off for themselves, but only the administrator decides on adult content.',
     ),
   ]),
   HelpTopic('Favorites and history', [
@@ -344,7 +336,7 @@ const _en = [
     ),
     HelpItem(
       'How do I delete favorites, watched titles or progress?',
-      'The administrator opens the profile card in the Family tab and chooses what to clear: favorites, watched or Continue watching. Deletion is permanent and reaches every TV.',
+      'In the Family tab, open the profile card and tap the list: Continue watching, Favorites, Wishlist or Watched. At the top, tap the clear button and confirm. The administrator clears any profile’s lists, and each member clears their own. Deletion is permanent and reaches every TV.',
     ),
   ]),
   HelpTopic('Subscription', [
@@ -502,7 +494,7 @@ const _es = [
       'Un perfil extra para visitas, que se activa y desactiva con el botón de arriba en la pestaña Familia. No ocupa lugar de miembro y nunca guarda favoritos, vistos ni progreso.',
     ),
   ]),
-  HelpTopic('Infantil y control parental', [
+  HelpTopic('Infantil y PIN', [
     HelpItem(
       '¿Qué es un perfil Infantil?',
       'Un perfil que solo recibe contenido clasificado como infantil por el servidor de iPlex. El contenido adulto nunca aparece ahí. La clasificación depende de la información que envía el proveedor de la lista.',
@@ -512,16 +504,12 @@ const _es = [
       'Solo el administrador puede hacerlo: en la pestaña Familia, abre la tarjeta del miembro y activa Cuenta infantil. Se conservan favoritos, historial y vínculos.',
     ),
     HelpItem(
-      '¿Qué es el PIN parental?',
-      'Un PIN de 4 dígitos que el administrador define en Familia › tu perfil › Control parental. Cuando hay un perfil infantil, los perfiles adultos solo se abren en el televisor con ese PIN y quedan bloqueados hasta que se define.',
-    ),
-    HelpItem(
       '¿Qué es el PIN personal?',
-      'Un PIN que protege tu propio perfil en el televisor. Solo tú puedes definirlo, cambiarlo o desactivarlo.',
+      'Un PIN de 4 dígitos que protege tu perfil. En la pestaña Familia, abre tu tarjeta y toca PIN personal para activarlo, cambiarlo o desactivarlo. Activado, el televisor lo pide para abrir tu perfil y para reproducir contenido adulto. Solo tú puedes definirlo.',
     ),
     HelpItem(
       '¿Cómo elijo qué puede ver cada miembro?',
-      'En la pestaña Familia, abre la tarjeta del miembro. El administrador habilita listas y tipos de contenido (En vivo, Películas y Series) y decide si aparece contenido adulto.',
+      'En la pestaña Familia, abre la tarjeta del miembro. En Contenido, el administrador activa o desactiva Canales, Películas, Series y Contenido adulto, para todas las listas. Cada miembro puede desactivar Canales, Películas o Series para sí, pero solo el administrador decide sobre el contenido adulto.',
     ),
   ]),
   HelpTopic('Favoritos e historial', [
@@ -531,7 +519,7 @@ const _es = [
     ),
     HelpItem(
       '¿Cómo borro favoritos, vistos o el progreso?',
-      'El administrador abre la tarjeta del perfil en la pestaña Familia y elige qué borrar: favoritos, vistos o Seguir viendo. El borrado es definitivo y llega a todos los televisores.',
+      'En la pestaña Familia, abre la tarjeta del perfil y toca la lista: Seguir viendo, Favoritos, Lista de deseos o Vistos. Arriba, toca el botón de borrar y confirma. El administrador borra las listas de cualquier perfil y cada miembro borra las suyas. El borrado es definitivo y llega a todos los televisores.',
     ),
   ]),
   HelpTopic('Suscripción', [

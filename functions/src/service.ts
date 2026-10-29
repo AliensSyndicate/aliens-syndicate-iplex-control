@@ -19,7 +19,7 @@ import {iptvWorkspace} from './iptv_workspace';
 import {z} from 'zod';
 import {saveIptvSource, syncIptvSource, syncPlayerSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
 import {acquire, addMember, canStartPlayback, DomainError, hash, idSchema, Lease, LEASE_MS, nameSchema, newToken, pinSchema, seal, sourceInputSchema, sourceSchema, startTrial, Subscription, TOKEN_MS, tokenSchema, unseal} from './domain';
-import {familyHasKids, isAdultProfile, manageParentalPin, parentalGate, PIN_SESSION_MS, verifyAdultPin, verifyProfilePin} from './parental';
+import {parentalGate, PIN_SESSION_MS, verifyAdultPin, verifyProfilePin} from './parental';
 import {decideProgressWrite,parseProgressSession,type SavedProgress} from './playback_progress';
 import {reportPlayback} from './playback_status';
 import {claimPlayRequest, pendingPointer, requestPlayback, UNLINK_MARKER, updatePlayRequest} from './play_requests';
@@ -175,13 +175,11 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  if(action==='listPlayerProfiles')return db().runTransaction(async tx=>{
   const f=await playerContext(tx,a);
   const docs=(await tx.get(f.ref.collection('profiles'))).docs,rows=docs.map(d=>profileView(d.id,d.data())),profilesDeleting=docs.map(d=>d.data().deleting===true);
-  const kids=rows.some((x,i)=>x.type==='kids'&&!profilesDeleting[i]);
-  const pinConfigured=(await tx.get(f.ref.collection('private').doc('parental'))).exists;
   // Identity of the account the TV is linked to (never a viewing profile): name and provider photo only.
   const owner=(await tx.get(db().doc(`users/${f.data.adminUid??f.data.adminId}`))).data();
   // A disabled guest keeps its configuration but is not offered on the TV.
-  // pinRequired is informative for the interface; acquireSession enforces it.
-  return {parentalPin:{configured:pinConfigured},account:{name:String(owner?.name??owner?.displayName??'').slice(0,80),photoUrl:safePhotoUrl(owner?.photoUrl)},profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion,pinRequired:kids&&isAdultProfile(x)}))};
+  // pinRequired (the profile has a personal PIN) is informative for the interface; acquireSession enforces it.
+  return {account:{name:String(owner?.name??owner?.displayName??'').slice(0,80),photoUrl:safePhotoUrl(owner?.photoUrl)},profiles:rows.filter((x,i)=>(x.type!=='guest'||x.enabled)&&!profilesDeleting[i]).map(x=>({id:x.id,name:x.name,type:x.type,generations:x.generations,permissionsVersion:x.permissionsVersion,pinRequired:x.pinConfigured}))};
  });
  if(action==='verifyAdultPin'){
   const f=await db().runTransaction(tx=>activePlayer(tx,a,p.profileId));
@@ -191,11 +189,6 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   const f=await db().runTransaction(tx=>playerContext(tx,a));
   return verifyProfilePin(p,{ref:f.ref,device:f.device,fid:f.fid,deviceId:a.deviceId!});
  }
- if(action==='setParentalPin'||action==='clearParentalPin')return db().runTransaction(async tx=>{
-  required(!a.deviceId);
-  const f=await family(tx,a,true);
-  return manageParentalPin(action,p,a.uid,f,tx);
- });
  if(action==='requestPlayback')return requestPlayback(p,a,tx=>family(tx,a));
  if(action==='claimPlayRequest')return claimPlayRequest(p,a);
  if(action==='updatePlayRequest')return updatePlayRequest(p,a);
@@ -364,8 +357,8 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
    const profileId=idSchema.parse(p.profileId);const profile=await tx.get(f.ref.collection('profiles').doc(profileId));required(profile.exists&&profile.data()?.deleting!==true,'not-found');
    const view=profileView(profileId,profile.data()!);
    required(view.enabled,'profile-disabled');
-   // Parental control: adult profile + kids profile in the family ⇒ PIN verified by the backend.
-   const gate=parentalGate(view,await familyHasKids(tx,f.ref),f.deviceData,now);
+   // Profile with a personal PIN ⇒ PIN verified by the backend.
+   const gate=parentalGate(view,f.deviceData,now);
    const lease={id:randomUUID(),deviceId:a.deviceId!,deviceName:f.deviceData.name,profileId,expiresAt:now+LEASE_MS};leases=acquire(leases,lease,now);
    tx.update(f.ref,{leases});tx.update(f.device,{sessionId:lease.id,lastSeenAt:now,onlineUntil:lease.expiresAt,...gate});return lease;
   }

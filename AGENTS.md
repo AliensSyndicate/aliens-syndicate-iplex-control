@@ -64,7 +64,7 @@ Exclusividade (backend: Cloud Functions e Rules):
 ## 2. CONTEXTOS DE AUTORIZAÇÃO
 
 O contexto é sempre a única família da conta. As permissões dependem do papel nela:
-- **Administrador**: gerencia membros, perfis, dispositivos, IPTV e controle parental.
+- **Administrador**: gerencia membros, perfis, dispositivos, IPTV e o conteúdo permitido a cada perfil.
 - **Membro**: vê o que a família autoriza, sem ações administrativas; pode sair da família.
 
 Uma conta não administra nem participa de outra família.
@@ -234,12 +234,13 @@ Regras permanentes desta etapa:
 
 ## 14. PERFIS: PERMISSÕES, INFANTIL, VISITANTE E LIMPEZA DE DADOS
 
-- **Espaço** = fonte IPTV × tipo de conteúdo (`{sourceId}:{channel|movie|series}`). Permissões em `profiles/{pid}.permissions {allSpaces, spaces}`; o administrador sempre acessa tudo.
+- **Conteúdo por tipo**: `profiles/{pid}.permissions {kinds, adult, allSpaces, spaces}`. `kinds` (Canais, Filmes, Séries) vale para todas as fontes IPTV; `spaces` (`{sourceId}:{tipo}`) é legado e só restringe mais. O administrador define os limites de cada perfil; o membro só restringe Canais/Filmes/Séries no próprio perfil (`preferences.kinds`), nunca além do limite. **Conteúdo adulto é decisão exclusiva do administrador**; perfil infantil nunca recebe adulto. No Control o administrador continua vendo tudo para gerenciar; a escolha dele para si vale na TV.
 - **Infantil** (regra do sistema, não configurável): só recebe itens classificados como infantis por `functions/src/content_audience.ts` (classificação etária explícita do provedor primeiro; sem ela, apenas categorias explicitamente infantis; sinais adultos sempre excluem; ambíguo = excluído). Nunca exibir cadeados, cards bloqueados ou títulos restritos.
 - O filtro é aplicado **no backend** (`readSourceCatalog`, `readSourceSeries`, `resolveSourceStream`, `listProfileSpaces`). Na TV o perfil vem da lease do servidor, não do parâmetro do cliente.
 - **Visitante**: habilitar/desabilitar mantém a configuração; desabilitado não aparece em `listPlayerProfiles` e não inicia sessão; nunca persiste favoritos, assistidos ou progresso (`guest-not-persisted`).
-- **Limpezas** (`clearProfileData`): três categorias independentes (`favorites`, `watched`, `progress`), somente administrador, exclusão real e paginada no Firestore (inclusive coleções legadas `profile_favorites`/`profile_progress`), job idempotente por `requestId`, bloqueio de concorrência (`clear-in-progress`).
+- **Limpezas** (`clearProfileData`): quatro categorias independentes (`favorites`, `wishlist`, `watched`, `progress`), feitas pelo administrador em qualquer perfil ou pelo membro no próprio perfil, exclusão real e paginada no Firestore (inclusive coleções legadas `profile_favorites`/`profile_progress`), job idempotente por `requestId`, bloqueio de concorrência (`clear-in-progress`).
 - **Gerações**: cada limpeza incrementa `profiles/{pid}.generations.{categoria}` antes de excluir. Toda escrita de favorito/assistido/progresso deve enviar a geração atual; ausente ou antiga é rejeitada (`generation-required`/`stale-generation`), impedindo que TVs offline restaurem dados excluídos.
+- **PIN pessoal** (único PIN do sistema; o PIN parental foi removido): definido só pela conta vinculada ao perfil. Com ele, a TV exige o PIN para abrir o perfil (`acquireSession`) e para tocar conteúdo adulto (`verifyAdultPin`); sem ele, nada é pedido.
 - Toda exclusão no app passa por `confirmAndRun` (bottom sheet com processamento, sem envio duplicado, sucesso só após o backend).
 - Contrato do Player detalhado em `docs/FAMILY_PROFILES.md`.
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:flutter/material.dart';
@@ -152,7 +153,7 @@ void main() {
   );
 
   testWidgets(
-    'a member: no administrative actions, only its own entry opens (to leave)',
+    'a member: no administrative actions, every entry opens to view',
     (tester) async {
       final repo = FamilyRepository(administrator: false)
         ..members = [
@@ -180,13 +181,14 @@ void main() {
       );
       expect(find.text('Dana'), findsOneWidget);
       expect(find.text('Pat'), findsOneWidget);
+      expect(find.byKey(const Key('guest-toggle')), findsNothing);
+      expect(find.byKey(const Key('add-member-button')), findsNothing);
+      // Other members open too, read-only (the details page decides).
       await tester.tap(find.widgetWithText(EntryTile, 'Pat'));
       await tester.pumpAndSettle();
-      expect(
-        navigation.path(c),
-        '/users',
-        reason: 'other members are read-only',
-      );
+      expect(navigation.path(c), '/users/member/m2');
+      c.read(routerProvider).go('/users');
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('profile-pu')));
       await tester.pumpAndSettle();
       expect(navigation.path(c), '/users/pu');

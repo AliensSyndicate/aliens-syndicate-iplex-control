@@ -571,5 +571,12 @@
   "errorAlreadyLifetime": "Esta família já tem acesso vitalício.",
   "helpSearchHint": "Buscar nas perguntas e respostas",
   "helpNoResultsTitle": "Nenhuma resposta encontrada",
-  "helpNoResultsBody": "Tente outras palavras ou limpe a busca para ver todas as perguntas."
+  "helpNoResultsBody": "Tente outras palavras ou limpe a busca para ver todas as perguntas.",
+  "contentSection": "Conteúdo",
+  "contentChannels": "Canais",
+  "lastSyncTitle": "Última sincronização",
+  "clearFavoritesBody": "Todos os favoritos de {name} serão excluídos permanentemente. Esta ação não pode ser desfeita. A exclusão será sincronizada com todos os dispositivos.",
+  "clearWishlist": "Limpar lista de desejos",
+  "clearWishlistTitle": "Limpar lista de desejos?",
+  "clearWishlistBody": "Toda a lista de desejos de {name} será excluída permanentemente. Esta ação não pode ser desfeita. A exclusão será sincronizada com todos os dispositivos."
 }

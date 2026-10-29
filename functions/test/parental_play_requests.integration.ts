@@ -43,70 +43,57 @@ async function publishCatalog(fid:string){
  return {item:(id:string)=>hash(`src1:${id}`)};
 }
 
-test('parental PIN: adult profiles need a backend-verified PIN when the family has a kids profile',async()=>{
+test('profile PIN: the TV asks for the personal PIN only of profiles that have one',async()=>{
  const {admin,fid,ctx}=await family();
  const kid=(await execute('saveProfile',{name:'Lia',type:'kids',...ctx},admin) as {id:string}).id;
  const reg=(await execute('saveProfile',{name:'Rui',...ctx},admin) as {id:string}).id;
  const player=await tv(admin,fid);
- const listed=await tvCall('listPlayerProfiles',{},player) as {parentalPin:{configured:boolean};profiles:{id:string;pinRequired:boolean}[]};
- assert.equal(listed.parentalPin.configured,false);
- assert.deepEqual(Object.fromEntries(listed.profiles.map(p=>[p.id,p.pinRequired])),{admin:true,[kid]:false,[reg]:true});
- // Fail closed: without a PIN the adult profile does not open, whatever the client says.
+ // No personal PIN: a kids profile no longer locks the adult profiles (the parental PIN is gone).
+ let listed=await tvCall('listPlayerProfiles',{},player) as {profiles:{id:string;pinRequired:boolean}[]};
+ assert.deepEqual(Object.fromEntries(listed.profiles.map(p=>[p.id,p.pinRequired])),{admin:false,[kid]:false,[reg]:false});
+ assert.deepEqual(await tvCall('verifyProfilePin',{profileId:'admin',pin:'1234'},player),{verified:true,required:false});
+ const open=await tvCall('acquireSession',{profileId:'admin'},player) as {id:string};
+ assert.deepEqual(await tvCall('verifyAdultPin',{profileId:'admin',pin:'1234'},player),{verified:true,required:false});
+ await tvCall('releaseSession',{sessionId:open.id},player);
+ await assert.rejects(execute('setParentalPin',{pin:'1234',confirmPin:'1234',...ctx},admin),/invalid-action/);
+ // The administrator sets its own personal PIN (never in clear); only its profile asks for it.
+ await execute('setPersonalPin',{pin:'1234',confirmPin:'1234',...ctx},admin);
+ assert.equal(JSON.stringify((await db().doc(`families/${fid}/private/personal_pin_admin`).get()).data()).includes('1234'),false);
+ listed=await tvCall('listPlayerProfiles',{},player) as {profiles:{id:string;pinRequired:boolean}[]};
+ assert.deepEqual(Object.fromEntries(listed.profiles.map(p=>[p.id,p.pinRequired])),{admin:true,[kid]:false,[reg]:false});
  await assert.rejects(tvCall('acquireSession',{profileId:'admin',pinVerified:true},player),/profile-pin-required/);
- await assert.rejects(tvCall('verifyProfilePin',{profileId:'admin',pin:'1234'},player),/parental-pin-not-configured/);
- // Only the administrator sets it; the PIN is never stored in clear.
- const member=await account();
- await assert.rejects(execute('setParentalPin',{pin:'1234',confirmPin:'1234',...ctx},member),/permission-denied/);
- await assert.rejects(execute('setParentalPin',{pin:'1234',confirmPin:'4321',...ctx},admin),/pin-mismatch/);
- await assert.rejects(execute('setParentalPin',{pin:'12a4',confirmPin:'12a4',...ctx},admin),/invalid/);
- await execute('setParentalPin',{pin:'1234',confirmPin:'1234',...ctx},admin);
- assert.equal((await db().doc(`families/${fid}`).get()).data()?.parental?.pinConfigured,true);
- assert.equal(JSON.stringify((await db().doc(`families/${fid}/private/parental`).get()).data()).includes('1234'),false);
  // Wrong PIN: no unlock. Right PIN: one session for that profile only.
  assert.deepEqual(await tvCall('verifyProfilePin',{profileId:'admin',pin:'0000'},player),{verified:false,required:true,attemptsLeft:4});
  await assert.rejects(tvCall('acquireSession',{profileId:'admin'},player),/profile-pin-required/);
  assert.deepEqual(await tvCall('verifyProfilePin',{profileId:'admin',pin:'1234'},player),{verified:true,required:true});
- await assert.rejects(tvCall('acquireSession',{profileId:reg},player),/profile-pin-required/,'the unlock is bound to one profile');
  const lease=await tvCall('acquireSession',{profileId:'admin'},player) as {id:string};
  const beat=await tvCall('heartbeat',{sessionId:lease.id},player) as {ok:boolean;playRequest:unknown};
- assert.deepEqual(beat,{ok:true,playRequest:null});
+ assert.equal(beat.ok,true);assert.equal(beat.playRequest,null);
+ // Adult content now asks for the same personal PIN.
+ assert.deepEqual(await tvCall('verifyAdultPin',{profileId:'admin',pin:'1234'},player),{verified:true,required:true});
  // Multitasking keeps the PIN session; leaving the profile locks it again.
  await tvCall('releaseSession',{sessionId:lease.id,suspend:true},player);
  const resumed=await tvCall('acquireSession',{profileId:'admin'},player) as {id:string};
  await tvCall('releaseSession',{sessionId:resumed.id},player);
  await assert.rejects(tvCall('acquireSession',{profileId:'admin'},player),/profile-pin-required/);
- // Kids profile opens directly.
- const kidLease=await tvCall('acquireSession',{profileId:kid},player) as {id:string};
- await tvCall('releaseSession',{sessionId:kidLease.id},player);
+ // Profiles without a PIN open directly.
+ const regLease=await tvCall('acquireSession',{profileId:reg},player) as {id:string};
+ await tvCall('releaseSession',{sessionId:regLease.id},player);
  // Lockout after five wrong attempts, even for the right PIN afterwards.
  for(let i=0;i<4;i++)await tvCall('verifyProfilePin',{profileId:'admin',pin:'9999'},player);
  const last=await tvCall('verifyProfilePin',{profileId:'admin',pin:'9999'},player) as {verified:boolean;attemptsLeft:number;retryAt:number};
  assert.equal(last.verified,false);assert.equal(last.attemptsLeft,0);assert.ok(last.retryAt>Date.now());
  await assert.rejects(tvCall('verifyProfilePin',{profileId:'admin',pin:'1234'},player),/pin-locked/);
- // Clearing the PIN keeps adults locked (fail closed) while the kids profile exists.
- await execute('clearParentalPin',{...ctx},admin);
- assert.equal((await db().doc(`families/${fid}/private/parental`).get()).exists,false);
-});
-
-test('parental PIN: families without kids profiles open adult profiles directly',async()=>{
- const {admin,fid}=await family();
- const player=await tv(admin,fid);
- const listed=await tvCall('listPlayerProfiles',{},player) as {profiles:{pinRequired:boolean}[]};
- assert.ok(listed.profiles.every(p=>!p.pinRequired));
- assert.deepEqual(await tvCall('verifyProfilePin',{profileId:'admin',pin:'1234'},player),{verified:true,required:false});
- assert.ok(((await tvCall('acquireSession',{profileId:'admin'},player)) as {id:string}).id);
 });
 
 test('play requests: Control asks a linked TV to start a title; single claim, expiry, supersede, kids and family isolation',async()=>{
  const {admin,fid,ctx}=await family();
  const {item}=await publishCatalog(fid);
  const kid=(await execute('saveProfile',{name:'Lia',type:'kids',...ctx},admin) as {id:string}).id;
- await execute('setParentalPin',{pin:'2468',confirmPin:'2468',...ctx},admin);
  const player=await tv(admin,fid);
  const request=(extra:Record<string,unknown>,actor:Identity=admin)=>execute('requestPlayback',{deviceId:player.deviceId,sourceId:'src1',requestId:rid(),...ctx,...extra},actor) as Promise<{id:string;status:string;expiresAt:number}>;
  // TV with no active profile session: the phone is told to open iPlex on the TV.
  await assert.rejects(request({itemId:item('m1')}),/device-offline/);
- await tvCall('verifyProfilePin',{profileId:'admin',pin:'2468'},player);
  const lease=await tvCall('acquireSession',{profileId:'admin'},player) as {id:string};
  // Idempotent per phone request id; only stable identifiers are stored.
  const requestId=rid();

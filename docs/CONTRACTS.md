@@ -36,13 +36,13 @@ clientes mapeiam o código para mensagens próprias (nunca genéricas).
 | Entidade | Onde | Campos do contrato |
 |---|---|---|
 | Usuário | `users/{uid}` | `publicCode` (12), `familyId` (**a única família da conta**), `homeFamilyId` (família individual; estacionada enquanto a conta é membro de outra), `photoUrl?` (foto https do provedor, escrita só pelo backend), `familyIds[]` (índice legado, não é lista de vínculos), `iptvWorkspaceId?` (legado), `locale` |
-| Família | `families/{fid}` | `name`, `individual?`, `adminUid`, `members{uid: admin\|member}`, `leases[]`, `parental{pinConfigured, updatedAt}`, `parked?` (família individual cujo titular entrou em outra; sem membros, nada é apagado), `kind?='personalIptv'` (legado: promovido a família individual no bootstrap) |
+| Família | `families/{fid}` | `name`, `individual?`, `adminUid`, `members{uid: admin\|member}`, `leases[]`, `parked?` (família individual cujo titular entrou em outra; sem membros, nada é apagado), `kind?='personalIptv'` (legado: promovido a família individual no bootstrap) |
 | Membro (conta) | `families/{fid}/members/{uid}` | `uid`, `name`, `role: admin\|member`, `photoUrl?`, `joinedAt` |
 | Convite | `family_requests/{id}` | `familyId`, `issuerUid`, `recipientUid`, `recipientName`, `recipientPhotoUrl?`, `status: pending\|accepted\|declined\|cancelled`, `expiresAt`; leem o convidado e o administrador da família emissora |
 | Perfil | `families/{fid}/profiles/{pid}` | `name`, `type: admin\|regular\|kids\|guest` (imutável), `enabled`, `permissions{allSpaces, spaces[]}`, `generations{favorites, watched, progress}`, `permissionsVersion` |
 | Dispositivo (TV) | `families/{fid}/devices/{did}` | `name`, `platform`, `model`, `status`, `credentialVersion`, `sessionId`, `onlineUntil`, `pinUnlock?`, `pinSession?`, `pendingPlayRequest?` |
 | Assinatura | `families/{fid}/private/subscription` (só admin lê) | `status: notStarted\|trial\|active\|cancelled\|expired\|pending`, `trialEndsAt`, `paidUntil` — política em `canStartPlayback` |
-| PIN parental | `families/{fid}/private/parental` (nenhum cliente lê) | `pinHash` (scrypt), `salt`, `updatedAt`, `updatedByUid` |
+| PIN pessoal | `families/{fid}/private/personal_pin_{pid}` (nenhum cliente lê) | `pinHash` (scrypt), `salt`, `profileId`, `uid`, `updatedAt` |
 | Fonte IPTV | `families/{fid}/sources/{sid}` | `name`, `format`, `status`, `version` (catálogo publicado), `revision`, `enabled`, `isProtected`; credenciais só em `source_secrets` (AES-256-GCM) |
 | Item de catálogo (canal, filme, série) | resposta de `readSourceCatalog` | `id` = sha256(`sourceId:catalogItemId`) (estável, público), `sourceId`, `kind: channel\|movie\|series`, `title` (original da fonte), `category`, `providerRef`, `epgId?`, `year?`, `ageRating?` |
 | Temporada/Episódio | resposta de `readSourceSeries` | `details.seasons[]{seasonNumber,name}`, `details.episodes{<temporada>: [{id, title, season, episodeNum}]}`; episódio é sempre referenciado por `episodeId` |
@@ -97,18 +97,21 @@ para salvar.
 - `removeMember {id}` (administrador) e `leaveFamily` (membro) devolvem a conta à família individual
   (restaurada ou criada); o administrador não sai (`administrator-protected`).
 
-## 3. PIN parental
+## 3. PIN do perfil (PIN pessoal)
 
-- `manager.setParentalPin {pin, confirmPin}` (4 dígitos) e
-  `manager.clearParentalPin` — somente administrador.
-- `player.listPlayerProfiles` → `{parentalPin:{configured}, account:{name, photoUrl|null}, profiles:[{…, pinRequired}]}`.
+- O PIN parental foi removido (`setParentalPin`/`clearParentalPin` → `invalid-action`).
+- `manager.setPersonalPin {pin, confirmPin, currentPin?}` e `manager.clearPersonalPin {currentPin}` —
+  somente a conta vinculada ao perfil.
+- `player.listPlayerProfiles` → `{account:{name, photoUrl|null}, profiles:[{…, generations, pinRequired}]}`.
   `account` identifica a **conta** vinculada à TV (administrador da família): nome e foto https do
   provedor, nunca credenciais nem perfis de visualização; `photoUrl: null` = avatar padrão.
-  `pinRequired = (perfil admin|regular) && (família tem perfil kids)`.
+  `pinRequired` = o perfil tem PIN pessoal. `generations` inclui `wishlist` (geração própria da Lista de desejos).
 - `player.verifyProfilePin {profileId, pin}` →
   `{verified, required, attemptsLeft?, retryAt?}`. 5 erros → bloqueio de 15 min
-  por TV (`pin-locked`, `details.retryAt`). Sem PIN definido:
-  `parental-pin-not-configured` (adultos ficam bloqueados — falha fechada).
+  por TV (`pin-locked`, `details.retryAt`). Perfil sem PIN pessoal: `{verified: true, required: false}`.
+- `player.verifyAdultPin {profileId, pin}` (com sessão ativa do perfil): mesmo PIN pessoal, libera um
+  título adulto (uso único, consumido por `resolveSourceStream`). Sem PIN pessoal: `{verified: true,
+  required: false}` e o adulto toca sem PIN (se o administrador liberou o adulto para o perfil).
 - `player.acquireSession` de perfil que exige PIN só passa com liberação
   recente (2 min, uso único, mesmo perfil) ou sessão de PIN válida (15 min,
   renovada pelo heartbeat) → senão `profile-pin-required`.

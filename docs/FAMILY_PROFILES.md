@@ -22,11 +22,12 @@ Ids fixos: `admin` (perfil do administrador, criado em `createFamily`) e `guest`
 |---|---|---|
 | `saveProfile {name, type?, requestId?, id?}` | admin | cria (`regular`/`kids`, limite de 4 associados, idempotente por `requestId`) renomeia ou altera `regular` ↔ `kids` em edição explícita por `id`; tipos `admin`/`guest` protegidos |
 | `setGuestEnabled {enabled, name?}` | admin | cria/ativa/desativa o visitante sem apagar configuração |
-| `setProfilePermissions {profileId, allSpaces, spaces[]}` | admin | espaços `{sourceId}:{channel\|movie\|series}`; incrementa `permissionsVersion` |
+| `setProfilePermissions {profileId, kinds?, adult?, allSpaces?, spaces?}` | admin | `kinds` (`channel`/`movie`/`series`, todas as fontes) e adulto; campos ausentes são mantidos; incrementa `permissionsVersion` |
+| `setProfilePreferences {kinds?}` | conta vinculada | restringe os próprios tipos dentro do limite (`beyond-limit`); `null` remove a restrição; adulto não muda (`permission-denied`) |
 | `createProfileLinkCode {profileId}` | admin | código de 8 caracteres + QR `iplex://profile-link?v=1&code=`; revoga o anterior |
 | `redeemProfileLink {code}` | conta que será vinculada | confirma; adiciona a conta à família se necessário; conflito → `account-already-linked` |
 | `unlinkProfileAccount {profileId}` | admin | remove só o vínculo; perfil e dados permanecem; conta Firebase intacta |
-| `clearProfileData {profileId, category, requestId}` | admin | incrementa a geração, exclui em páginas de 400 (inclui `profile_favorites`/`profile_progress` legados), conclui o job; repetição com o mesmo `requestId` não duplica |
+| `clearProfileData {profileId, category, requestId}` | admin (qualquer perfil) ou conta vinculada (próprio perfil) | `category`: `favorites`, `wishlist`, `watched`, `progress`; incrementa a geração, exclui em páginas de 400 (inclui `profile_favorites`/`profile_progress` legados), conclui o job; repetição com o mesmo `requestId` não duplica |
 | `listPlayerProfiles` | TV | perfis selecionáveis (visitante desabilitado omitido), com gerações e `permissionsVersion` |
 | `listProfileSpaces` | TV/app | espaços visíveis para o perfil ativo (infantil: só espaços com conteúdo infantil) |
 | `favorite` / `watchProgress` / `markWatched` | TV/app | exigem `generation` atual da categoria; visitante sempre rejeitado |

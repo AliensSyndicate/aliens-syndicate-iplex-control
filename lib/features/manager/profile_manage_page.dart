@@ -165,7 +165,7 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
         key: const Key('member-details'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: EdgeToEdge.padded([
-          // Header: avatar, name, role, account and last sync.
+          // Header: avatar, name and role.
           Center(
             child: AppAvatar(
               key: const Key('member-avatar'),
@@ -183,35 +183,25 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Center(child: RoleChip(label: roleLabel(context, type))),
-          const SizedBox(height: AppSpacing.sm),
-          if (type == 'guest')
+          if (type == 'guest') ...[
+            const SizedBox(height: AppSpacing.sm),
             Text(
               l.guestHint,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
-            )
-          else
-            Text(
-              linkedUid == null ? l.accountNotLinked : l.accountLinked,
-              key: const Key('profile-link-status'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          if (lastActive > 0) ...[
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              l.lastSyncLabel(
-                formatCardDateTime(
-                  context,
-                  DateTime.fromMillisecondsSinceEpoch(lastActive),
-                ),
-              ),
-              key: const Key('member-last-sync'),
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.textSecondary),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
+          if (lastActive > 0)
+            EntryTile(
+              key: const Key('member-last-sync'),
+              title: l.lastSyncTitle,
+              subtitle: formatCardDateTime(
+                context,
+                DateTime.fromMillisecondsSinceEpoch(lastActive),
+              ),
+              icon: AppIcons.refresh,
+            ),
 
           if (type == 'guest' && admin && inFamily)
             NeumorphicSwitchTile(
@@ -226,70 +216,28 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
               }),
             ),
 
-          if (linkable)
+          // Lists: Continuar assistindo, Favoritos, Lista de desejos, Assistidos.
+          if (showContent) _LibraryCards(profileId: profile.id),
+
+          // Personal PIN: one card, only on the account's own profile.
+          if (own && type != 'guest') _PinCard(profile: profile),
+
+          // Content: kids classification and the allowed types.
+          SectionHeader(l.contentSection),
+          if (type == 'regular' || type == 'kids')
             NeumorphicSwitchTile(
               key: const Key('kids-account-toggle'),
               title: l.kidsAccount,
+              subtitle: type == 'kids' ? l.kidsRestrictionNote : null,
               value: type == 'kids',
-              disabled: busy,
+              disabled: busy || !linkable,
               onChanged: (value) => _run('saveProfile', {
                 'id': profile.id,
                 'name': profile.name,
                 'type': value ? 'kids' : 'regular',
               }),
             ),
-
-          // Administrator limits.
-          if (type == 'admin') ...[
-            Text(
-              l.adminFullAccess,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-            // O administrador liga ou desliga o próprio conteúdo adulto (as demais permissões seguem protegidas).
-            if (admin) ...[
-              const SizedBox(height: AppSpacing.md),
-              _AccessEditor(
-                profile: profile,
-                mode: _AccessMode.limits,
-                adultOnly: true,
-              ),
-            ],
-          ] else if (admin) ...[
-            SectionHeader(l.adminLimitsTitle),
-            Text(
-              l.adminLimitsHint,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _AccessEditor(profile: profile, mode: _AccessMode.limits),
-          ],
-
-          // The member's own preferences, within the limits.
-          if (own && type != 'admin' && type != 'guest') ...[
-            SectionHeader(l.myPreferences),
-            Text(
-              l.myPreferencesHint,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _AccessEditor(profile: profile, mode: _AccessMode.preferences),
-          ],
-
-          // Security: the personal PIN (own profile only) and, for the
-          // administrator, the family's parental control.
-          if (own && type != 'guest') ...[
-            SectionHeader(l.securitySection),
-            _PersonalPin(profile: profile),
-            if (type == 'admin')
-              EntryTile(
-                key: const Key('parental-control'),
-                title: l.parentalControl,
-                icon: AppIcons.lock,
-                onTap: () => context.push('/users/parental'),
-              ),
-          ],
-
-          if (showContent) _Content(profile: profile, canClear: admin),
+          _ContentToggles(profile: profile, admin: admin, own: own),
 
           // Account actions.
           if (admin && type != 'admin' && type != 'guest') ...[
@@ -384,86 +332,88 @@ class _MemberDetailsState extends ConsumerState<_MemberDetails> {
   }
 }
 
-/// Content sections of the profile (shared [LibrarySection] layout).
-class _Content extends ConsumerWidget {
-  const _Content({required this.profile, required this.canClear});
-  final Entry profile;
-  final bool canClear;
+/// One card per list with its name and how many titles it holds; tapping
+/// opens the list.
+class _LibraryCards extends ConsumerWidget {
+  const _LibraryCards({required this.profileId});
+  final String profileId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final data = ref.watch(profileLibraryProvider(profile.id));
-    return EdgeToEdge(
-      child: data.when(
-        loading: () => const Padding(
-          padding: EdgeToEdge.inset,
-          child: AppLoadingSkeleton(rows: 3),
-        ),
-        error: (e, s) => Padding(
-          padding: EdgeToEdge.inset,
-          child: ErrorState(
-            onRetry: () => ref.invalidate(profileLibraryProvider(profile.id)),
+    final library = ref.watch(profileLibraryProvider(profileId)).asData?.value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (kind, icon) in [
+          (LibraryKind.continueWatching, AppIcons.play),
+          (LibraryKind.favorites, AppIcons.favorite),
+          (LibraryKind.wishlist, AppIcons.add),
+          (LibraryKind.watched, AppIcons.check),
+        ])
+          EntryTile(
+            key: ValueKey('library-${kind.name}'),
+            title: libraryTitle(context, kind),
+            icon: icon,
+            trailing: library == null
+                ? null
+                : Text(
+                    '${library.of(kind).length}',
+                    key: ValueKey('library-${kind.name}-count'),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+            onTap: () => context.push('/users/$profileId/library/${kind.name}'),
           ),
-        ),
-        data: (library) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final (kind, items) in [
-              (LibraryKind.continueWatching, library.continueWatching),
-              (LibraryKind.favorites, library.favorites),
-              (LibraryKind.wishlist, library.wishlist),
-              (LibraryKind.watched, library.watched),
-            ])
-              LibrarySection(
-                kind: kind,
-                profileId: profile.id,
-                profileName: profile.name,
-                items: items,
-                canClear: canClear,
-              ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }
 
-enum _AccessMode { limits, preferences }
-
-/// Adult content and sections (IPTV source × content type). In [limits] mode
-/// the administrator sets the maximum; in [preferences] mode the member
-/// narrows its own access, only inside those limits.
-class _AccessEditor extends ConsumerStatefulWidget {
-  const _AccessEditor({
+/// Canais, Filmes, Séries and Adulto. The administrator sets what each
+/// profile may see; a member narrows Canais/Filmes/Séries on its own profile
+/// only, within those limits. Adult content is the administrator's alone, and
+/// kids profiles never get it. Anyone else only sees the current state.
+class _ContentToggles extends ConsumerStatefulWidget {
+  const _ContentToggles({
     required this.profile,
-    required this.mode,
-    this.adultOnly = false,
+    required this.admin,
+    required this.own,
   });
   final Entry profile;
-  final _AccessMode mode;
-
-  /// Só o interruptor de conteúdo adulto (perfil do administrador).
-  final bool adultOnly;
+  final bool admin, own;
   @override
-  ConsumerState<_AccessEditor> createState() => _AccessEditorState();
+  ConsumerState<_ContentToggles> createState() => _ContentTogglesState();
 }
 
-class _AccessEditorState extends ConsumerState<_AccessEditor> {
+class _ContentTogglesState extends ConsumerState<_ContentToggles> {
+  static const all = ['channel', 'movie', 'series'];
   bool busy = false;
-  Map<String, dynamic> get limits =>
-      (widget.profile.data['permissions'] as Map?)?.cast<String, dynamic>() ??
-      const {};
-  Map<String, dynamic> get prefs =>
-      (widget.profile.data['preferences'] as Map?)?.cast<String, dynamic>() ??
-      const {};
-  bool get limitsAll => limits['allSpaces'] != false;
-  List<String> get limitSpaces =>
-      ((limits['spaces'] as List?) ?? const []).cast<String>();
-  bool get limitAdult => limits['adult'] != false;
-  bool get prefAdult => prefs['adult'] != false;
-  List<String>? get prefSpaces => (prefs['spaces'] as List?)?.cast<String>();
-  bool get kids => widget.profile.text('type') == 'kids';
-  bool get preferences => widget.mode == _AccessMode.preferences;
+
+  Map<String, dynamic> _map(String key) =>
+      (widget.profile.data[key] as Map?)?.cast<String, dynamic>() ?? const {};
+  String get type => widget.profile.text('type').isEmpty
+      ? 'regular'
+      : widget.profile.text('type');
+  List<String>? _kinds(Map<String, dynamic> m) =>
+      (m['kinds'] as List?)?.whereType<String>().toList();
+
+  /// Types the administrator allows (its own profile is never limited).
+  List<String> get limitKinds =>
+      type == 'admin' ? all : _kinds(_map('permissions')) ?? all;
+
+  /// The member's own narrowing (null: none).
+  List<String>? get prefKinds => _kinds(_map('preferences'));
+  bool get limitAdult =>
+      type != 'kids' && _map('permissions')['adult'] != false;
+  bool get prefAdult => _map('preferences')['adult'] != false;
+
+  /// The administrator edits the limits of other profiles; the account linked
+  /// to the profile (the administrator included) edits its own preferences.
+  bool get editsPreferences => widget.own;
+  bool get editsLimits => widget.admin && !widget.own;
 
   Future<void> _mutate(String action, Map<String, dynamic> payload) async {
     setState(() => busy = true);
@@ -476,182 +426,129 @@ class _AccessEditorState extends ConsumerState<_AccessEditor> {
     }
   }
 
-  Future<void> _saveLimits({bool? all, List<String>? spaces, bool? adult}) =>
+  void _toggleKind(String kind, bool value) {
+    if (editsPreferences) {
+      final current = prefKinds ?? limitKinds;
+      final next = value
+          ? {...current, kind}.toList()
+          : current.where((k) => k != kind).toList();
+      // Everything allowed again: no own restriction.
+      final none = limitKinds.every(next.contains);
+      _mutate('setProfilePreferences', {
+        'kinds': none
+            ? null
+            : [
+                for (final k in all)
+                  if (next.contains(k)) k,
+              ],
+      });
+    } else {
+      final next = value
+          ? {...limitKinds, kind}.toList()
+          : limitKinds.where((k) => k != kind).toList();
       _mutate('setProfilePermissions', {
         'profileId': widget.profile.id,
-        'allSpaces': all ?? limitsAll,
-        'spaces': spaces ?? limitSpaces,
-        'adult': adult ?? limitAdult,
+        'kinds': [
+          for (final k in all)
+            if (next.contains(k)) k,
+        ],
       });
-
-  Future<void> _savePrefs({
-    bool? adult,
-    List<String>? spaces,
-    bool keep = true,
-  }) => _mutate('setProfilePreferences', {
-    'adult': adult ?? prefAdult,
-    'spaces': keep ? (spaces ?? prefSpaces) : spaces,
-  });
-
-  bool allowed(String space) => limitsAll || limitSpaces.contains(space);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l = context.l, enabled = !busy;
-    final kinds = {
-      'channel': l.spaceLive,
+    final l = context.l;
+    final labels = {
+      'channel': l.contentChannels,
       'movie': l.spaceMovies,
       'series': l.spaceSeries,
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (kids)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: Text(
-              l.kidsRestrictionNote,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          )
-        else
+        for (final kind in all)
           NeumorphicSwitchTile(
-            key: Key('${widget.mode.name}-adult'),
-            title: l.adultContent,
-            subtitle: preferences && !limitAdult
+            key: Key('content-$kind'),
+            title: labels[kind]!,
+            subtitle: editsPreferences && !limitKinds.contains(kind)
                 ? l.notAllowedByAdmin
-                : l.adultContentHint,
-            value: preferences ? limitAdult && prefAdult : limitAdult,
-            disabled: !enabled || (preferences && !limitAdult),
-            onChanged: (value) => preferences
-                ? _savePrefs(adult: value)
-                : _saveLimits(adult: value),
+                : null,
+            value:
+                limitKinds.contains(kind) &&
+                (prefKinds?.contains(kind) ?? true),
+            disabled:
+                busy ||
+                !(editsLimits ||
+                    (editsPreferences && limitKinds.contains(kind))),
+            onChanged: (value) => _toggleKind(kind, value),
           ),
-        if (!preferences && !widget.adultOnly)
+        // Kids profiles never see adult content (system rule): no toggle.
+        if (type != 'kids')
           NeumorphicSwitchTile(
-            key: const Key('all-spaces'),
-            title: l.allSpaces,
-            subtitle: l.allSpacesHint,
-            value: limitsAll,
-            disabled: !enabled,
-            onChanged: (value) => _saveLimits(all: value),
+            key: const Key('content-adult'),
+            title: l.adultContent,
+            subtitle: l.adultContentHint,
+            value: limitAdult && prefAdult,
+            disabled: busy || !widget.admin,
+            onChanged: (value) => _mutate('setProfilePermissions', {
+              'profileId': widget.profile.id,
+              'adult': value,
+            }),
           ),
-        if (!widget.adultOnly && (preferences || !limitsAll))
-          ref
-              .watch(familySourcesProvider)
-              .when(
-                loading: () => const AppLoadingSkeleton(),
-                error: (e, s) => ErrorState(
-                  onRetry: () => ref.invalidate(familySourcesProvider),
-                ),
-                data: (sources) {
-                  final rows = [
-                    for (final source in sources)
-                      for (final kind in kinds.entries)
-                        if (!preferences || allowed('${source.id}:${kind.key}'))
-                          (source, kind),
-                  ];
-                  if (rows.isEmpty) {
-                    return Text(
-                      l.noFamilySources,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    );
-                  }
-                  final allowedIds = [
-                    for (final (s, k) in rows) '${s.id}:${k.key}',
-                  ];
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final (source, kind) in rows)
-                        NeumorphicSwitchTile(
-                          key: Key(
-                            '${preferences ? 'pref' : 'space'}-${source.id}-${kind.key}',
-                          ),
-                          title: kind.value,
-                          subtitle: source.name,
-                          value: preferences
-                              ? (prefSpaces?.contains(
-                                      '${source.id}:${kind.key}',
-                                    ) ??
-                                    true)
-                              : limitSpaces.contains(
-                                  '${source.id}:${kind.key}',
-                                ),
-                          disabled: !enabled,
-                          onChanged: (value) {
-                            final id = '${source.id}:${kind.key}';
-                            if (preferences) {
-                              final current = prefSpaces ?? allowedIds;
-                              final next = value
-                                  ? [...current, id]
-                                  : current.where((s) => s != id).toList();
-                              // Everything allowed again: no own restriction.
-                              final all = allowedIds.every(next.contains);
-                              _savePrefs(
-                                spaces: all ? null : next,
-                                keep: false,
-                              );
-                            } else {
-                              _saveLimits(
-                                all: false,
-                                spaces: value
-                                    ? [...limitSpaces, id]
-                                    : limitSpaces
-                                          .where((s) => s != id)
-                                          .toList(),
-                              );
-                            }
-                          },
-                        ),
-                    ],
-                  );
-                },
-              ),
       ],
     );
   }
 }
 
-/// Personal PIN of the account's own profile: on/off, set, change, turn off.
-/// The administrator never sees nor sets another member's PIN (backend rule).
-class _PersonalPin extends ConsumerWidget {
-  const _PersonalPin({required this.profile});
+/// Personal PIN of the account's own profile: one card; tapping opens the
+/// sheet to set it or, when on, to change or turn it off. The administrator
+/// never sees nor sets another member's PIN (backend rule).
+class _PinCard extends StatelessWidget {
+  const _PinCard({required this.profile});
   final Entry profile;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l = context.l;
     final on = (profile.data['personalPin'] as Map?)?['configured'] == true;
-    void open({required bool remove}) => showAppModalSheet<void>(
+    void form({required bool remove}) => showAppModalSheet<void>(
       context: context,
       builder: (_) => _PersonalPinForm(configured: on, remove: remove),
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        EntryTile(
-          key: const Key('personal-pin'),
-          title: l.personalPin,
-          subtitle: on ? l.personalPinOn : l.personalPinOff,
-          lines: [l.personalPinHint],
-          icon: on ? AppIcons.lock : AppIcons.unlock,
-        ),
-        AppButton(
-          key: const Key('personal-pin-set'),
-          label: on ? l.changePersonalPin : l.enablePersonalPin,
-          onPressed: () => open(remove: false),
-        ),
-        if (on) ...[
-          const SizedBox(height: AppSpacing.sm),
-          AppButton(
-            key: const Key('personal-pin-remove'),
-            label: l.disablePersonalPin,
-            onPressed: () => open(remove: true),
+    return EntryTile(
+      key: const Key('personal-pin'),
+      title: l.personalPin,
+      subtitle: on ? l.personalPinOn : l.personalPinOff,
+      icon: on ? AppIcons.lock : AppIcons.unlock,
+      onTap: () async {
+        if (!on) return form(remove: false);
+        final remove = await showAppModalSheet<bool>(
+          context: context,
+          builder: (sheet) => AppModalSheet(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SheetHeader(icon: AppIcons.lock, title: l.personalPin),
+                SheetActionRow(
+                  key: const Key('personal-pin-change'),
+                  icon: AppIcons.edit,
+                  label: l.changePersonalPin,
+                  onTap: () => Navigator.of(sheet).pop(false),
+                ),
+                SheetActionRow(
+                  key: const Key('personal-pin-remove'),
+                  icon: AppIcons.unlock,
+                  label: l.disablePersonalPin,
+                  onTap: () => Navigator.of(sheet).pop(true),
+                ),
+              ],
+            ),
           ),
-        ],
-        const SizedBox(height: AppSpacing.md),
-      ],
+        );
+        if (remove != null && context.mounted) form(remove: remove);
+      },
     );
   }
 }

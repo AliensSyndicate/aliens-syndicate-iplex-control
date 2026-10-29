@@ -1,16 +1,17 @@
 /**
- * Parental PIN (contract v1, docs/CONTRACTS.md).
+ * Profile PIN on the TV (contract v1, docs/CONTRACTS.md).
  *
- * One 4-digit PIN per family, set by the administrator in the iPlex Control.
- * On a TV, when the family has a kids profile, entering an adult profile
- * (admin or regular) requires that PIN. The rule is enforced by the backend in
- * acquireSession; the TV interface only asks for the PIN.
+ * Each profile may have a personal 4-digit PIN, set only by the account linked
+ * to it in the iPlex Control (family_profiles.ts). When it is set, the TV asks
+ * for it to open the profile (enforced in acquireSession) and to play adult
+ * content (enforced in resolveSourceStream). Without it, neither is asked.
  *
- *  families/{fid}/private/parental  {pinHash, salt, updatedAt, updatedByUid}  (no client access)
- *  families/{fid}.parental          {pinConfigured, updatedAt}                (members read it)
+ *  families/{fid}/private/personal_pin_{pid} {pinHash, salt, ...}           (no client access)
+ *  families/{fid}/profiles/{pid}.personalPin {configured, updatedAt}        (members read it)
  *  families/{fid}/devices/{did}     pinUnlock {profileId, expiresAt}: one correct PIN, consumed by acquireSession
  *                                   pinSession {profileId, until}: re-acquire the same profile without a new PIN
- *  identity_attempts/parental_{fid}_{did} {failures, lockedUntil}           (no client access)
+ *                                   adultUnlock {profileId, expiresAt}: one adult title, consumed by resolveSourceStream
+ *  identity_attempts/parental_{fid}_{did}, adult_{fid}_{did} {failures, lockedUntil} (no client access)
  *
  * The PIN is never stored in clear, never returned and never compared on a client.
  */
@@ -42,31 +43,9 @@ export function matchesParentalPin(pin: string, stored: {pinHash?: unknown; salt
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
-export const isAdultProfile = (view: Pick<ProfileView, 'type'>) => view.type === 'admin' || view.type === 'regular';
+const personalSecret = (family: DocumentReference, profileId: string) => family.collection('private').doc(`personal_pin_${profileId}`);
 
-/** Kids profiles that still exist (deleting profiles no longer protect anything). */
-export async function familyHasKids(tx: Transaction, family: DocumentReference): Promise<boolean> {
-  return (await tx.get(family.collection('profiles'))).docs.some(d => d.data().type === 'kids' && d.data().deleting !== true);
-}
-
-/** Admin-only management from the Control (callable manager). */
-export async function manageParentalPin(action: string, p: Record<string, unknown>, uid: string, scope: {fid: string; ref: DocumentReference}, tx: Transaction) {
-  const now = Date.now(), ref = scope.ref.collection('private').doc('parental');
-  if (action === 'setParentalPin') {
-    const pin = pinSchema.parse(p.pin);
-    require_(p.confirmPin === pin, 'pin-mismatch');
-    const salt = randomBytes(16).toString('base64');
-    tx.set(ref, {pinHash: hashParentalPin(pin, salt), salt, updatedAt: now, updatedByUid: uid});
-    tx.set(scope.ref, {parental: {pinConfigured: true, updatedAt: now}}, {merge: true});
-    return {pinConfigured: true, updatedAt: now};
-  }
-  // clearParentalPin: adult profiles stay locked on TVs while a kids profile exists (fail closed).
-  tx.delete(ref);
-  tx.set(scope.ref, {parental: {pinConfigured: false, updatedAt: now}}, {merge: true});
-  return {pinConfigured: false, updatedAt: now};
-}
-
-/** Player: validates the PIN for one adult profile and arms a short, single-use unlock on this device. */
+/** Player: validates the personal PIN of one profile and arms a short, single-use unlock on this device. */
 export async function verifyProfilePin(p: Record<string, unknown>, context: {ref: DocumentReference; device: DocumentReference; fid: string; deviceId: string}) {
   const db = getFirestore(), now = Date.now();
   const profileId = idSchema.parse(p.profileId);
@@ -74,13 +53,11 @@ export async function verifyProfilePin(p: Record<string, unknown>, context: {ref
   const pin = pinSchema.parse(p.pin);
   const attemptsRef = db.doc(`identity_attempts/parental_${context.fid}_${context.deviceId}`);
   return db.runTransaction(async tx => {
-    const [profile, secret, attempts] = await tx.getAll(context.ref.collection('profiles').doc(profileId), context.ref.collection('private').doc('parental'), attemptsRef);
+    const [profile, secret, attempts] = await tx.getAll(context.ref.collection('profiles').doc(profileId), personalSecret(context.ref, profileId), attemptsRef);
     require_(profile!.exists && profile!.data()?.deleting !== true, 'profile-unavailable');
     const view = profileView(profileId, profile!.data()!);
     require_(view.enabled, 'profile-disabled');
-    const kids = await familyHasKids(tx, context.ref);
-    if (!isAdultProfile(view) || !kids) return {verified: true, required: false};
-    require_(secret!.exists, 'parental-pin-not-configured');
+    if (!view.pinConfigured || !secret!.exists) return {verified: true, required: false};
     const lockedUntil = (attempts!.data()?.lockedUntil as number | undefined) ?? 0;
     if (lockedUntil > now) throw new DomainError('pin-locked', {retryAt: lockedUntil});
     if (matchesParentalPin(pin, secret!.data())) {
@@ -96,18 +73,19 @@ export async function verifyProfilePin(p: Record<string, unknown>, context: {ref
 }
 
 /**
- * Player: PIN parental para TOCAR conteúdo adulto. Sempre exigido (não depende de haver perfil infantil), só para
- * perfis habilitados ao conteúdo adulto, com o mesmo limite de tentativas do PIN parental. Arma um desbloqueio de
- * uso único neste dispositivo, consumido por resolveSourceStream.
+ * Player: PIN pessoal do perfil para TOCAR conteúdo adulto, só quando o perfil tem PIN (sem PIN, não é pedido).
+ * Perfis sem conteúdo adulto liberado são recusados. Arma um desbloqueio de uso único neste dispositivo,
+ * consumido por resolveSourceStream.
  */
-export async function verifyAdultPin(p: Record<string, unknown>, context: {ref: DocumentReference; device: DocumentReference; fid: string; deviceId: string; view: Pick<ProfileView, 'id' | 'type' | 'permissions'>}) {
+export async function verifyAdultPin(p: Record<string, unknown>, context: {ref: DocumentReference; device: DocumentReference; fid: string; deviceId: string; view: Pick<ProfileView, 'id' | 'type' | 'permissions' | 'pinConfigured'>}) {
   const db = getFirestore(), now = Date.now();
-  const pin = pinSchema.parse(p.pin);
   require_(context.view.permissions.adult, 'permission-denied');
+  if (!context.view.pinConfigured) return {verified: true, required: false};
+  const pin = pinSchema.parse(p.pin);
   const attemptsRef = db.doc(`identity_attempts/adult_${context.fid}_${context.deviceId}`);
   return db.runTransaction(async tx => {
-    const [secret, attempts] = await tx.getAll(context.ref.collection('private').doc('parental'), attemptsRef);
-    require_(secret!.exists, 'parental-pin-not-configured');
+    const [secret, attempts] = await tx.getAll(personalSecret(context.ref, context.view.id), attemptsRef);
+    if (!secret!.exists) return {verified: true, required: false};
     const lockedUntil = (attempts!.data()?.lockedUntil as number | undefined) ?? 0;
     if (lockedUntil > now) throw new DomainError('pin-locked', {retryAt: lockedUntil});
     if (matchesParentalPin(pin, secret!.data())) {
@@ -122,8 +100,9 @@ export async function verifyAdultPin(p: Record<string, unknown>, context: {ref: 
   });
 }
 
-/** Consome o desbloqueio de uso único do conteúdo adulto (mesmo perfil, ainda válido); senão `adult-pin-required`. */
-export async function consumeAdultUnlock(fid: string, deviceId: string, profileId: string | undefined): Promise<void> {
+/** Consome o desbloqueio de uso único do conteúdo adulto (mesmo perfil, ainda válido); senão `adult-pin-required`. Sem PIN pessoal, nada é exigido. */
+export async function consumeAdultUnlock(fid: string, deviceId: string, profileId: string | undefined, pinConfigured: boolean): Promise<void> {
+  if (!pinConfigured) return;
   const db = getFirestore(), ref = db.doc(`families/${fid}/devices/${deviceId}`), now = Date.now();
   await db.runTransaction(async tx => {
     const unlock = (await tx.get(ref)).data()?.adultUnlock as {profileId?: string; expiresAt?: number} | undefined;
@@ -133,12 +112,12 @@ export async function consumeAdultUnlock(fid: string, deviceId: string, profileI
 }
 
 /**
- * Called inside acquireSession (after all its reads): an adult profile on a family with
- * kids needs a fresh unlock (PIN) or a still valid PIN session for the SAME profile.
+ * Called inside acquireSession (after all its reads): a profile with a personal PIN needs a
+ * fresh unlock (PIN) or a still valid PIN session for the SAME profile.
  * Returns the device fields to write.
  */
-export function parentalGate(view: ProfileView, kids: boolean, device: FirebaseFirestore.DocumentData, now: number): Record<string, unknown> {
-  if (!isAdultProfile(view) || !kids) return {pinUnlock: FieldValue.delete(), pinSession: FieldValue.delete()};
+export function parentalGate(view: ProfileView, device: FirebaseFirestore.DocumentData, now: number): Record<string, unknown> {
+  if (!view.pinConfigured) return {pinUnlock: FieldValue.delete(), pinSession: FieldValue.delete()};
   const unlock = device.pinUnlock as {profileId?: string; expiresAt?: number} | undefined;
   const session = device.pinSession as {profileId?: string; until?: number} | undefined;
   const unlocked = unlock?.profileId === view.id && (unlock.expiresAt ?? 0) > now;
