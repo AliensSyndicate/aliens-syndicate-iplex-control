@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'support/catalog_sets_fixture.dart';
+
 import 'package:aliens_syndicate_iplex_control/app/app.dart';
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/data/providers.dart';
@@ -125,13 +127,41 @@ class LibraryRepo extends navigation.SessionRepository {
       ];
       return {'ok': true};
     }
+    final sets = catalogSetsAnswer(action, payload, [
+      ...recentMovies,
+      ...recentSeries,
+      ...channels,
+    ]);
+    if (sets != null) {
+      mutationPayloads.add((action, Map.of(payload)));
+      return sets;
+    }
     if (action == 'readSourceCatalog') {
       mutationPayloads.add((action, Map.of(payload)));
       final all = [...recentMovies, ...recentSeries, ...channels];
+      final ofKind = [
+        for (final i in all)
+          if (payload['kind'] == null || i['kind'] == payload['kind']) i,
+      ];
+      // Categories of the tab (the backend's de-para; here one per name).
+      if (payload['groups'] == true) {
+        final counts = <String, int>{};
+        for (final i in ofKind) {
+          counts.update('${i['category']}', (n) => n + 1, ifAbsent: () => 1);
+        }
+        return {
+          'groups': [
+            for (final MapEntry(:key, :value) in counts.entries)
+              {'key': key, 'name': key, 'count': value},
+          ],
+        };
+      }
       return {
         'items': [
-          for (final i in all)
-            if (payload['kind'] == null || i['kind'] == payload['kind']) i,
+          for (final i in ofKind)
+            if (payload['category'] == null ||
+                i['category'] == payload['category'])
+              i,
         ],
         'hasMore': false,
       };
@@ -1185,12 +1215,21 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('tab-1')));
     await tester.pumpAndSettle();
     expect(
-      repo.mutationPayloads.lastWhere((m) => m.$1 == 'readSourceCatalog').$2,
-      containsPair('kind', 'channel'),
+      repo.mutationPayloads.lastWhere((m) => m.$1 == 'readCatalogChunk').$2,
+      anyOf(
+        containsPair('set', 'live'),
+        containsPair('set', 'live_categories'),
+      ),
     );
+    // Categories first; items only inside the open one.
+    expect(find.byKey(const ValueKey('home-card-ch1')), findsNothing);
+    await tester.tap(find.text('Notícias'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('home-card-ch1')), findsOneWidget);
     expect(find.byKey(const ValueKey('home-card-m1')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('tab-2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Filmes'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('home-card-m1')), findsOneWidget);
     await fixtures.screenshot(tester, 'redesign/home-movies');

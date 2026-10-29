@@ -270,7 +270,10 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
   Widget build(BuildContext context) {
     final l = context.l;
     final item = widget.item;
-    final persistent = widget.home.profile?.persistent ?? false;
+    // Adult content (as on the TV): only "Assistir na TV"; nothing is saved,
+    // shared or opened in details.
+    final adult = isAdultEntry(item);
+    final persistent = !adult && (widget.home.profile?.persistent ?? false);
     final favorite = saved[LibraryList.favorites]!;
     final wished = saved[LibraryList.wishlist]!;
     final kind = switch (item.kind) {
@@ -302,7 +305,10 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
             key: const Key('option-watch'),
             icon: AppIcons.play,
             label: l.watchOnTv,
-            onTap: () => closeThen((host) => showWatchOnTv(host, item)),
+            onTap: () => closeThen(
+              (host) =>
+                  adult ? openTitle(host, item) : showWatchOnTv(host, item),
+            ),
           ),
         if (persistent) ...[
           SheetActionRow(
@@ -336,27 +342,29 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
             label: l.removeFromContinueWatching,
             onTap: removingProgress ? null : removeProgress,
           ),
-        SheetActionRow(
-          key: const Key('option-share'),
-          material: Icons.ios_share_rounded,
-          label: l.share,
-          onTap: () async {
-            final title = item.year == null
-                ? item.name
-                : '${item.name} (${item.year})';
-            try {
-              await AppSharing.share(AppSharing.message(title, title));
-            } catch (e) {
-              if (context.mounted) showFailure(context, e);
-            }
-          },
-        ),
-        SheetActionRow(
-          key: const Key('option-details'),
-          material: Icons.info_outline_rounded,
-          label: l.seeDetails,
-          onTap: () => closeThen((host) => openTitle(host, item)),
-        ),
+        if (!adult) ...[
+          SheetActionRow(
+            key: const Key('option-share'),
+            material: Icons.ios_share_rounded,
+            label: l.share,
+            onTap: () async {
+              final title = item.year == null
+                  ? item.name
+                  : '${item.name} (${item.year})';
+              try {
+                await AppSharing.share(AppSharing.message(title, title));
+              } catch (e) {
+                if (context.mounted) showFailure(context, e);
+              }
+            },
+          ),
+          SheetActionRow(
+            key: const Key('option-details'),
+            material: Icons.info_outline_rounded,
+            label: l.seeDetails,
+            onTap: () => closeThen((host) => openTitle(host, item)),
+          ),
+        ],
       ],
     );
   }

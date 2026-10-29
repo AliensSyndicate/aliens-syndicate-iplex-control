@@ -9,6 +9,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'navigation_test.dart' as navigation;
+import 'support/catalog_sets_fixture.dart';
 import 'support/now_playing_fixture.dart';
 import 'widget_test.dart' as fixtures;
 
@@ -432,10 +433,22 @@ void main() {
       expect(art('f1'), art('m1'));
       expect(art('ch1').width, art('ch1').height, reason: 'channels: square');
       expect(art('r1').height / art('r1').width, closeTo(1.5, 0.01));
-      // Featured release: greeting, label, title and "Ver detalhes".
-      expect(find.byKey(const Key('home-hero')), findsOneWidget);
-      expect(find.text('Featured release'), findsOneWidget);
+      // Featured release: portrait art up to the status bar, title and the
+      // primary "See details"; no greeting or label.
+      final hero = find.byKey(const Key('home-hero'));
+      expect(hero, findsOneWidget);
+      expect(tester.getTopLeft(hero).dy, 0);
+      final heroSize = tester.getSize(hero);
+      expect(heroSize.height / heroSize.width, closeTo(16 / 9, 0.01));
+      expect(find.text('Featured release'), findsNothing);
+      expect(find.textContaining('Hi, '), findsNothing);
       expect(find.byKey(const Key('home-hero-title')), findsOneWidget);
+      expect(
+        tester
+            .widget<AppButton>(find.byKey(const Key('home-hero-open')))
+            .primary,
+        isTrue,
+      );
       expect(
         tester.getTopLeft(find.byKey(const Key('home-hero'))).dy,
         lessThan(tester.getTopLeft(find.text('Continue watching')).dy),
@@ -704,33 +717,58 @@ void main() {
 }
 
 class _FeedRepo extends navigation.SessionRepository {
-  _FeedRepo(this.kind) : super(uid: 'u', linked: true) {
+  _FeedRepo(this.kind, {this.failure = false}) : super(uid: 'u', linked: true) {
     sources = [
       Entry('s', {'name': 'Minha IPTV', 'version': 'v', 'status': 'ready'}),
     ];
     home = {'profile': profile};
   }
   final String kind;
+
+  /// The catalog cannot be read.
+  final bool failure;
   static const total = 100;
-  final pages = <Map<String, dynamic>>[];
+  static const small = 5;
+
+  /// Chunk requests, in order.
+  final chunks = <Map<String, dynamic>>[];
 
   @override
   Future<Map<String, dynamic>> mutate(
     String action, [
     Map<String, dynamic> payload = const {},
   ]) async {
-    if (action != 'readSourceCatalog') return super.mutate(action, payload);
-    pages.add(Map.of(payload));
-    final offset = payload['cursor'] as int? ?? 0;
-    final limit = payload['limit'] as int? ?? 30;
-    return {
-      'items': [
-        for (var i = offset; i < offset + limit && i < total; i++)
-          {'id': 'i$i', 'title': 'Item $i', 'kind': kind, 'sourceId': 's'},
-      ],
-      'cursor': offset + limit,
-      'hasMore': offset + limit < total,
-    };
+    if (action == 'readCatalogChunk') chunks.add(Map.of(payload));
+    if (failure && action == 'readCatalogManifest') {
+      throw const AppFailure('unavailable');
+    }
+    return catalogSetsAnswer(
+          action,
+          payload,
+          [
+            for (var i = 0; i < total; i++)
+              {
+                'id': 'i$i',
+                'title': 'Item $i',
+                'kind': kind,
+                'category': 'ACAO',
+                'sourceId': 's',
+              },
+            for (var i = 0; i < small; i++)
+              {
+                'id': 'c$i',
+                'title': 'Comédia $i',
+                'kind': kind,
+                'categoryId': '7',
+                'category': 'ignored when the id has a name',
+                'sourceId': 's',
+              },
+          ],
+          categories: [
+            {'id': '7', 'name': 'FILMES | Comédia', 'kind': kind},
+          ],
+        ) ??
+        await super.mutate(action, payload);
   }
 }
 
@@ -744,15 +782,41 @@ Future<void> settleFeed(WidgetTester tester) async {
 void catalogFeedTests() {
   for (final (tab, kind) in [(1, 'channel'), (2, 'movie'), (3, 'series')]) {
     testWidgets(
-      '$kind tab: three per row feed, 30 per page, loads by scrolling, no "More" button',
+      '$kind tab: categories grouped in the app (TV names) with counts; one '
+      'opens at a time, three per row, A–Z',
       (tester) async {
         final repo = _FeedRepo(kind);
         await navigation.launch(tester, repo);
         await tester.tap(find.byKey(ValueKey('tab-$tab')));
         await settleFeed(tester);
-        expect(repo.pages.first['limit'], 30);
-        expect(find.widgetWithText(AppButton, 'More'), findsNothing);
-        // Three cards share the first row; channels are square, titles 2:3.
+        // Read as the TV reads it: the kind's items and its categories.
+        final set = const {
+          'channel': 'live',
+          'movie': 'vod',
+          'series': 'series',
+        }[kind]!;
+        expect(repo.chunks.map((c) => c['set']).toSet(), {
+          set,
+          '${set}_categories',
+        });
+        // Only the categories (TV de-para) and their counts, A–Z.
+        expect(find.text('Ação'), findsOneWidget);
+        expect(find.text('Comédia'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('Ação')).dy,
+          lessThan(tester.getTopLeft(find.text('Comédia')).dy),
+        );
+        String count(String key) => tester
+            .widget<Text>(find.byKey(ValueKey('catalog-category-count-$key')))
+            .data!;
+        expect(count('acao'), '100');
+        expect(count('comedia'), '5');
+        expect(find.byType(HomeCard), findsNothing);
+
+        await tester.tap(find.text('Ação'));
+        await settleFeed(tester);
+        // Three cards share the first row; channels are square, titles 2:3;
+        // numbers sort by value (Item 2 before Item 10).
         final first = tester.getRect(
           find.byKey(const ValueKey('home-card-i0')),
         );
@@ -768,27 +832,61 @@ void catalogFeedTests() {
           first.height / first.width,
           closeTo(kind == 'channel' ? 1 : 1.5, 0.01),
         );
-        // Scrolling to the end loads the next pages by itself, until the end.
-        final scroll = find.byKey(const PageStorageKey('home-scroll'));
-        for (var i = 0; i < 40 && repo.pages.length < 3; i++) {
-          await tester.drag(scroll, const Offset(0, -1500));
-          await settleFeed(tester);
-        }
-        expect(repo.pages.map((p) => p['cursor']), [0, 30, 60]);
-        for (var i = 0; i < 20; i++) {
-          await tester.drag(scroll, const Offset(0, -3000));
-          await settleFeed(tester);
-        }
-        expect(repo.pages.map((p) => p['cursor']), [
-          0,
-          30,
-          60,
-          90,
-        ], reason: 'nothing left to load');
-        expect(find.widgetWithText(AppButton, 'More'), findsNothing);
+        expect(
+          first.top,
+          greaterThan(tester.getBottomLeft(find.text('Ação')).dy),
+        );
+        // The rest is built while scrolling, without new requests.
+        final requests = repo.chunks.length;
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('home-card-i99')),
+          600,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const PageStorageKey('home-scroll')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(repo.chunks.length, requests);
+
+        // Opening another category closes the first; tapping again closes it.
+        await tester.scrollUntilVisible(
+          find.text('Comédia'),
+          600,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const PageStorageKey('home-scroll')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        // Up from under the bottom navigation.
+        await tester.drag(
+          find.byKey(const PageStorageKey('home-scroll')),
+          const Offset(0, -300),
+        );
+        await settleFeed(tester);
+        await tester.tap(find.text('Comédia'));
+        await settleFeed(tester);
+        expect(find.byKey(const ValueKey('home-card-c0')), findsOneWidget);
+        expect(find.byKey(const ValueKey('home-card-i0')), findsNothing);
+        await tester.tap(find.text('Comédia'));
+        await settleFeed(tester);
+        expect(find.byType(HomeCard), findsNothing);
       },
     );
   }
+
+  testWidgets('catalog that cannot be read: retry, never a "Todos" list', (
+    tester,
+  ) async {
+    await navigation.launch(tester, _FeedRepo('movie', failure: true));
+    await tester.tap(find.byKey(const ValueKey('tab-2')));
+    await settleFeed(tester);
+    expect(find.byType(HomeCard), findsNothing);
+    expect(find.byType(ErrorState), findsOneWidget);
+  });
 }
 
 void floatingBarTests() {
@@ -798,6 +896,8 @@ void floatingBarTests() {
       final repo = _FeedRepo('movie');
       await navigation.launch(tester, repo);
       await tester.tap(find.byKey(const ValueKey('tab-2')));
+      await settleFeed(tester);
+      await tester.tap(find.text('Ação'));
       await settleFeed(tester);
       final title = find.byKey(const Key('home-title'));
       final tabs = find.byKey(const Key('home-tabs'));

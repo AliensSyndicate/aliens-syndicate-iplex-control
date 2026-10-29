@@ -786,6 +786,9 @@ void main() {
           'recentMovies': [item],
         };
       await launch(tester, repo);
+      // Below the featured release.
+      await tester.ensureVisible(find.byKey(const ValueKey('home-card-film')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('home-card-film')));
       await tester.pumpAndSettle();
       expect(find.text('Watch on TV'), findsOneWidget);
@@ -806,10 +809,19 @@ void main() {
         },
         'recentMovies': [item],
       };
+      // Back to the top, then pull to refresh.
+      await tester.fling(
+        find.byType(CustomScrollView).first,
+        const Offset(0, 3000),
+        3000,
+      );
+      await tester.pumpAndSettle();
       await tester.drag(
         find.byType(CustomScrollView).first,
         const Offset(0, 300),
       );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const ValueKey('home-card-film')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('home-card-film')));
       await tester.pumpAndSettle();

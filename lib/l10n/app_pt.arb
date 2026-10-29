@@ -404,8 +404,6 @@
   "iptvSources": "Fontes IPTV",
   "homeNowPlaying": "Reproduzindo",
   "homeFavorites": "Favoritos",
-  "homeGreeting": "Olá, {name}",
-  "homeFeaturedRelease": "Lançamento em destaque",
   "homeReleases": "Lançamentos",
   "homeContinueWatching": "Continuar assistindo",
   "homeRecentMovies": "Filmes recentes",
@@ -578,5 +576,6 @@
   "clearFavoritesBody": "Todos os favoritos de {name} serão excluídos permanentemente. Esta ação não pode ser desfeita. A exclusão será sincronizada com todos os dispositivos.",
   "clearWishlist": "Limpar lista de desejos",
   "clearWishlistTitle": "Limpar lista de desejos?",
-  "clearWishlistBody": "Toda a lista de desejos de {name} será excluída permanentemente. Esta ação não pode ser desfeita. A exclusão será sincronizada com todos os dispositivos."
+  "clearWishlistBody": "Toda a lista de desejos de {name} será excluída permanentemente. Esta ação não pode ser desfeita. A exclusão será sincronizada com todos os dispositivos.",
+  "adultTab": "Adulto"
 }

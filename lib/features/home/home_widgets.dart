@@ -264,9 +264,12 @@ class _ArtworkState extends ConsumerState<Artwork> {
 
   void _lookup() {
     _delay?.cancel();
+    // Adult content never queries TMDB (as on the TV): the source's own image
+    // or the name only.
     if (sourceImage != null ||
         !widget.item.isPlayableTitle ||
-        widget.item.isEditorial) {
+        widget.item.isEditorial ||
+        isAdultEntry(widget.item)) {
       metadata = null;
       return;
     }

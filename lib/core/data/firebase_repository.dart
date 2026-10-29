@@ -334,6 +334,8 @@ class FirebaseManagerRepository implements ManagerRepository {
         'id': source.id,
         'version': source.text('version'),
         'search': search,
+        // Adult content never appears in the search (as on the TV).
+        'adult': false,
         'cursor': cursor ?? 0,
       });
       return CatalogPage(

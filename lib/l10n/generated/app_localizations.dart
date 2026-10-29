@@ -2314,18 +2314,6 @@ abstract class AppLocalizations {
   /// **'Favorites'**
   String get homeFavorites;
 
-  /// No description provided for @homeGreeting.
-  ///
-  /// In en, this message translates to:
-  /// **'Hi, {name}'**
-  String homeGreeting(String name);
-
-  /// No description provided for @homeFeaturedRelease.
-  ///
-  /// In en, this message translates to:
-  /// **'Featured release'**
-  String get homeFeaturedRelease;
-
   /// No description provided for @homeReleases.
   ///
   /// In en, this message translates to:
@@ -3195,6 +3183,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name}\'s whole wishlist will be permanently deleted. This cannot be undone. The deletion is synced to every device.'**
   String clearWishlistBody(String name);
+
+  /// Home tab with the adult content (only for profiles allowed to see it).
+  ///
+  /// In en, this message translates to:
+  /// **'Adult'**
+  String get adultTab;
 }
 
 class _AppLocalizationsDelegate

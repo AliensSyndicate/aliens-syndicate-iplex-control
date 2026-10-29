@@ -257,9 +257,7 @@ void main() {
 
     // Home tabs and rows.
     tabsEdgeToEdge(find.byKey(const Key('home-tabs')), 0);
-    final row = find.byKey(
-      const PageStorageKey('home-row-New releases'),
-    );
+    final row = find.byKey(const PageStorageKey('home-row-New releases'));
     edgeToEdge(row);
     expect(
       tester.getTopLeft(find.byKey(const ValueKey('home-card-m2'))).dx,

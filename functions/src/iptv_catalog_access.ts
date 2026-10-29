@@ -12,13 +12,14 @@ import {xtreamBase} from './iptv_server';
 import {lookup} from 'node:dns/promises';
 import {activePlayer,type Identity} from './service';
 import {classifyAudience, isAdultContent} from './content_audience';
-import {profileView, ProfileView, spaceAllowed} from './family_profiles';
+import {CONTENT_KINDS, profileView, ProfileView, spaceAllowed} from './family_profiles';
 import {consumeAdultUnlock} from './parental';
 import {TitleResolver, type LibraryList} from './library';
 
 type Kind='channel'|'movie'|'series';
 const fold=(v:string)=>v.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-/** Active profile restrictions. null = unrestricted (admin, personal scope, unlinked manager). */
+/** Active profile restrictions. null = unrestricted (personal scope, unlinked manager, administrator
+ * without a profile). */
 export type Viewer = ProfileView | null;
 export function canSee(viewer:Viewer,sourceId:string,item:{kind:Kind;title?:string;category?:string;ageRating?:string;isAdult?:boolean}) {
   if(!viewer)return true;
@@ -44,12 +45,17 @@ async function resolveViewer(tx:FirebaseFirestore.Transaction,actor:Identity,fid
     if(!view.enabled)throw new DomainError('profile-disabled');
     return view;
   }
-  if(family?.kind==='personalIptv'||(family?.adminUid??family?.adminId)===actor.uid)return null;
+  if(family?.kind==='personalIptv')return null;
+  const admin=(family?.adminUid??family?.adminId)===actor.uid;
   const link=await tx.get(db.doc(`families/${fid}/profile_links/${actor.uid}`));
-  const profileId=link.data()?.profileId;
+  const profileId=link.data()?.profileId??(admin?'admin':undefined);
   if(!profileId)return null;
   const snap=await tx.get(db.doc(`families/${fid}/profiles/${profileId}`));
-  return snap.exists?profileView(snap.id,snap.data()!):null;
+  if(!snap.exists)return null;
+  const view=profileView(snap.id,snap.data()!);
+  // The administrator manages every profile, so the Control shows every type; adult content
+  // follows the administrator's own "Conteúdo adulto", as on the TV.
+  return admin?{...view,permissions:{...view.permissions,kinds:[...CONTENT_KINDS]}}:view;
 }
 
 /** Shared objects are never public or signed into bearer download URLs. */
@@ -109,6 +115,9 @@ export async function readSourceCatalog(input:Record<string,unknown>,actor:Ident
   const limit=z.number().int().min(1).max(60).parse(input.limit??30);
   // Optional: one kind only (Control tabs Canais / Filmes / Séries).
   const kind=input.kind===undefined||input.kind===null?null:z.enum(['channel','movie','series']).parse(input.kind);
+  // Optional: the Control's "Adulto" tab (true) or every other list and the search (false); as on
+  // the TV, adult content only exists in its own section. Absent: everything (older clients).
+  const adult=input.adult===undefined||input.adult===null?null:z.boolean().parse(input.adult);
   const catalog=await load(version);
   // Sorted once per published version (a page request no longer sorts 100k titles).
   const sorted=sortedItems(version,catalog);
@@ -117,7 +126,7 @@ export async function readSourceCatalog(input:Record<string,unknown>,actor:Ident
   if(access.viewer&&!visible.length&&catalog.items.length)throw new DomainError('not-found');
   // Matches anywhere in the title, ignoring case and accents.
   const needle=fold(search);
-  const items=visible.filter(i=>(!kind||i.kind===kind)&&(!needle||fold(i.titleKey).includes(needle)));
+  const items=visible.filter(i=>(!kind||i.kind===kind)&&(adult===null||isAdultContent(i)===adult)&&(!needle||fold(i.titleKey).includes(needle)));
   const latest=await authorize(actor,id,false,input.profileId);
   if(latest.fid!==access.fid||latest.data.version!==version||latest.data.revision!==access.data.revision)throw new DomainError('source-conflict');
   const shown=new Set(visible.map(i=>`${i.kind}:${i.categoryId??i.category}`));
@@ -354,23 +363,27 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
   const rowLimit=(section:typeof HOME_SECTIONS[number])=>full===section?SECTION_MAX:HOME_ROW;
   const context=await homeScope(actor);
   const recentMovies:Record<string,unknown>[]=[],recentSeries:Record<string,unknown>[]=[],releases:Record<string,unknown>[]=[];
+  // Kinds with adult content the profile can see in the selected source: the "Adulto" tab.
+  const adultKinds:Kind[]=[];
   const {visible,known}=await visibleCatalog(actor,context.sources,(source,access,catalog,name)=>{
     if(source.id!==selected)return;
     // Only providers that publish an "added" date: nothing is guessed for the others.
-    const newest=(kind:Kind)=>catalog.items.filter(i=>i.kind===kind&&i.addedAt&&canSee(access.viewer,source.id,i))
+    for(const kind of CONTENT_KINDS)if(catalog.items.some(i=>i.kind===kind&&isAdultContent(i)&&canSee(access.viewer,source.id,i)))adultKinds.push(kind);
+    // Never adult: it only exists in the "Adulto" tab.
+    const newest=(kind:Kind)=>catalog.items.filter(i=>i.kind===kind&&i.addedAt&&!isAdultContent(i)&&canSee(access.viewer,source.id,i))
       .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey));
     const pub=(i:Item)=>publicItem({sourceId:source.id,sourceName:name,version:access.data.version,item:i},hash(`${source.id}:${i.id}`));
     const movies=newest('movie'),series=newest('series');
     recentMovies.push(...movies.slice(0,rowLimit('recentMovies')).map(pub));recentSeries.push(...series.slice(0,rowLimit('recentSeries')).map(pub));
     // Lançamentos: never adult (even when allowed, adult content stays in its own category).
     const perKind=full==='releases'?SECTION_MAX:RELEASES_PER_KIND;
-    releases.push(...[...movies.filter(i=>!isAdultContent(i)).slice(0,perKind),...series.filter(i=>!isAdultContent(i)).slice(0,perKind)]
+    releases.push(...[...movies.slice(0,perKind),...series.slice(0,perKind)]
       .sort((a,b)=>b.addedAt!-a.addedAt!||a.titleKey.localeCompare(b.titleKey)).slice(0,full==='releases'?SECTION_MAX:RELEASES_PER_KIND*2).map(pub));
   });
   const profile=context.profile;
   const resolved=(id:string)=>{const v=visible.get(id);return v?publicItem(v,id):null;};
   const recentSearches:Record<string,unknown>[]=[];
-  if(profile?.type!=='guest')for(const id of new Set(recentSearchIds)){const item=resolved(id);if(item)recentSearches.push(item);}
+  if(profile?.type!=='guest')for(const id of new Set(recentSearchIds)){const item=resolved(id);if(item&&!isAdultContent(item))recentSearches.push(item);}
   // Personal rows (guest: none) never carry adult content, as on the TV "Meu iPlex".
   const {favoriteIds,favorites,myList,continueWatching,library,saved}=profile&&profile.type!=='guest'
     ?await profileLibrary(context.ref,profile,visible,known,selected,rowLimit,full==='continueWatching'?SECTION_MAX:50,true)
@@ -378,7 +391,7 @@ export async function readHome(input:Record<string,unknown>,actor:Identity) {
   const watched=profile&&profile.type!=='guest'?await watchedTitles(context.ref,profile,visible,rowLimit('watched'),true):[];
   return {schemaVersion:2,selectedSourceId:selected,
     profile:profile?{id:profile.id,name:profile.name,type:profile.type,generations:profile.generations}:null,
-    favoriteIds,favorites,myList,continueWatching,releases,watched,recentMovies,recentSeries,recentSearches,library,saved};
+    favoriteIds,favorites,myList,continueWatching,releases,watched,recentMovies,recentSeries,recentSearches,library,saved,adultKinds};
 }
 
 type RowLimit=(section:typeof HOME_SECTIONS[number])=>number;
@@ -471,8 +484,9 @@ export async function readProfileLibrary(input:Record<string,unknown>,actor:Iden
   const profile=scope.profile;
   if(profile.type==='guest')return {profile:{id:profile.id,type:profile.type},favorites:[],wishlist:[],continueWatching:[],watched:[]};
   const {visible,known}=await visibleCatalog(actor,scope.sources);
-  const lib=await profileLibrary(scope.ref,profile,visible,known,null,()=>SECTION_MAX,SECTION_MAX);
-  const watched=await watchedTitles(scope.ref,profile,visible,SECTION_MAX);
+  const lib=await profileLibrary(scope.ref,profile,visible,known,null,()=>SECTION_MAX,SECTION_MAX,true);
+  // As on the TV, adult content is never listed with the profile's lists.
+  const watched=(await watchedTitles(scope.ref,profile,visible,SECTION_MAX)).filter(i=>!isAdultContent(i));
   return {profile:{id:profile.id,type:profile.type},favorites:lib.library.favorites,wishlist:lib.library.wishlist,continueWatching:lib.continueWatching,watched};
 }
 
@@ -504,6 +518,8 @@ export async function resolveTitle(input:Record<string,unknown>,actor:Identity) 
   const q=titleQuerySchema.parse({kind:input.kind,tmdbId:input.tmdbId,title:input.title,originalTitle:input.originalTitle,year:input.year,sourceId:input.sourceId});
   const context=await homeScope(actor);
   const {visible,known}=await visibleCatalog(actor,context.sources);
+  // An editorial title never opens adult content (as on the TV).
+  for(const [id,v] of visible)if(isAdultContent(v.item))visible.delete(id);
   const link=new TitleResolver(candidates(visible),known,q.sourceId??null).resolve(q);
   const v=link.id?visible.get(link.id):undefined;
   return {item:v?publicItem(v,link.id!):null,match:v?link.via:null};

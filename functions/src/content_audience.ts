@@ -13,6 +13,8 @@ export type Audience = 'kids' | 'general';
 const fold = (value: unknown) => String(value ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 const ADULT = /(^|[^a-z0-9])(xxx|adult[oa]?s?|adults?|porn\w*|erotic\w*|erotik\w*|hentai|playboy|sexy|18\s*\+|\+\s*18|for adults)([^a-z0-9]|$)/;
+// Category names only (same as the TV's adult category labels): "Sexo" names a category, not a title.
+const ADULT_CATEGORY = /(^|[^a-z0-9])sexo([^a-z0-9]|$)/;
 const KIDS_CATEGORY = /(^|[^a-z0-9])(infantil|infantis|infantiles|kids?|criancas?|children|childrens|ninos|ninas|desenhos?( animados)?|dibujos( animados)?|cartoons?|toddlers?|preschool|pre-escolar|disney junior|disney jr|nick jr|nickelodeon junior|discovery kids|cartoon network|cartoonito|gloob|gloobinho|baby ?tv|zoomoo|tooncast)([^a-z0-9]|$)/;
 // Ratings that mean "suitable for all ages / young children".
 const KIDS_RATINGS = new Set(['l', 'livre', 'al', 'all', 'g', 'tv-y', 'tvy', 'tv-y7', 'tvy7', 'tv-y7-fv', 'tv-g', 'tvg', 'u', 'fsk 0', 'fsk0', 'pegi 3', 'pegi3', 'atp', 'apta', 'apta para todos', 'todos', 'tp', '0', '0+', '3', '3+', '6', '6+', '7', '7+']);
@@ -28,14 +30,14 @@ export function normalizeAgeRating(value: unknown): string | undefined {
 export function isAdultContent(item: {title?: string; category?: string; ageRating?: string; isAdult?: boolean}): boolean {
   // Marca explícita do provedor (Xtream `is_adult`): sinal adicional, nunca reduz a proteção.
   if (item.isAdult === true) return true;
-  if (ADULT.test(fold(item.title)) || ADULT.test(fold(item.category))) return true;
+  if (ADULT.test(fold(item.title)) || ADULT.test(fold(item.category)) || ADULT_CATEGORY.test(fold(item.category))) return true;
   const rating = normalizeAgeRating(item.ageRating);
   return rating !== undefined && /^(18|18\+|r18|nc-17|nc17|x|xxx|pegi 18|pegi18|fsk 18|fsk18)$/.test(rating);
 }
 
 export function classifyAudience(item: {title?: string; category?: string; ageRating?: string}): Audience {
   const title = fold(item.title), category = fold(item.category);
-  if (ADULT.test(title) || ADULT.test(category)) return 'general';
+  if (ADULT.test(title) || ADULT.test(category) || ADULT_CATEGORY.test(category)) return 'general';
   const rating = normalizeAgeRating(item.ageRating);
   if (rating) return KIDS_RATINGS.has(rating) ? 'kids' : 'general';
   return KIDS_CATEGORY.test(category) ? 'kids' : 'general';

@@ -12,6 +12,7 @@ import '../../core/domain/models.dart';
 import '../manager/widgets/home_welcome_state.dart';
 import '../manager/widgets/account_avatar.dart';
 import '../manager/widgets/iptv_source_status.dart';
+import 'catalog_groups.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
 import 'home_providers.dart';
@@ -30,6 +31,9 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   /// Home tab: 0 Meu iPlex, 1 Canais, 2 Filmes, 3 Séries.
   int tab = 0;
+
+  /// Kind shown in the "Adulto" tab (null: the first one it has).
+  String? adultKind;
 
   /// Room below the content for the main menu.
   static const _bottomSpace = AppDimensions.bottomNav + AppSpacing.xl;
@@ -139,7 +143,16 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
     final source = ready.where((s) => s.id == sourceId).firstOrNull;
     final l = context.l;
+    // "Adulto" (as on the TV menu): only for a profile that sees adult
+    // content in this source (never kids); the tab closes when it no longer
+    // does.
+    final adultKinds = ready.isEmpty
+        ? const <String>[]
+        : ref.watch(homeProvider(sourceId)).asData?.value.adultKinds ??
+              const <String>[];
+    if (tab == 4 && adultKinds.isEmpty) tab = 0;
     final playing = tab == 0 ? ref.watch(nowPlayingProvider) : null;
+    final hero = playing == null ? _hero(sourceId, ready) : null;
     final statusBar = MediaQuery.paddingOf(context).top;
     final appBar = Padding(
       padding: EdgeInsets.fromLTRB(
@@ -183,12 +196,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: AppTabs<int>(
         key: const Key('home-tabs'),
         padding: EdgeToEdge.inset,
-        translucent: playing != null,
+        // Over artwork (playing or featured release).
+        translucent: playing != null || hero != null,
         options: [
           (0, l.myIplex),
           (1, l.filterChannels),
           (2, l.filterMovies),
           (3, l.filterSeries),
+          if (adultKinds.isNotEmpty) (4, l.adultTab),
         ],
         selected: tab,
         onSelected: (i) => setState(() => tab = i),
@@ -259,7 +274,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           ],
         ),
       );
-    } else if (_hero(sourceId, ready) case (final home, final releases)) {
+    } else if (hero case (final home, final releases)) {
       // Meu iPlex: the day's featured release, as on the TV.
       final account = ref.watch(accountProvider).asData?.value;
       final profile = home.profile;
@@ -267,9 +282,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         children: [
           ReleaseHero(
             candidates: releases,
-            greeting: profile == null || profile.name.isEmpty
-                ? l.myIplex
-                : l.homeGreeting(profile.name),
             storageKey:
                 'iplex.hero.v1.${account?.uid}.${account?.iptvScopeId}.${profile?.id}',
             top: floating
@@ -330,6 +342,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           SliverToBoxAdapter(child: header),
           if (tab == 0)
             ..._homeSlivers(context, home, sourceId)
+          else if (source != null && tab == 4)
+            ..._adultSlivers(context, source, adultKinds, home.asData?.value)
           else if (source != null)
             CatalogTab(
               key: ValueKey('catalog-${source.id}-$tab'),
@@ -361,6 +375,44 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ],
     );
+  }
+
+  /// "Adulto": the same feed as Canais / Filmes / Séries, with only the
+  /// kinds that have adult content (Ao vivo, Filmes, Séries, as on the TV).
+  List<Widget> _adultSlivers(
+    BuildContext context,
+    Entry source,
+    List<String> kinds,
+    HomeData? home,
+  ) {
+    final l = context.l;
+    final kind = kinds.contains(adultKind) ? adultKind! : kinds.first;
+    final labels = {
+      'channel': l.filterChannels,
+      'movie': l.filterMovies,
+      'series': l.filterSeries,
+    };
+    return [
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: AppTabs<String>(
+            key: const Key('adult-kinds'),
+            padding: EdgeToEdge.inset,
+            options: [for (final k in kinds) (k, labels[k]!)],
+            selected: kind,
+            onSelected: (k) => setState(() => adultKind = k),
+          ),
+        ),
+      ),
+      CatalogTab(
+        key: ValueKey('catalog-${source.id}-adult-$kind'),
+        source: source,
+        kind: kind,
+        home: home,
+        adult: true,
+      ),
+    ];
   }
 
   /// Home data and Lançamentos for the featured release (Meu iPlex tab with
@@ -573,78 +625,50 @@ class CatalogTab extends ConsumerStatefulWidget {
     required this.source,
     required this.kind,
     required this.home,
+    this.adult = false,
   });
   final Entry source;
   final String kind;
   final HomeData? home;
 
+  /// The "Adulto" tab: adult content only; every other tab never has it.
+  final bool adult;
+
   @override
   ConsumerState<CatalogTab> createState() => _CatalogTabState();
 }
 
-/// Items per page of the catalog feed (first batch, skeletons and every
-/// following batch).
-const catalogPageSize = 30;
-
-/// Cards per row of the catalog feed.
+/// Cards per row of a category.
 const catalogColumns = 3;
 
-/// How many cards before the end the next page is requested.
-const _prefetchAhead = 12;
-
 class _CatalogTabState extends ConsumerState<CatalogTab> {
-  final items = <Entry>[];
-  Object? cursor = 0, error;
-  bool loading = false, more = true;
+  /// The open category (one at a time, so the screen stays clean). There is
+  /// no "Todos": titles only show inside an open category.
+  String? open;
+  final headers = <String, GlobalKey>{};
 
-  @override
-  void initState() {
-    super.initState();
-    load();
-  }
+  ({String sourceId, String version, String kind, bool adult}) get _key => (
+    sourceId: widget.source.id,
+    version: widget.source.text('version'),
+    kind: widget.kind,
+    adult: widget.adult,
+  );
 
-  Future<void> load() async {
-    if (loading || !more) return;
-    // `loading` is set without a rebuild: the feed shows its loading row
-    // already (more == true), so only the page arriving repaints.
-    loading = true;
-    error = null;
-    try {
-      final result = await ref.read(repositoryProvider).mutate(
-        'readSourceCatalog',
-        {
-          'id': widget.source.id,
-          'version': widget.source.text('version'),
-          'kind': widget.kind,
-          'cursor': cursor,
-          'limit': catalogPageSize,
-        },
-      );
-      if (!mounted) return;
-      setState(() {
-        final known = {for (final i in items) i.id};
-        items.addAll([
-          for (final raw in (result['items'] as List? ?? const []))
-            if (raw is Map && raw['id'] is String && !known.contains(raw['id']))
-              Entry(raw['id'] as String, Map<String, dynamic>.from(raw)),
-        ]);
-        cursor = result['cursor'];
-        more = result['hasMore'] == true;
-      });
-      // Few cards (or a tall screen): keep fetching until the feed scrolls,
-      // without waiting for any interaction.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fillViewport());
-    } catch (e) {
-      if (mounted) setState(() => error = e);
-    } finally {
-      loading = false;
-    }
-  }
-
-  void _fillViewport() {
-    if (!mounted || !more || loading || error != null) return;
-    final position = Scrollable.maybeOf(context)?.position;
-    if (position != null && position.maxScrollExtent <= 0) load();
+  /// Opens [key] (closing the open one) or closes it; the header stays in
+  /// view.
+  void toggle(String key) {
+    setState(() => open = open == key ? null : key);
+    if (open == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final header = headers[key]?.currentContext;
+      if (header != null && header.mounted) {
+        Scrollable.ensureVisible(
+          header,
+          duration: AppMotion.duration(context, AppMotion.pageEnter),
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        );
+      }
+    });
   }
 
   Widget _box(Widget child) => SliverToBoxAdapter(child: _Padded(child: child));
@@ -652,26 +676,23 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
   @override
   Widget build(BuildContext context) {
     final l = context.l;
-    if (error != null && items.isEmpty) {
+    final groups = ref.watch(catalogGroupsProvider(_key));
+    if (groups.hasError && !groups.hasValue) {
       return _box(
         ErrorState(
-          onRetry: () {
-            more = true;
-            load();
-          },
+          onRetry: () => ref.invalidate(
+            catalogSetProvider((
+              _key.sourceId,
+              _key.version,
+              widget.adult ? 'adult' : widget.kind,
+            )),
+          ),
         ),
       );
     }
-    if (loading && items.isEmpty) {
-      return _box(
-        PosterGridSkeleton(
-          count: catalogPageSize,
-          columns: catalogColumns,
-          square: widget.kind == 'channel',
-        ),
-      );
-    }
-    if (items.isEmpty) {
+    final categories = groups.asData?.value;
+    if (categories == null) return _box(const _CategorySkeleton());
+    if (categories.isEmpty) {
       return _box(
         EmptyState(
           title: l.noResults,
@@ -680,106 +701,155 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
         ),
       );
     }
-    final home = widget.home;
-    final square = widget.kind == 'channel';
+    final index = categories.indexWhere((c) => c.key == open);
+    Widget headerList(Iterable<CatalogGroup> list) => SliverList.list(
+      children: [
+        for (final c in list)
+          _CategoryHeader(
+            key: headers.putIfAbsent(c.key, GlobalKey.new),
+            category: c,
+            open: c.key == open,
+            onTap: () => toggle(c.key),
+          ),
+      ],
+    );
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       sliver: SliverMainAxisGroup(
+        key: ValueKey('catalog-categories-${widget.kind}'),
         slivers: [
-          SliverLayoutBuilder(
-            builder: (context, constraints) {
-              const gap = AppSpacing.sm;
-              final cell =
-                  (constraints.crossAxisExtent - gap * (catalogColumns - 1)) /
-                  catalogColumns;
-              return SliverGrid(
-                key: ValueKey('catalog-grid-${widget.kind}'),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: catalogColumns,
-                  mainAxisSpacing: gap,
-                  crossAxisSpacing: gap,
-                  childAspectRatio: square ? 1 : 2 / 3,
-                ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  // Near the end of what is loaded: fetch the next page.
-                  if (more &&
-                      !loading &&
-                      error == null &&
-                      index >= items.length - _prefetchAhead) {
-                    // Marked now so the many cards built in one frame ask once.
-                    loading = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      loading = false;
-                      if (mounted) load();
-                    });
-                  }
-                  final item = items[index];
-                  return HomeCard(
-                    item: item,
-                    width: cell,
-                    onTap: () => openTitle(context, item),
-                    onLongPress: home == null
-                        ? null
-                        : () => showLibraryActions(
-                            context,
-                            item: item,
-                            home: home,
-                          ),
-                  );
-                }, childCount: items.length),
-              );
-            },
-          ),
-          if (more && error == null)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: _FeedLoadingRow(square: square),
-              ),
-            ),
-          if (error != null)
-            _box(
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.md),
-                child: ErrorState(onRetry: load),
-              ),
-            ),
+          headerList(index < 0 ? categories : categories.take(index + 1)),
+          if (index >= 0) ...[
+            _grid(context, categories[index]),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+            headerList(categories.skip(index + 1)),
+          ],
         ],
       ),
     );
   }
+
+  /// Titles of one category, [catalogColumns] per row (built as they scroll
+  /// into view).
+  Widget _grid(BuildContext context, CatalogGroup group) {
+    final home = widget.home;
+    final square = widget.kind == 'channel';
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        const gap = AppSpacing.sm;
+        final cell =
+            (constraints.crossAxisExtent - gap * (catalogColumns - 1)) /
+            catalogColumns;
+        return SliverGrid(
+          key: ValueKey('catalog-grid-${widget.kind}-${group.key}'),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: catalogColumns,
+            mainAxisSpacing: gap,
+            crossAxisSpacing: gap,
+            childAspectRatio: square ? 1 : 2 / 3,
+          ),
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final item = group.items[index];
+            return HomeCard(
+              item: item,
+              width: cell,
+              onTap: () => openTitle(context, item),
+              onLongPress: home == null
+                  ? null
+                  : () => showLibraryActions(context, item: item, home: home),
+            );
+          }, childCount: group.items.length),
+        );
+      },
+    );
+  }
 }
 
-/// One row of placeholder cards under the feed while the next page loads
-/// (same [catalogColumns] columns and card shape as the feed).
-class _FeedLoadingRow extends StatelessWidget {
-  const _FeedLoadingRow({required this.square});
-  final bool square;
+/// Accordion header of a category (same surface as the Help questions): the
+/// name, how many titles it has and the open/closed arrow.
+class _CategoryHeader extends StatelessWidget {
+  const _CategoryHeader({
+    super.key,
+    required this.category,
+    required this.open,
+    required this.onTap,
+  });
+  final CatalogGroup category;
+  final bool open;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    child: Semantics(
+      button: true,
+      expanded: open,
+      child: Material(
+        key: ValueKey('catalog-category-${category.key}'),
+        color: AppColors.surfaceDefault,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.card),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.card),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    category.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  '${category.items.length}',
+                  key: ValueKey('catalog-category-count-${category.key}'),
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                AnimatedRotation(
+                  turns: open ? 0.5 : 0,
+                  duration: AppMotion.duration(context, AppMotion.pageEnter),
+                  curve: AppMotion.pageCurve,
+                  child: const AppIcon(
+                    AppIcons.down,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Category headers while the list of categories loads.
+class _CategorySkeleton extends StatelessWidget {
+  const _CategorySkeleton();
   @override
   Widget build(BuildContext context) => Semantics(
     label: context.l.loading,
     liveRegion: true,
     child: ExcludeSemantics(
       child: AppSkeletonPulse(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            const gap = AppSpacing.sm;
-            final cell =
-                (constraints.maxWidth - gap * (catalogColumns - 1)) /
-                catalogColumns;
-            return Row(
-              children: [
-                for (var i = 0; i < catalogColumns; i++) ...[
-                  if (i > 0) const SizedBox(width: gap),
-                  AppSkeletonBlock(
-                    width: cell,
-                    height: square ? cell : cell * 3 / 2,
-                    radius: AppRadii.md,
-                  ),
-                ],
-              ],
-            );
-          },
+        child: Column(
+          children: [
+            for (var i = 0; i < 8; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpacing.sm),
+              const AppSkeletonBlock(height: 56, radius: AppRadii.card),
+            ],
+          ],
         ),
       ),
     ),

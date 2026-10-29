@@ -1247,14 +1247,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeFavorites => 'Favorites';
 
   @override
-  String homeGreeting(String name) {
-    return 'Hi, $name';
-  }
-
-  @override
-  String get homeFeaturedRelease => 'Featured release';
-
-  @override
   String get homeReleases => 'New releases';
 
   @override
@@ -1732,4 +1724,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String clearWishlistBody(String name) {
     return '$name\'s whole wishlist will be permanently deleted. This cannot be undone. The deletion is synced to every device.';
   }
+
+  @override
+  String get adultTab => 'Adult';
 }

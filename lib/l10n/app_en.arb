@@ -501,15 +501,6 @@
   "iptvSources": "IPTV sources",
   "homeNowPlaying": "Now playing",
   "homeFavorites": "Favorites",
-  "homeGreeting": "Hi, {name}",
-  "@homeGreeting": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "homeFeaturedRelease": "Featured release",
   "homeReleases": "New releases",
   "homeContinueWatching": "Continue watching",
   "homeRecentMovies": "Recently added movies",
@@ -734,5 +725,9 @@
         "type": "String"
       }
     }
+  },
+  "adultTab": "Adult",
+  "@adultTab": {
+    "description": "Home tab with the adult content (only for profiles allowed to see it)."
   }
 }

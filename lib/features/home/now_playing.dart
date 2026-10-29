@@ -51,21 +51,23 @@ final nowPlayingProvider = Provider.autoDispose<NowPlaying?>((ref) {
       continue;
     }
     final position = status['positionSec'], duration = status['durationSec'];
+    final item = Entry(itemId, {
+      'title': status['title'],
+      'kind': status['kind'],
+      'sourceId': status['sourceId'],
+      'providerRef': status['providerRef'],
+      'imageRef': status['imageRef'],
+      'year': status['year'],
+      'episodeId': status['episodeId'],
+      if (position is num && duration is num && duration > 0)
+        'progress': {'position': position, 'duration': duration},
+      'category': status['category'],
+    });
+    // Adult content is never shown as playing (as on the TV, which does not
+    // report it).
+    if (isAdultEntry(item)) continue;
     bestAt = at;
-    best = NowPlaying(
-      deviceId: device.id,
-      item: Entry(itemId, {
-        'title': status['title'],
-        'kind': status['kind'],
-        'sourceId': status['sourceId'],
-        'providerRef': status['providerRef'],
-        'imageRef': status['imageRef'],
-        'year': status['year'],
-        'episodeId': status['episodeId'],
-        if (position is num && duration is num && duration > 0)
-          'progress': {'position': position, 'duration': duration},
-      }),
-    );
+    best = NowPlaying(deviceId: device.id, item: item);
   }
   return best;
 });

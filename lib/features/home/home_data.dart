@@ -171,6 +171,7 @@ class HomeData {
     this.libraryFavorites = const [],
     this.wishlist = const [],
     this.saved = const {},
+    this.adultKinds = const [],
   });
 
   factory HomeData.fromJson(Map<String, dynamic> json) {
@@ -236,6 +237,10 @@ class HomeData {
               },
         LibraryList.wishlist: keys('wishlist'),
       },
+      adultKinds: [
+        for (final kind in const ['channel', 'movie', 'series'])
+          if ((json['adultKinds'] as List? ?? const []).contains(kind)) kind,
+      ],
     );
   }
 
@@ -252,6 +257,11 @@ class HomeData {
   /// Library rows (catalog items and editorial titles, `available` flag).
   final List<Entry> libraryFavorites, wishlist;
   final Map<LibraryList, Set<String>> saved;
+
+  /// Kinds with adult content the profile can see in the selected source, in
+  /// the TV order (Ao vivo, Filmes, Séries): the "Adulto" tab, only when not
+  /// empty.
+  final List<String> adultKinds;
 
   bool get isEmpty =>
       libraryFavorites.isEmpty &&
@@ -336,12 +346,18 @@ final _adultRating = RegExp(
   r'^(18|18\+|r18|nc-17|nc17|x|xxx|pegi 18|pegi18|fsk 18|fsk18)$',
 );
 
-/// Adult content: same signals as the backend (`isAdultContent`): provider
-/// flag, title/category words or an 18 rating.
+/// Adult category names of the TV (`isAdultName`): "Sexo" names a category,
+/// not a title.
+final _adultCategory = RegExp(r'(^|[^a-z0-9])sexo([^a-z0-9]|$)');
+
+/// Adult content: same signals as the TV (`isAdultItem`) and the backend
+/// (`isAdultContent`): provider flag, title/category words or an 18 rating.
 bool isAdultEntry(Entry item) {
   if (item.data['isAdult'] == true) return true;
-  if (_adult.hasMatch(_fold(item.data['title'])) ||
-      _adult.hasMatch(_fold(item.data['category']))) {
+  final category = _fold(item.data['category']);
+  if (_adult.hasMatch(_fold(item.data['title'] ?? item.data['name'])) ||
+      _adult.hasMatch(category) ||
+      _adultCategory.hasMatch(category)) {
     return true;
   }
   final rating = _fold(item.data['ageRating'])

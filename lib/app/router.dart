@@ -258,6 +258,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                     _rootPage(key: s.pageKey, child: const HomePage()),
                 routes: [
                   // Full details pages (never a sheet). Catalog items travel
+                  // Adult series: its episodes only (no details page).
+                  GoRoute(
+                    path: 'adult-series',
+                    redirect: (c, s) => s.extra is Entry ? null : '/home',
+                    pageBuilder: (c, s) => _appPage(
+                      key: s.pageKey,
+                      child: AdultSeriesPage(series: s.extra! as Entry),
+                    ),
+                  ),
                   // as `extra`; editorial titles are addressed by TMDB id.
                   GoRoute(
                     path: 'title',

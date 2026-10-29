@@ -218,6 +218,48 @@ test('kids and space permissions are enforced by the backend in listings, search
  assert.deepEqual(tvItems,['k1','k2','s1']);
 });
 
+test('adult content only exists in its own section of the Control, as on the TV; the administrator follows its own choice',async()=>{
+ const {admin,fid,ctx}=await family();
+ const catalog={schemaVersion:1,items:[
+  {id:'m1',title:'Drama',titleKey:'drama',kind:'movie',category:'Filmes',providerRef:'1',addedAt:2,tmdbId:10},
+  {id:'m2',title:'XXX Night',titleKey:'xxx night',kind:'movie',category:'Filmes',providerRef:'2',addedAt:3,tmdbId:20},
+  {id:'c1',title:'Canal Notícias',titleKey:'canal noticias',kind:'channel',category:'Notícias',providerRef:'3'},
+  {id:'c2',title:'Canal Hot',titleKey:'canal hot',kind:'channel',category:'Sexo',providerRef:'4'},
+  {id:'s1',title:'Bluey',titleKey:'bluey',kind:'series',category:'Kids',providerRef:'5'},
+ ]};
+ const body=JSON.stringify(catalog),version=hash(body);
+ await getStorage().bucket().file(`catalogs/${version}.json`).save(body);
+ await db().doc(`catalogs/${version}`).set({storagePath:`catalogs/${version}.json`,integrityHash:hash(body)});
+ await db().doc(`families/${fid}/sources/src1`).set({name:'Lista',enabled:true,version,revision:1});
+ const read=async(a:Identity,adult?:boolean)=>(await execute('readSourceCatalog',{id:'src1',contextFamilyId:fid,...(adult===undefined?{}:{adult})},a) as {items:{catalogItemId:string}[]}).items.map(i=>i.catalogItemId).sort();
+ const home=async(a:Identity)=>await execute('readHome',{sourceId:'src1',recentSearchIds:catalog.items.map(i=>hash(`src1:${i.id}`)),...ctx},a) as {adultKinds:string[];recentMovies:{catalogItemId:string}[];releases:{catalogItemId:string}[];recentSearches:{catalogItemId:string}[]};
+ const ids=(rows:{catalogItemId:string}[])=>rows.map(r=>r.catalogItemId);
+ // Older clients (no `adult`) keep the whole list; the Control asks for one side or the other.
+ assert.equal((await read(admin)).length,5);
+ assert.deepEqual(await read(admin,false),['c1','m1','s1']);
+ assert.deepEqual(await read(admin,true),['c2','m2'],'"Sexo" names an adult category');
+ const before=await home(admin);
+ assert.deepEqual(before.adultKinds,['channel','movie']);
+ assert.deepEqual(ids(before.recentMovies),['m1']);
+ assert.deepEqual(ids(before.releases),['m1']);
+ assert.deepEqual(ids(before.recentSearches).sort(),['c1','m1','s1']);
+ // An editorial (TMDB) title never opens adult content.
+ const title=async(tmdbId:number)=>(await execute('resolveTitle',{kind:'movie',tmdbId,...ctx},admin) as {item:{catalogItemId:string}|null}).item?.catalogItemId??null;
+ assert.equal(await title(10),'m1');
+ assert.equal(await title(20),null);
+ // The administrator turns its own adult content off: gone from the Control too, as on the TV.
+ await execute('setProfilePermissions',{profileId:'admin',adult:false,...ctx},admin);
+ assert.deepEqual(await read(admin),['c1','m1','s1']);
+ assert.deepEqual(await read(admin,true),[]);
+ assert.deepEqual((await home(admin)).adultKinds,[]);
+ // Kids never have the section.
+ const kid=(await execute('saveProfile',{name:'Lia',type:'kids',...ctx},admin) as {id:string}).id;
+ const lia=await account('Lia');
+ const {code}=await execute('createProfileLinkCode',{profileId:kid,...ctx},admin) as {code:string};
+ await execute('redeemProfileLink',{code},lia);
+ assert.deepEqual((await home(lia)).adultKinds,[]);
+});
+
 test('deleting a profile removes its media data for real and releases its account link',async()=>{
  const {admin,fid,ctx}=await family();
  const pid=(await execute('saveProfile',{name:'Rui',...ctx},admin) as {id:string}).id;

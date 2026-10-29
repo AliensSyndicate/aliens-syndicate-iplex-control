@@ -18,8 +18,18 @@ import 'season_episodes.dart';
 import '../../core/data/app_sharing.dart';
 
 /// Opens the full details page of [item] on top of the current page (Home →
-/// title → person → title …); Back returns through the same stack.
+/// title → person → title …); Back returns through the same stack. Adult
+/// content never has a details page (as on the TV): a movie or channel goes
+/// straight to "Assistir na TV" and a series to its episodes.
 void openTitle(BuildContext context, Entry item) {
+  if (!item.isEditorial && isAdultEntry(item)) {
+    if (item.kind == 'series') {
+      context.push('/home/adult-series', extra: item);
+    } else {
+      showWatchOnTv(context, item);
+    }
+    return;
+  }
   if (item.isEditorial) {
     context.push('/home/title/${item.kind}/${item.tmdbId}', extra: item);
   } else {
@@ -1006,4 +1016,82 @@ class _Programme {
   const _Programme(this.title, this.start, this.end);
   final String title;
   final DateTime start, end;
+}
+
+/// Episodes of an adult series (as on the TV): the source's own seasons and
+/// names, no TMDB, nothing saved; an episode opens "Assistir na TV".
+class AdultSeriesPage extends ConsumerStatefulWidget {
+  const AdultSeriesPage({super.key, required this.series});
+  final Entry series;
+
+  @override
+  ConsumerState<AdultSeriesPage> createState() => _AdultSeriesPageState();
+}
+
+class _AdultSeriesPageState extends ConsumerState<AdultSeriesPage> {
+  late Future<List<TvEpisode>> episodes = _load();
+  int? season;
+
+  Future<List<TvEpisode>> _load() async {
+    final result = await ref.read(repositoryProvider).mutate(
+      'readSourceSeries',
+      {
+        'id': widget.series.sourceId,
+        'seriesId': widget.series.text('providerRef'),
+      },
+    );
+    return parseEpisodes(result['details']);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    return Scaffold(
+      body: PageTemplate(
+        title: widget.series.name,
+        showBack: true,
+        child: FutureBuilder<List<TvEpisode>>(
+          future: episodes,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return ErrorState(
+                onRetry: () => setState(() => episodes = _load()),
+              );
+            }
+            final list = snapshot.data;
+            if (list == null) return const AppLoadingSkeleton();
+            if (list.isEmpty) {
+              return EmptyState(
+                title: l.noResults,
+                body: l.noResultsBody,
+                icon: AppIcons.search,
+              );
+            }
+            final numbers = {for (final e in list) e.season}.toList()..sort();
+            final current = numbers.contains(season) ? season! : numbers.first;
+            return Column(
+              key: const Key('adult-series'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _SeasonPicker(
+                  seasons: numbers,
+                  selected: current,
+                  onSelected: (n) => setState(() => season = n),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SeasonEpisodes(
+                  key: ValueKey('adult-season-$current'),
+                  series: widget.series,
+                  season: current,
+                  available: list,
+                  onPlay: (e) =>
+                      showWatchOnTv(context, widget.series, episodeId: e.id),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }

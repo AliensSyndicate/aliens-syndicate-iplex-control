@@ -100,7 +100,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       ]);
       if (!mounted || request != generation) return;
       setState(() {
-        titles = results[0] as List<Entry>;
+        // Never adult (as on the TV), even from an older backend.
+        titles = [
+          for (final t in results[0] as List<Entry>)
+            if (!isAdultEntry(t)) t,
+        ];
         final found = results[1] as List<PersonResult>?;
         people = found ?? const [];
         peopleUnavailable = found == null;

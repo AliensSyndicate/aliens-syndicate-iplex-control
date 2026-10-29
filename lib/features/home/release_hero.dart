@@ -17,30 +17,28 @@ String heroDay([DateTime? now]) {
   return '${d.year}-${two(d.month)}-${two(d.day)}';
 }
 
-/// "Lançamento em destaque" at the top of Meu iPlex (same rule as the TV):
-/// one release per day and profile, remembered on the device. A release
-/// without any image (no TMDB match and no source cover) is skipped for the
-/// next one; when none has an image, the first is shown on the plain
-/// background (never stuck loading).
+/// Featured release at the top of Meu iPlex (same rule as the TV): one
+/// release per day and profile, remembered on the device. The portrait art
+/// (9:16) fills the block up to the status bar, under the floating app bar,
+/// as when a title is playing. A release without any image (no TMDB match
+/// and no source cover) is skipped for the next one; when none has an
+/// image, the first is shown on the plain background (never stuck loading).
 class ReleaseHero extends ConsumerStatefulWidget {
   const ReleaseHero({
     super.key,
     required this.candidates,
-    required this.greeting,
     required this.storageKey,
     required this.top,
     required this.onOpen,
   });
   final List<Entry> candidates;
-  final String greeting;
 
   /// Device preference key of the daily pick (per account, scope and profile).
   final String storageKey;
 
-  /// Room for the floating app bar over the artwork.
+  /// App bar (or the room for the floating one) drawn over the artwork.
   final Widget top;
   final ValueChanged<Entry> onOpen;
-
   @override
   ConsumerState<ReleaseHero> createState() => _ReleaseHeroState();
 }
@@ -90,8 +88,9 @@ class _ReleaseHeroState extends ConsumerState<ReleaseHero> {
         summary = await metadata.summary(candidate);
       } catch (_) {}
       if (!mounted || key != widget.storageKey) return;
+      // Portrait art, as the block shows it (see [Artwork]).
       final image =
-          summary?.backdrop ?? summary?.poster ?? candidate.sourceImage;
+          candidate.sourceImage ?? candidate.editorialPoster ?? summary?.poster;
       if (image == null) continue;
       setState(() {
         item = candidate;
@@ -124,133 +123,99 @@ class _ReleaseHeroState extends ConsumerState<ReleaseHero> {
         ? meta!.title!
         : item?.name;
     final overview = meta?.overview ?? '';
-    // Below the app bar and tabs (their background stays the page's). The
-    // height follows the text; the artwork fills the block, with at least
-    // this much image above the text.
-    final imageGap = MediaQuery.sizeOf(context).width * 0.5;
-    return Column(
+    final width = MediaQuery.sizeOf(context).width;
+    return SizedBox(
       key: const Key('home-hero'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        widget.top,
-        Stack(
-          children: [
-            Positioned.fill(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (item != null)
-                    Artwork(
-                      key: ValueKey('home-hero-art-${item.id}'),
-                      item: item,
-                      backdrop: true,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.topCenter,
-                      background: AppColors.backgroundPrimary,
-                    )
-                  else if (!resolved)
-                    const AppSkeletonPulse(
-                      child: AppSkeletonBlock(
-                        height: double.infinity,
-                        radius: 0,
-                      ),
+      height: width * 16 / 9,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (item != null)
+            Artwork(
+              key: ValueKey('home-hero-art-${item.id}'),
+              item: item,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              background: AppColors.backgroundPrimary,
+              decodeWidth: 1080,
+            )
+          else if (!resolved)
+            const AppSkeletonPulse(
+              child: AppSkeletonBlock(height: double.infinity, radius: 0),
+            ),
+          // Legibility of the app bar over the image (as when playing).
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment(0, -0.5),
+                colors: [Color(0xB3000000), Colors.transparent],
+              ),
+            ),
+          ),
+          // And of the text, fading into the page colour.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: const Alignment(0, 0.1),
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppColors.backgroundPrimary.withValues(alpha: 0.85),
+                  AppColors.backgroundPrimary,
+                ],
+                stops: const [0.0, 0.6, 1.0],
+              ),
+            ),
+          ),
+          Positioned(top: 0, left: 0, right: 0, child: widget.top),
+          Positioned(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            bottom: AppSpacing.md,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (title != null)
+                  Text(
+                    title,
+                    key: const Key('home-hero-title'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.6,
+                      height: 1.15,
+                      color: Colors.white,
+                      shadows: textShadow,
                     ),
-                  // Legibility only over the image, in the page colour.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: const Alignment(0, -0.1),
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          AppColors.backgroundPrimary.withValues(alpha: 0.85),
-                          AppColors.backgroundPrimary,
-                        ],
-                        stops: const [0.0, 0.6, 1.0],
-                      ),
+                  ),
+                if (overview.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    overview,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: const Color(0xFFD0D0D0),
+                      shadows: textShadow,
                     ),
                   ),
                 ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: imageGap),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.greeting,
-                        key: const Key('home-hero-greeting'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          shadows: textShadow,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l.homeFeaturedRelease,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFFD0D0D0),
-                          shadows: textShadow,
-                        ),
-                      ),
-                      if (title != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          title,
-                          key: const Key('home-hero-title'),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.6,
-                            height: 1.15,
-                            color: Colors.white,
-                            shadows: textShadow,
-                          ),
-                        ),
-                      ],
-                      if (overview.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          overview,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: const Color(0xFFD0D0D0),
-                            shadows: textShadow,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.md),
-                      AppButton(
-                        key: const Key('home-hero-open'),
-                        width: 180,
-                        label: l.viewDetails,
-                        onPressed: item == null
-                            ? null
-                            : () => widget.onOpen(item),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                  ),
+                const SizedBox(height: AppSpacing.md),
+                AppButton.primary(
+                  key: const Key('home-hero-open'),
+                  width: 180,
+                  label: l.viewDetails,
+                  onPressed: item == null ? null : () => widget.onOpen(item),
                 ),
               ],
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
