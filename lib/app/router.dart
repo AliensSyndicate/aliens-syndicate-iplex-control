@@ -134,6 +134,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     refresh.refresh();
   });
   ref.listen(accountProvider, (_, _) => refresh.refresh());
+  // Boot: the loading page stays until the IPTV lists ("configurações") have
+  // arrived once, so Home opens ready (with only its own rows skeleton).
+  // Later reloads never send the user back to it.
+  var configured = false;
+  ref.listen(entriesProvider('sources'), (_, _) => refresh.refresh());
   ref.listen(familyProvider, (_, _) => refresh.refresh());
   final router = GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -174,6 +179,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           account.hasError ||
           account.asData?.value?.uid != uid) {
         return path == '/loading' ? null : gate;
+      }
+      if (!configured) {
+        // Before the account is known the lists provider answers an empty
+        // placeholder: only a finished read of this account's lists counts.
+        final sources = ref.read(entriesProvider('sources'));
+        final scoped = account.asData!.value!.iptvScopeId != null;
+        if (!scoped ||
+            (!sources.isLoading && (sources.hasValue || sources.hasError))) {
+          configured = true;
+        } else {
+          return path == '/loading' ? null : gate;
+        }
       }
       final target = ['/login', '/loading'].contains(path)
           ? destination ?? '/home'

@@ -113,7 +113,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: account.when(
             skipLoadingOnRefresh: false,
             skipLoadingOnReload: false,
-            loading: () => const _Padded(child: AppLoadingSkeleton()),
+            // Covered by the boot loading page: no generic skeleton here.
+            loading: () => const SizedBox.shrink(),
             error: (e, stack) => _Padded(
               child: ErrorState(onRetry: () => ref.invalidate(accountProvider)),
             ),
@@ -123,7 +124,8 @@ class _HomePageState extends ConsumerState<HomePage> {
               }
               final sources = ref.watch(entriesProvider('sources'));
               return sources.when(
-                loading: () => const _Padded(child: AppLoadingSkeleton()),
+                // Covered by the boot loading page: no generic skeleton here.
+                loading: () => const SizedBox.shrink(),
                 error: (e, stack) => _Padded(
                   child: ErrorState(
                     onRetry: () => ref.invalidate(entriesProvider('sources')),

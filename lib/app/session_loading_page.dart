@@ -71,7 +71,9 @@ class SessionLoadingPage extends ConsumerWidget {
                       child: Text(
                         auth.isLoading
                             ? context.l.restoringSession
-                            : context.l.loadingAccount,
+                            : account.isLoading || family.isLoading
+                            ? context.l.loadingAccount
+                            : context.l.loadingSettings,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: AppColors.textSecondary),
                       ),

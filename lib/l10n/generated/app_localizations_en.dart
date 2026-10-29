@@ -1787,4 +1787,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get playbackStreamUnreachable =>
       'Your IPTV list provider did not deliver the video (address offline). Try other content or contact the provider.';
+
+  @override
+  String get loadingSettings => 'Loading settings';
 }

@@ -3303,6 +3303,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your IPTV list provider did not deliver the video (address offline). Try other content or contact the provider.'**
   String get playbackStreamUnreachable;
+
+  /// Boot: the IPTV lists and settings are loading before Home opens.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading settings'**
+  String get loadingSettings;
 }
 
 class _AppLocalizationsDelegate

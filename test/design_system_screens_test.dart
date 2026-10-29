@@ -4,6 +4,7 @@ import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
+import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -189,11 +190,15 @@ void main() {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-    final repo = _Repo()..pendingSources = Completer<List<Entry>>();
-    await navigation.launch(tester, repo, settle: false);
-    for (var i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 100));
-    }
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(body: AppLoadingSkeleton()),
+      ),
+    );
+    await tester.pump();
     expect(find.byType(AppLoadingSkeleton), findsOneWidget);
     expect(
       find.descendant(

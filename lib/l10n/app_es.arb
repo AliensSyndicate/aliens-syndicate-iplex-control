@@ -596,5 +596,6 @@
   "playerDeviceName": "Celular",
   "errorFeatureUnavailable": "Esta función aún no está disponible en el servidor. Inténtalo más tarde.",
   "errorProfileUnavailable": "Tu perfil no está disponible para reproducir. Revisa tu perfil en la pestaña Familia.",
-  "playbackStreamUnreachable": "El proveedor de tu lista IPTV no entregó el video (dirección fuera de línea). Prueba otro contenido o contacta al proveedor."
+  "playbackStreamUnreachable": "El proveedor de tu lista IPTV no entregó el video (dirección fuera de línea). Prueba otro contenido o contacta al proveedor.",
+  "loadingSettings": "Cargando configuración"
 }

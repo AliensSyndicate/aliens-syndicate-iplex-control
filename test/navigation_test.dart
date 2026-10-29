@@ -510,7 +510,8 @@ void main() {
     },
   );
   testWidgets(
-    'loading sources shows skeleton, not an empty or failed catalog',
+    'boot: while the IPTV lists load, the loading page (no skeleton), then '
+    'Home; never an empty or failed catalog',
     (tester) async {
       // Skeletons pulse; with reduced motion they stay still and the test
       // can settle.
@@ -522,13 +523,20 @@ void main() {
       final pending = Completer<List<Entry>>();
       final repo = SessionRepository(uid: 'u', linked: true)
         ..pendingSources = pending;
-      await launch(tester, repo);
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byType(AppLoadingSkeleton), findsOneWidget);
+      final c = await launch(tester, repo, settle: false);
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(path(c), '/loading');
+      expect(find.text('Loading settings'), findsOneWidget);
+      expect(find.byType(AppLoadingSkeleton), findsNothing);
       expect(find.text('Welcome to iPlex'), findsNothing);
-      await fixtures.screenshot(tester, 'home-skeleton');
+      await fixtures.screenshot(tester, 'boot-loading-settings');
       pending.complete([]);
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(path(c), '/home');
       expect(find.byType(AppLoadingSkeleton), findsNothing);
       expect(find.text('Welcome to iPlex'), findsOneWidget);
     },

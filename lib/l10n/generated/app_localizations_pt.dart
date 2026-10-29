@@ -1804,4 +1804,7 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get playbackStreamUnreachable =>
       'O provedor da sua lista IPTV não entregou o vídeo (endereço fora do ar). Tente outro conteúdo ou fale com o provedor.';
+
+  @override
+  String get loadingSettings => 'Carregando configurações';
 }

@@ -763,5 +763,9 @@
   "playbackStreamUnreachable": "Your IPTV list provider did not deliver the video (address offline). Try other content or contact the provider.",
   "@playbackStreamUnreachable": {
     "description": "The player could not reach the stream address the IPTV provider gave (DNS, connection, HTTP error)."
+  },
+  "loadingSettings": "Loading settings",
+  "@loadingSettings": {
+    "description": "Boot: the IPTV lists and settings are loading before Home opens."
   }
 }
