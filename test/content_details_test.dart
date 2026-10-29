@@ -1326,13 +1326,13 @@ void main() {
       ..recentMovies = [item('m2', 'Filme Novo', 'movie')];
     await launchWith(tester, repo, metadataFixture());
     // Not offered for a title that is not in progress.
-    await tester.tap(find.byKey(const ValueKey('home-card-more-m2')));
+    await tester.longPress(find.byKey(const ValueKey('home-card-m2')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('option-remove-progress')), findsNothing);
     Navigator.of(tester.element(find.byKey(const Key('content-options'))))
         .pop();
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('home-card-more-m1')).first);
+    await tester.longPress(find.byKey(const ValueKey('home-card-m1')).first);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('option-remove-progress')));
     await tester.pumpAndSettle();

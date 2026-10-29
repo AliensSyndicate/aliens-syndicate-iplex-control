@@ -5,6 +5,7 @@ import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../../core/data/app_sharing.dart';
+import '../manager/widgets/profile_library.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
@@ -64,7 +65,10 @@ Future<void> saveToLibrary(
       'poster': ?poster,
     },
   });
-  ref.invalidate(homeProvider);
+  ref
+    ..invalidate(homeProvider)
+    // The lists at the top of the catalog tabs.
+    ..invalidate(profileLibraryProvider);
 }
 
 /// "Favoritos" + "Lista de desejos" toggles. Both are independent; a channel
@@ -181,7 +185,7 @@ class _LibraryButtonsState extends ConsumerState<LibraryButtons> {
 }
 
 /// Content options (reference: "Modal Sheet – Opções de conteúdo"), from
-/// the "⋮" of a card or a long press: Assistir na TV (catalog items),
+/// a long press on a card: Assistir na TV (catalog items),
 /// Favoritos, Lista de desejos (titles), Compartilhar and Ver detalhes.
 /// Only existing actions; nothing here creates new lists.
 Future<void> showLibraryActions(
@@ -230,7 +234,8 @@ class _ContentOptionsState extends ConsumerState<_ContentOptions> {
       });
       ref
         ..invalidate(homeProvider)
-        ..invalidate(homeSectionProvider);
+        ..invalidate(homeSectionProvider)
+        ..invalidate(profileLibraryProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {

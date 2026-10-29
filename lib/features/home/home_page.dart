@@ -12,6 +12,7 @@ import '../../core/domain/models.dart';
 import '../manager/widgets/home_welcome_state.dart';
 import '../manager/widgets/account_avatar.dart';
 import '../manager/widgets/iptv_source_status.dart';
+import '../manager/widgets/profile_library.dart';
 import 'catalog_groups.dart';
 import 'content_details_page.dart';
 import 'home_data.dart';
@@ -84,7 +85,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     openTitle(context, withProgress);
   }
 
-  /// "⋮" / long press on a card: content options (the list actions only
+  /// Long press on a card: content options (the list actions only
   /// for persistent profiles, inside the sheet).
   ValueChanged<Entry>? libraryActions(HomeData? home) => home == null
       ? null
@@ -196,8 +197,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       child: AppTabs<int>(
         key: const Key('home-tabs'),
         padding: EdgeToEdge.inset,
-        // Over artwork (playing or featured release).
-        translucent: playing != null || hero != null,
+        // Same look on every tab (as on Meu iPlex, over the artwork).
+        translucent: true,
         options: [
           (0, l.myIplex),
           (1, l.filterChannels),
@@ -690,8 +691,11 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
         ),
       );
     }
-    final categories = groups.asData?.value;
-    if (categories == null) return _box(const _CategorySkeleton());
+    final provider = groups.asData?.value;
+    if (provider == null) return _box(const _CategorySkeleton());
+    // The profile's own lists first, when they have titles of this kind (as
+    // on the TV menu); never in the "Adulto" tab.
+    final categories = [..._personal(context), ...provider];
     if (categories.isEmpty) {
       return _box(
         EmptyState(
@@ -729,38 +733,69 @@ class _CatalogTabState extends ConsumerState<CatalogTab> {
     );
   }
 
-  /// Titles of one category, [catalogColumns] per row (built as they scroll
-  /// into view).
+  /// Continuar assistindo, Favoritos, Lista de desejos and Assistidos of the
+  /// account's profile, with this tab's kind only (TV order); empty ones are
+  /// left out.
+  List<CatalogGroup> _personal(BuildContext context) {
+    final profileId = widget.home?.profile?.id;
+    if (widget.adult || profileId == null) return const [];
+    final library = ref.watch(profileLibraryProvider(profileId)).asData?.value;
+    if (library == null) return const [];
+    return [
+      for (final kind in const [
+        LibraryKind.continueWatching,
+        LibraryKind.favorites,
+        LibraryKind.wishlist,
+        LibraryKind.watched,
+      ])
+        if (_ofKind(library.of(kind)) case final items when items.isNotEmpty)
+          CatalogGroup(
+            'personal-${kind.name}',
+            libraryTitle(context, kind),
+            items,
+          ),
+    ];
+  }
+
+  /// One entry per title of this tab's kind (history lists every episode).
+  List<Entry> _ofKind(List<Entry> items) {
+    final seen = <String>{};
+    return [
+      for (final item in items)
+        if (item.kind == widget.kind &&
+            !isAdultEntry(item) &&
+            seen.add(item.id))
+          item,
+    ];
+  }
+
+  /// Titles of one category, [catalogColumns] per row, built as they scroll
+  /// into view. The card width comes from its own cell: a sliver layout
+  /// builder here would rebuild every visible card on each scroll frame.
   Widget _grid(BuildContext context, CatalogGroup group) {
     final home = widget.home;
     final square = widget.kind == 'channel';
-    return SliverLayoutBuilder(
-      builder: (context, constraints) {
-        const gap = AppSpacing.sm;
-        final cell =
-            (constraints.crossAxisExtent - gap * (catalogColumns - 1)) /
-            catalogColumns;
-        return SliverGrid(
-          key: ValueKey('catalog-grid-${widget.kind}-${group.key}'),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: catalogColumns,
-            mainAxisSpacing: gap,
-            crossAxisSpacing: gap,
-            childAspectRatio: square ? 1 : 2 / 3,
+    return SliverGrid(
+      key: ValueKey('catalog-grid-${widget.kind}-${group.key}'),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: catalogColumns,
+        mainAxisSpacing: AppSpacing.sm,
+        crossAxisSpacing: AppSpacing.sm,
+        childAspectRatio: square ? 1 : 2 / 3,
+      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final item = group.items[index];
+        return LayoutBuilder(
+          builder: (context, cell) => HomeCard(
+            item: item,
+            width: cell.maxWidth,
+            onTap: () => openTitle(context, item),
+            onLongPress: home == null
+                ? null
+                : () => showLibraryActions(context, item: item, home: home),
           ),
-          delegate: SliverChildBuilderDelegate((context, index) {
-            final item = group.items[index];
-            return HomeCard(
-              item: item,
-              width: cell,
-              onTap: () => openTitle(context, item),
-              onLongPress: home == null
-                  ? null
-                  : () => showLibraryActions(context, item: item, home: home),
-            );
-          }, childCount: group.items.length),
         );
-      },
+      }, childCount: group.items.length),
     );
   }
 }

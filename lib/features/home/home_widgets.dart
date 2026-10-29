@@ -78,6 +78,9 @@ class HomeCard extends StatelessWidget {
       button: true,
       label: item.name,
       excludeSemantics: true,
+      // Content options open with a long press only (no "⋮" button);
+      // screen readers get the same action.
+      onLongPress: onLongPress,
       child: GestureDetector(
         key: ValueKey('home-card-${item.id}'),
         behavior: HitTestBehavior.opaque,
@@ -114,40 +117,6 @@ class HomeCard extends StatelessWidget {
                               ? AppSpacing.md
                               : AppSpacing.xs,
                           child: AgeRatingBadge(seal, size: 18),
-                        ),
-                      // "⋮": the content options (same as a long press).
-                      if (onLongPress != null)
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Semantics(
-                            button: true,
-                            label: context.l.more,
-                            child: InkResponse(
-                              key: ValueKey('home-card-more-${item.id}'),
-                              onTap: onLongPress,
-                              radius: 20,
-                              child: const SizedBox.square(
-                                dimension: 36,
-                                child: Center(
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: AppColors.scrim,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(2),
-                                      child: Icon(
-                                        Icons.more_vert_rounded,
-                                        size: 18,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                         ),
                       // Progress bar inside the bottom of the poster (8 px, 8 px margin)
                       if (progress != null)

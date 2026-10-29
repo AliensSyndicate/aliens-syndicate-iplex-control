@@ -733,12 +733,16 @@ class _FeedRepo extends navigation.SessionRepository {
   /// Chunk requests, in order.
   final chunks = <Map<String, dynamic>>[];
 
+  /// Lists of the account's profile (`readProfileLibrary`).
+  Map<String, dynamic> library = const {};
+
   @override
   Future<Map<String, dynamic>> mutate(
     String action, [
     Map<String, dynamic> payload = const {},
   ]) async {
     if (action == 'readCatalogChunk') chunks.add(Map.of(payload));
+    if (action == 'readProfileLibrary') return library;
     if (failure && action == 'readCatalogManifest') {
       throw const AppFailure('unavailable');
     }
@@ -799,6 +803,13 @@ void catalogFeedTests() {
           set,
           '${set}_categories',
         });
+        // The top menu keeps the Meu iPlex look on every tab.
+        expect(
+          tester
+              .widget<AppTabs<int>>(find.byKey(const Key('home-tabs')))
+              .translucent,
+          isTrue,
+        );
         // Only the categories (TV de-para) and their counts, A–Z.
         expect(find.text('Ação'), findsOneWidget);
         expect(find.text('Comédia'), findsOneWidget);
@@ -877,6 +888,47 @@ void catalogFeedTests() {
       },
     );
   }
+
+  testWidgets('the profile lists come first, with this tab\'s kind only, '
+      'in the TV order; empty ones are left out', (tester) async {
+    final repo = _FeedRepo('movie')
+      ..library = {
+        'continueWatching': [
+          item(
+            'p1',
+            'Em andamento',
+            'movie',
+            progress: {'position': 30, 'duration': 100},
+          ),
+          item('p2', 'Série em andamento', 'series'),
+        ],
+        'favorites': [
+          item('f1', 'Favorito', 'movie'),
+          item('f2', 'Canal favorito', 'channel'),
+        ],
+        'wishlist': [item('w1', 'Desejo série', 'series')],
+        // History lists every episode: one entry per title.
+        'watched': [item('h1', 'Visto', 'movie'), item('h1', 'Visto', 'movie')],
+      };
+    await navigation.launch(tester, repo);
+    await tester.tap(find.byKey(const ValueKey('tab-2')));
+    await settleFeed(tester);
+    double top(String text) => tester.getTopLeft(find.text(text)).dy;
+    expect(find.text('Wishlist'), findsNothing, reason: 'no movie there');
+    expect(top('Continue watching'), lessThan(top('Favorites')));
+    expect(top('Favorites'), lessThan(top('Watched')));
+    expect(top('Watched'), lessThan(top('Ação')));
+    String count(String key) => tester
+        .widget<Text>(find.byKey(ValueKey('catalog-category-count-$key')))
+        .data!;
+    expect(count('personal-continueWatching'), '1');
+    expect(count('personal-favorites'), '1');
+    expect(count('personal-watched'), '1');
+    await tester.tap(find.text('Favorites'));
+    await settleFeed(tester);
+    expect(find.byKey(const ValueKey('home-card-f1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-card-f2')), findsNothing);
+  });
 
   testWidgets('catalog that cannot be read: retry, never a "Todos" list', (
     tester,

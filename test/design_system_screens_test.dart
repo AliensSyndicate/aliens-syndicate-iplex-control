@@ -124,8 +124,9 @@ void main() {
     Navigator.of(tester.element(find.byKey(const Key('sheet-handle')))).pop();
     await tester.pumpAndSettle();
 
-    // Content options (⋮ on a poster card).
-    await tester.tap(find.byKey(const ValueKey('home-card-more-m1')));
+    // Content options (long press on a poster card; no "⋮" button).
+    expect(find.byIcon(Icons.more_vert_rounded), findsNothing);
+    await tester.longPress(find.byKey(const ValueKey('home-card-m1')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('content-options')), findsOneWidget);
     // No profile linked here: watch, share and details (lists need one).
