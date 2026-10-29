@@ -36,11 +36,13 @@ class SubscriptionStatusCard extends ConsumerWidget {
             'cancelled' => l.subscriptionCancelled,
             'expired' => l.subscriptionExpired,
             'pending' => l.subscriptionPending,
+            'lifetime' => l.subscriptionLifetime,
             _ => l.unavailable,
           }, style: Theme.of(context).textTheme.titleLarge),
           if (plan == 'monthly') Text(l.monthly),
           if (plan == 'annual') Text(l.annual),
-          if (end > 0)
+          if (status == 'lifetime') Text(l.lifetime),
+          if (end > 0 && status != 'lifetime')
             Text(
               DateFormat.yMMMd(Localizations.localeOf(context).toString())
                   .format(DateTime.fromMillisecondsSinceEpoch(end)),

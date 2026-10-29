@@ -1661,4 +1661,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorProfileNotLinked =>
       'Your account is not linked to a profile in this family.';
+
+  @override
+  String get trialPlan => '7-day trial';
+
+  @override
+  String get trialPlanBody => 'Starts when the first TV is linked.';
+
+  @override
+  String get lifetime => 'Lifetime';
+
+  @override
+  String get lifetimeViaCoupon => 'Unlocked with a coupon';
+
+  @override
+  String get subscriptionLifetime => 'Lifetime access';
+
+  @override
+  String get couponCode => 'Coupon code';
+
+  @override
+  String get redeemCoupon => 'Redeem coupon';
+
+  @override
+  String get couponRedeemed => 'Coupon redeemed. Lifetime access unlocked.';
+
+  @override
+  String get errorCouponInvalid => 'Invalid coupon.';
+
+  @override
+  String get errorCouponExpired => 'This coupon has expired.';
+
+  @override
+  String get errorCouponUsed => 'This coupon has reached its usage limit.';
+
+  @override
+  String get errorAlreadyLifetime => 'This family already has lifetime access.';
 }

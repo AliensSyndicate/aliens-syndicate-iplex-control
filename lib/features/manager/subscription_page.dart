@@ -21,6 +21,9 @@ class SubscriptionPage extends ConsumerWidget {
     final hasFamily =
         ref.watch(accountProvider).asData?.value?.resourceScopeId != null;
     final admin = ref.watch(canManageResourcesProvider);
+    final lifetime =
+        ref.watch(subscriptionProvider).asData?.value?.text('status') ==
+        'lifetime';
     return Scaffold(
       body: PageTemplate(
         title: l.subscription,
@@ -61,6 +64,10 @@ class SubscriptionPage extends ConsumerWidget {
                   ),
             const SizedBox(height: AppSpacing.xl),
             const _Plans(),
+            if (hasFamily && admin && !lifetime) ...[
+              const SizedBox(height: AppSpacing.xl),
+              const _CouponRedeem(),
+            ],
           ],
         ),
       ),
@@ -83,8 +90,10 @@ class _Plans extends ConsumerWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          EntryTile(title: l.trialPlan, subtitle: l.trialPlanBody),
           EntryTile(title: l.monthly, subtitle: l.comingSoon),
           EntryTile(title: l.annual, subtitle: l.comingSoon),
+          EntryTile(title: l.lifetime, subtitle: l.lifetimeViaCoupon),
           Text(
             l.subscriptionsComingSoon,
             key: const Key('subscriptions-coming-soon'),
@@ -92,6 +101,12 @@ class _Plans extends ConsumerWidget {
           ),
         ],
       );
+    }
+    final lifetime =
+        ref.watch(subscriptionProvider).asData?.value?.text('status') ==
+        'lifetime';
+    if (lifetime) {
+      return EntryTile(title: l.lifetime, subtitle: l.subscriptionLifetime);
     }
     final checkout = ref.watch(checkoutControllerProvider);
     final cfg = config.requireValue;
@@ -114,6 +129,8 @@ class _Plans extends ConsumerWidget {
           style: const TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: AppSpacing.md),
+        EntryTile(title: l.trialPlan, subtitle: l.trialPlanBody),
+        const SizedBox(height: AppSpacing.sm),
         ref
             .watch(storePlansProvider)
             .when(
@@ -150,6 +167,7 @@ class _Plans extends ConsumerWidget {
             textAlign: TextAlign.center,
           ),
         ],
+        EntryTile(title: l.lifetime, subtitle: l.lifetimeViaCoupon),
         const SizedBox(height: AppSpacing.md),
         EntryTile(
           title: l.restorePurchases,
@@ -168,6 +186,86 @@ class _Plans extends ConsumerWidget {
             mode: LaunchMode.externalApplication,
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Lifetime access is unlocked only by a coupon validated on the server
+/// (`redeemCoupon`); the subscription card updates from Firestore afterwards.
+class _CouponRedeem extends ConsumerStatefulWidget {
+  const _CouponRedeem();
+
+  @override
+  ConsumerState<_CouponRedeem> createState() => _CouponRedeemState();
+}
+
+class _CouponRedeemState extends ConsumerState<_CouponRedeem> {
+  final _code = TextEditingController();
+  bool _busy = false;
+  String? _message;
+  bool _failed = false;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _redeem() async {
+    final code = _code.text.trim();
+    if (code.isEmpty || _busy) return;
+    final l = context.l;
+    setState(() {
+      _busy = true;
+      _message = null;
+    });
+    try {
+      await ref.read(repositoryProvider).mutate('redeemCoupon', {'code': code});
+      if (!mounted) return;
+      _code.clear();
+      setState(() {
+        _failed = false;
+        _message = l.couponRedeemed;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _failed = true;
+        _message = failureText(context, e);
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppTextField(
+          key: const Key('coupon-code'),
+          label: l.couponCode,
+          controller: _code,
+          hintText: 'IPLEX-XXXX-XXXX-XXXX',
+        ),
+        AppButton(
+          key: const Key('redeem-coupon'),
+          label: l.redeemCoupon,
+          busy: _busy,
+          onPressed: _busy ? null : _redeem,
+        ),
+        if (_message != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _message!,
+            key: const Key('coupon-message'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _failed ? AppColors.error : null),
+          ),
+        ],
       ],
     );
   }

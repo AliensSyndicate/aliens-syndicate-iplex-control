@@ -9,11 +9,13 @@ export class DomainError extends Error {
   constructor(readonly code: string, readonly details: Record<string, unknown> = {}) { super(code); }
 }
 export type Lease = {id: string; deviceId: string; deviceName: string; profileId: string; expiresAt: number};
-export type Subscription = {status: 'notStarted'|'trial'|'active'|'cancelled'|'expired'|'pending'; trialStartedAt?: number; trialEndsAt?: number; paidUntil?: number};
+export type Subscription = {status: 'notStarted'|'trial'|'active'|'cancelled'|'expired'|'pending'|'lifetime'; trialStartedAt?: number; trialEndsAt?: number; paidUntil?: number};
 // Playback policy only. Manager operations authorize identity and family role.
 // Missing or malformed subscription metadata never grants playback.
 export function canStartPlayback(s: Subscription | undefined, now: number): boolean {
   if (!s) return false;
+  // Lifetime is granted only by the backend (coupon or administrative grant) and never expires.
+  if (s.status === 'lifetime') return true;
   return (s.status === 'trial' && Number.isFinite(s.trialEndsAt) && (s.trialEndsAt ?? 0) > now) || ((s.status === 'active' || s.status === 'cancelled') && Number.isFinite(s.paidUntil) && (s.paidUntil ?? 0) > now);
 }
 export function startTrial(s: Subscription = {status:'notStarted'}, now: number): Subscription {

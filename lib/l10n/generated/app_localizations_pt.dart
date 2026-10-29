@@ -1676,4 +1676,40 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get errorProfileNotLinked =>
       'Sua conta não está vinculada a um perfil nesta família.';
+
+  @override
+  String get trialPlan => 'Teste de 7 dias';
+
+  @override
+  String get trialPlanBody => 'Começa ao vincular a primeira TV.';
+
+  @override
+  String get lifetime => 'Vitalício';
+
+  @override
+  String get lifetimeViaCoupon => 'Liberado por cupom';
+
+  @override
+  String get subscriptionLifetime => 'Acesso vitalício';
+
+  @override
+  String get couponCode => 'Código do cupom';
+
+  @override
+  String get redeemCoupon => 'Resgatar cupom';
+
+  @override
+  String get couponRedeemed => 'Cupom resgatado. Acesso vitalício liberado.';
+
+  @override
+  String get errorCouponInvalid => 'Cupom inválido.';
+
+  @override
+  String get errorCouponExpired => 'Este cupom expirou.';
+
+  @override
+  String get errorCouponUsed => 'Este cupom já atingiu o limite de usos.';
+
+  @override
+  String get errorAlreadyLifetime => 'Esta família já tem acesso vitalício.';
 }

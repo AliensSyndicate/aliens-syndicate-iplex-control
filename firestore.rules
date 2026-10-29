@@ -273,6 +273,7 @@ service cloud.firestore {
     // Payments: checkout switch and verified Play purchase tokens are backend-only.
     match /app_config/{id} { allow read, write: if false; }
     match /play_purchases/{tokenHash} { allow read, write: if false; }
+    match /coupons/{path=**} { allow read, write: if false; }
 
     // Fallback catch-all
     match /{document=**} {

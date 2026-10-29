@@ -14,6 +14,7 @@ import {authPhotoUrl,ensureFamily,safePhotoUrl} from './family_individual';
 import {familyProfiles, profileView, requireWritableGeneration, writeAdminProfile, ADMIN_PROFILE_ID} from './family_profiles';
 import {listProfileSpaces} from './iptv_catalog_access';
 import {obfuscatedAccount, paymentsConfig, verifyPlayPurchase} from './play_billing';
+import {redeemCoupon} from './coupons';
 import {iptvWorkspace} from './iptv_workspace';
 import {z} from 'zod';
 import {saveIptvSource, syncIptvSource, verifyIptvPin, deleteIptvSource, readIptvEpg} from './iptv_sources';
@@ -205,6 +206,13 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
   // Playback rights belong to the scope's administrator (family admin or personal owner).
   const scope=await db().runTransaction(tx=>family(tx,a,true,false));
   return verifyPlayPurchase(p,a.uid,scope.fid);
+ }
+ if(action==='redeemCoupon'){
+  required(!a.deviceId);
+  // Every attempt is charged before the lookup: coupon codes must not be guessable by brute force.
+  await limitIdentityAttempts(a.uid,'coupon');
+  const scope=await db().runTransaction(tx=>family(tx,a,true,false));
+  return redeemCoupon(p,a.uid,scope.fid);
  }
  if(action==='inspectPairingSession') {
   let tokenHash: string | undefined;

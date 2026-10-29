@@ -556,5 +556,17 @@
   },
   "errorPinInvalid": "PIN actual incorrecto.",
   "errorBeyondLimit": "Esto supera lo que el administrador permite.",
-  "errorProfileNotLinked": "Tu cuenta no está vinculada a un perfil en esta familia."
+  "errorProfileNotLinked": "Tu cuenta no está vinculada a un perfil en esta familia.",
+  "trialPlan": "Prueba de 7 días",
+  "trialPlanBody": "Empieza al vincular el primer televisor.",
+  "lifetime": "Vitalicio",
+  "lifetimeViaCoupon": "Se activa con cupón",
+  "subscriptionLifetime": "Acceso vitalicio",
+  "couponCode": "Código del cupón",
+  "redeemCoupon": "Canjear cupón",
+  "couponRedeemed": "Cupón canjeado. Acceso vitalicio activado.",
+  "errorCouponInvalid": "Cupón no válido.",
+  "errorCouponExpired": "Este cupón ha caducado.",
+  "errorCouponUsed": "Este cupón alcanzó su límite de usos.",
+  "errorAlreadyLifetime": "Esta familia ya tiene acceso vitalicio."
 }

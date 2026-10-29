@@ -692,5 +692,17 @@
   },
   "errorPinInvalid": "Incorrect current PIN.",
   "errorBeyondLimit": "This goes beyond what the administrator allows.",
-  "errorProfileNotLinked": "Your account is not linked to a profile in this family."
+  "errorProfileNotLinked": "Your account is not linked to a profile in this family.",
+  "trialPlan": "7-day trial",
+  "trialPlanBody": "Starts when the first TV is linked.",
+  "lifetime": "Lifetime",
+  "lifetimeViaCoupon": "Unlocked with a coupon",
+  "subscriptionLifetime": "Lifetime access",
+  "couponCode": "Coupon code",
+  "redeemCoupon": "Redeem coupon",
+  "couponRedeemed": "Coupon redeemed. Lifetime access unlocked.",
+  "errorCouponInvalid": "Invalid coupon.",
+  "errorCouponExpired": "This coupon has expired.",
+  "errorCouponUsed": "This coupon has reached its usage limit.",
+  "errorAlreadyLifetime": "This family already has lifetime access."
 }

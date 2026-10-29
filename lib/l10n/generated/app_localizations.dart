@@ -3063,6 +3063,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your account is not linked to a profile in this family.'**
   String get errorProfileNotLinked;
+
+  /// No description provided for @trialPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'7-day trial'**
+  String get trialPlan;
+
+  /// No description provided for @trialPlanBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts when the first TV is linked.'**
+  String get trialPlanBody;
+
+  /// No description provided for @lifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime'**
+  String get lifetime;
+
+  /// No description provided for @lifetimeViaCoupon.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlocked with a coupon'**
+  String get lifetimeViaCoupon;
+
+  /// No description provided for @subscriptionLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime access'**
+  String get subscriptionLifetime;
+
+  /// No description provided for @couponCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon code'**
+  String get couponCode;
+
+  /// No description provided for @redeemCoupon.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeem coupon'**
+  String get redeemCoupon;
+
+  /// No description provided for @couponRedeemed.
+  ///
+  /// In en, this message translates to:
+  /// **'Coupon redeemed. Lifetime access unlocked.'**
+  String get couponRedeemed;
+
+  /// No description provided for @errorCouponInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid coupon.'**
+  String get errorCouponInvalid;
+
+  /// No description provided for @errorCouponExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This coupon has expired.'**
+  String get errorCouponExpired;
+
+  /// No description provided for @errorCouponUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'This coupon has reached its usage limit.'**
+  String get errorCouponUsed;
+
+  /// No description provided for @errorAlreadyLifetime.
+  ///
+  /// In en, this message translates to:
+  /// **'This family already has lifetime access.'**
+  String get errorAlreadyLifetime;
 }
 
 class _AppLocalizationsDelegate

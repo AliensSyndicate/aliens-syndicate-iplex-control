@@ -16,6 +16,9 @@ class _Repo implements ManagerRepository {
   _Repo({required this.checkout});
   bool checkout;
   Object? verifyFailure;
+  Object? couponFailure;
+  String status = 'notStarted';
+  final payloads = <Map<String, dynamic>>[];
   final calls = <String>[];
   @override
   bool get configured => true;
@@ -35,13 +38,18 @@ class _Repo implements ManagerRepository {
       Stream.value(const []);
   @override
   Stream<Entry?> watchEntry(String familyId, String collection, String id) =>
-      Stream.value(Entry('subscription', const {'status': 'notStarted'}));
+      Stream.value(Entry('subscription', {'status': status}));
   @override
   Future<Map<String, dynamic>> mutate(
     String action, [
     Map<String, dynamic> payload = const {},
   ]) async {
     calls.add(action);
+    payloads.add(payload);
+    if (action == 'redeemCoupon') {
+      if (couponFailure != null) throw couponFailure!;
+      return {'status': 'lifetime'};
+    }
     if (action == 'getPaymentsConfig') {
       return {
         'paymentsEnabled': checkout,
@@ -124,8 +132,13 @@ Widget _host(_Repo repo, _Store store) => ProviderScope(
   ),
 );
 
-Future<void> _open(WidgetTester tester, _Repo repo, _Store store) async {
-  tester.view.physicalSize = const Size(1170, 4000);
+Future<void> _open(
+  WidgetTester tester,
+  _Repo repo,
+  _Store store, {
+  double height = 4000,
+}) async {
+  tester.view.physicalSize = Size(1170, height);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(_host(repo, store));
@@ -186,4 +199,58 @@ void main() {
       expect(find.textContaining('Compra cancelada'), findsOneWidget);
     },
   );
+
+  testWidgets('all four plans are listed; a coupon is redeemed on the server', (
+    tester,
+  ) async {
+    final repo = _Repo(checkout: false), store = _Store();
+    await _open(tester, repo, store, height: 8000);
+    for (final plan in ['Teste de 7 dias', 'Mensal', 'Anual', 'Vitalício']) {
+      expect(find.text(plan), findsOneWidget, reason: plan);
+    }
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(const Key('coupon-code')),
+        matching: find.byType(TextField),
+      ),
+      'iplex-abcd-efgh-jkmn',
+    );
+    await tester.tap(find.byKey(const Key('redeem-coupon')));
+    await tester.pumpAndSettle();
+    expect(repo.payloads[repo.calls.indexOf('redeemCoupon')], {
+      'code': 'iplex-abcd-efgh-jkmn',
+    });
+    expect(
+      find.text('Cupom resgatado. Acesso vitalício liberado.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('coupon errors are explicit', (tester) async {
+    final repo = _Repo(checkout: false)
+          ..couponFailure = const AppFailure('coupon-used'),
+        store = _Store();
+    await _open(tester, repo, store, height: 8000);
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(const Key('coupon-code')),
+        matching: find.byType(TextField),
+      ),
+      'IPLEX-USED-USED-USED',
+    );
+    await tester.tap(find.byKey(const Key('redeem-coupon')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Este cupom já atingiu o limite de usos.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('lifetime family: no purchase, no coupon field', (tester) async {
+    final repo = _Repo(checkout: true)..status = 'lifetime', store = _Store();
+    await _open(tester, repo, store);
+    expect(find.text('Acesso vitalício'), findsWidgets);
+    expect(find.byKey(const Key('buy-monthly')), findsNothing);
+    expect(find.byKey(const Key('coupon-code')), findsNothing);
+  });
 }

@@ -90,6 +90,8 @@ async function applyState(token: string, familyId: string, sub: PlaySubscription
     if (bound!.data()?.familyId && bound!.data()!.familyId !== familyId) throw new DomainError('purchase-already-used');
     const isCurrentToken = !data.purchaseTokenHash || data.purchaseTokenHash === hash(token) || data.purchaseTokenHash === (sub.linkedPurchaseToken ? hash(sub.linkedPurchaseToken) : undefined);
     if ((data.storeFetchedAt ?? 0) > fetchedAt && isCurrentToken) return; // stale snapshot
+    // Lifetime access (coupon/grant) is never replaced by a store state.
+    if (data.status === 'lifetime') return;
     tx.set(purchase, {familyId, productId: PLAY_PRODUCT_ID, basePlanId: entitlement.basePlanId, state: entitlement.storeState,
       latestOrderId: sub.latestOrderId ?? null, test: !!sub.testPurchase, updatedAt: fetchedAt, ...(revoked ? {revokedAt: fetchedAt} : {})}, {merge: true});
     // A superseded token (plan change) never downgrades the family's newer purchase.
@@ -108,6 +110,8 @@ async function applyState(token: string, familyId: string, sub: PlaySubscription
 export async function verifyPlayPurchase(input: Record<string, unknown>, uid: string, familyId: string, api: PlayApi = googlePlayApi) {
   const config = await paymentsConfig(uid);
   if (!config.checkoutAllowed) throw new DomainError('payments-disabled');
+  // A lifetime family has nothing to buy; the purchase stays unacknowledged so Play refunds it.
+  if ((await getFirestore().doc(`families/${familyId}/private/subscription`).get()).data()?.status === 'lifetime') throw new DomainError('already-lifetime');
   const token = z.string().min(10).max(4096).parse(input.purchaseToken);
   idSchema.parse(familyId);
   const sub = await api.getSubscription(token).catch(() => { throw new DomainError('purchase-invalid'); });

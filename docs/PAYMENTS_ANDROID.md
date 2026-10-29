@@ -63,6 +63,25 @@ Eventos fora de ordem: o estado é sempre relido na API e gravado com `storeFetc
 5. **Testadores de licença:** *Configurações* › *Teste de licença* › adicionar as contas Google de teste (compras de teste, sem cobrança real).
 6. **Faixa de teste interno:** enviar o AAB assinado com a chave de upload.
 
+## Planos
+
+| Plano | Como é obtido | Estado em `subscription` |
+|---|---|---|
+| Teste de 7 dias | Automático no primeiro `linkDevice`, uma vez por família | `trial` até `trialEndsAt` |
+| Mensal / Anual | Google Play (`iplex_playback`, planos-base `monthly`/`annual`) | `active`/`cancelled` até `paidUntil` |
+| Vitalício | Cupom (`redeemCoupon`) ou concessão do operador | `lifetime`, sem vencimento |
+
+Vitalício nunca é sobrescrito por estado da Play; uma compra feita por família vitalícia é recusada (`already-lifetime`) e fica sem confirmação, então a Play a reembolsa.
+
+### Cupons
+
+- `coupons/{sha256('iplex-coupon:' + código normalizado)}`: `{plan: 'lifetime', maxRedemptions, redemptions, expiresAt?, disabled?, note?}`. O código não é guardado; maiúsculas, espaços e hífens são ignorados.
+- Resgate: administrador do escopo, uma vez por família, tentativas limitadas (20/h por usuário). Registro em `coupons/{id}/redemptions/{familyId}`. Regras negam qualquer acesso do cliente.
+- Operação (`functions/`, credenciais ADC do operador):
+  - `npx tsx scripts/coupons.ts create --uses 1 [--expires AAAA-MM-DD] [--note texto]` — imprime o código uma vez.
+  - `npx tsx scripts/coupons.ts disable <código>`
+  - `npx tsx scripts/coupons.ts grant <email> [--apply]` — concede vitalício direto na família do usuário (sem `--apply` só simula).
+
 ## Ativação futura (exige autorização explícita)
 
 - Teste isolado: incluir UIDs em `app_config/payments.testerUids` (checkout só para eles; `paymentsEnabled` continua `false`).

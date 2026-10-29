@@ -20,7 +20,7 @@ class SubscriptionModel {
   final String id;
   final String familyId;
   final String
-  status; // 'not_started' | 'trialing' | 'active' | 'cancelled' | 'expired'
+  status; // 'not_started' | 'trialing' | 'active' | 'cancelled' | 'expired' | 'lifetime'
   final String plan;
   final DateTime? trialStartedAt;
   final DateTime? trialEndsAt;
@@ -28,6 +28,7 @@ class SubscriptionModel {
   final DateTime? updatedAt;
 
   bool canPlay(DateTime now) {
+    if (status == 'lifetime') return true;
     if (status == 'trialing' || status == 'trial') {
       return trialEndsAt != null && trialEndsAt!.isAfter(now);
     }

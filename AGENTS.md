@@ -255,4 +255,5 @@ Regras permanentes desta etapa:
 - **Assinatura familiar:** comprada e administrada pelo administrador do escopo (família ou conta pessoal); grava `families/{fid}/private/subscription` só pelo backend. Limite de 3 reproduções simultâneas preservado.
 - **Validação:** só o backend concede direito (`verifyPlayPurchase` + notificações RTDN no tópico Pub/Sub `play-billing-notifications`), sempre relendo o estado na Google Play Developer API. Token vinculado à conta (`obfuscatedAccountId`) e a uma única família.
 - **Checkout desativado por padrão:** `app_config/payments.paymentsEnabled` ausente/false. Ligar exige autorização explícita do responsável. A flag nunca concede reprodução. `testerUids` permite teste isolado.
+- **Vitalício:** status `lifetime`, liberado só por cupom (`redeemCoupon`) ou concessão do operador (`functions/scripts/coupons.ts`); não é vendido na loja e nunca é sobrescrito pela Play. Ver `docs/PAYMENTS_ANDROID.md`.
 - **Proibido:** teste gratuito automático, cobrança pública sem autorização, checkout externo, confirmação de compra pelo cliente.
