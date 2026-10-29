@@ -17,13 +17,13 @@ import '../features/manager/detail_page.dart';
 import '../features/manager/profile_link_redeem_page.dart';
 import '../features/manager/profile_manage_page.dart';
 import '../features/devices/presentation/pages/device_list_page.dart';
-import '../features/manager/information_page.dart';
+import '../features/manager/about/about_page.dart';
+import '../features/manager/help/help_page.dart';
 import '../features/manager/invite_page.dart';
 import '../features/manager/name_form.dart';
 import '../features/manager/parental_control_page.dart';
 import '../features/manager/profile_data_page.dart';
 import '../features/manager/scan_page.dart';
-import '../features/manager/settings_page.dart';
 import '../features/manager/iptv_page.dart';
 import '../features/manager/iptv_source_form.dart';
 import '../features/manager/list_iptv_page.dart';
@@ -523,25 +523,22 @@ final routerProvider = Provider<GoRouter>((ref) {
                     _rootPage(key: s.pageKey, child: const AccountPage()),
                 routes: [
                   GoRoute(
-                    path: 'settings',
-                    pageBuilder: (c, s) =>
-                        _appPage(key: s.pageKey, child: const SettingsPage()),
-                  ),
-                  GoRoute(
                     path: 'subscription',
                     pageBuilder: (c, s) => _appPage(
                       key: s.pageKey,
                       child: const SubscriptionPage(),
                     ),
                   ),
-                  for (final kind in ['profile', 'help', 'about'])
-                    GoRoute(
-                      path: kind,
-                      pageBuilder: (c, s) => _appPage(
-                        key: s.pageKey,
-                        child: InformationPage(kind: kind),
-                      ),
-                    ),
+                  GoRoute(
+                    path: 'help',
+                    pageBuilder: (c, s) =>
+                        _appPage(key: s.pageKey, child: const HelpPage()),
+                  ),
+                  GoRoute(
+                    path: 'about',
+                    pageBuilder: (c, s) =>
+                        _appPage(key: s.pageKey, child: const AboutPage()),
+                  ),
                 ],
               ),
             ],

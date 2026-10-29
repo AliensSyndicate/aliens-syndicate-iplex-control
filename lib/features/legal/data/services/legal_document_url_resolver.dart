@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import '../../domain/enums/legal_document_type.dart';
 
 /// Execution environment for resolving legal document endpoints.
@@ -35,14 +33,14 @@ class LegalDocumentUrlResolver {
   final String customTermsUrl;
   final String customPrivacyUrl;
 
-  /// Default production domain on Firebase Hosting for project iplex-2c8fc.
-  static const String productionBaseHost = 'iplex-2c8fc.web.app';
-  static const String stagingBaseHost = 'iplex-staging.web.app';
+  /// Site that hosts the official Terms of Use and Privacy Policy.
+  static const String legalBaseHost = 'aliens-syndicate-docs.web.app';
   static const String devLocalHost = '127.0.0.1';
   static const String devAndroidHost = '10.0.2.2';
 
   /// Whitelisted domains permitted for in-app legal WebView display.
   static const Set<String> authorizedDomains = {
+    legalBaseHost,
     'iplex-2c8fc.web.app',
     'iplex-2c8fc.firebaseapp.com',
     'iplex.app',
@@ -66,23 +64,15 @@ class LegalDocumentUrlResolver {
       }
     }
 
-    // 2. Resolve official URL by environment
-    final path = type == LegalDocumentType.termsOfUse ? '/terms' : '/privacy';
-    final Uri baseUri;
-
-    switch (environment) {
-      case LegalEnvironment.production:
-        baseUri = Uri.https(productionBaseHost, path);
-        break;
-      case LegalEnvironment.staging:
-        baseUri = Uri.https(stagingBaseHost, path);
-        break;
-      case LegalEnvironment.development:
-        final isAndroid = defaultTargetPlatform == TargetPlatform.android;
-        final host = isAndroid ? devAndroidHost : devLocalHost;
-        baseUri = Uri(scheme: 'http', host: host, port: 5000, path: path);
-        break;
-    }
+    // 2. Official pages, published on the Aliens Syndicate site (Firebase
+    // Hosting, project aliens-syndicate-docs) in every environment: there is
+    // no separate staging or local copy of the legal documents.
+    final baseUri = Uri.https(
+      legalBaseHost,
+      type == LegalDocumentType.termsOfUse
+          ? '/apps/iplex/terms'
+          : '/apps/iplex/policy',
+    );
 
     return _applyLocale(baseUri, languageCode);
   }

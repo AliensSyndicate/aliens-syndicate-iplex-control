@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:aliens_syndicate_iplex_control/app/bottom_navigation.dart';
 import 'package:aliens_syndicate_iplex_control/core/domain/models.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/manager/about/about_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/manager/help/help_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_details_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
@@ -87,8 +88,9 @@ void main() {
     (name: 'iptv', page: const ListIptvPage(), tab: 3),
     (name: 'source-detail', page: const IptvPage(id: 's'), tab: null),
     (name: 'account', page: const AccountPage(), tab: 4),
-    (name: 'settings', page: const SettingsPage(), tab: null),
     (name: 'source-form', page: const IptvSourceForm(), tab: null),
+    (name: 'help', page: const HelpPage(), tab: null),
+    (name: 'about', page: const AboutPage(), tab: null),
   ];
   for (final page in pages) {
     testWidgets('graphite ${page.name} at phone size', (tester) async {

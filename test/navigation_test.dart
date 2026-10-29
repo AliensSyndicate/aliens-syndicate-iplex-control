@@ -327,7 +327,7 @@ void main() {
     '8 and 10: private deep link retains its path, query and fragment through Splash/Login',
     (tester) async {
       final repo = SessionRepository(waitForAuth: true, linked: true);
-      const destination = '/account/settings?section=language#preference';
+      const destination = '/account/about?section=language#preference';
       final c = await launch(
         tester,
         repo,

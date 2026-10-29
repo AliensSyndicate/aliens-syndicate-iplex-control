@@ -48,7 +48,10 @@ abstract final class AppColors {
   /// Main color of the app (solid white): selection, active state,
   /// primary action, online status.
   static const primary = Color(0xFFFFFFFF);
-  static const onPrimary = Color(0xFF000000);
+  static const onPrimary = Color(0xFF0F0F0F);
+
+  /// Pressed fill of a primary button (web `.iplex-button-primary:hover`).
+  static const primaryPressed = Color(0xFFF1F1F1);
 
   /// Active / highlighted state (same as [primary]).
   static const accent = primary;

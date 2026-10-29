@@ -82,8 +82,8 @@ void main() {
       final iptvAddSize = tester.getSize(iptvAdd);
       expect(iptvAddSize, equals(const Size.square(AppDimensions.touch)));
 
-      // 4. Back button in PageTemplate (navigate to child screen /account/settings)
-      router.go('/account/settings');
+      // 4. Back button in PageTemplate (navigate to child screen /account/about)
+      router.go('/account/about');
       await tester.pumpAndSettle();
       final backButton = find.descendant(
         of: find.byType(PageTemplate),

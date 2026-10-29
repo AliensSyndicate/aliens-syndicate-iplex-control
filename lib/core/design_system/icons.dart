@@ -34,6 +34,15 @@ abstract final class AppIcons {
       notification = HugeIcons.strokeRoundedNotification01,
       more = HugeIcons.strokeRoundedMoreHorizontal,
       menu = HugeIcons.strokeRoundedMenu01;
+
+  /// Account page entries.
+  static const subscription = HugeIcons.strokeRoundedCrown,
+      help = HugeIcons.strokeRoundedHelpCircle,
+      info = HugeIcons.strokeRoundedInformationCircle,
+      share = HugeIcons.strokeRoundedShare08,
+      language = HugeIcons.strokeRoundedLanguageCircle,
+      terms = HugeIcons.strokeRoundedLegalDocument01,
+      privacy = HugeIcons.strokeRoundedShield01;
   static const cloud = HugeIcons.strokeRoundedCloud,
       wind = HugeIcons.strokeRoundedWind,
       sun = HugeIcons.strokeRoundedSun01,

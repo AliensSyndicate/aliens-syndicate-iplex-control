@@ -1697,4 +1697,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorAlreadyLifetime => 'This family already has lifetime access.';
+
+  @override
+  String get helpSearchHint => 'Search questions and answers';
+
+  @override
+  String get helpNoResultsTitle => 'No answers found';
+
+  @override
+  String get helpNoResultsBody =>
+      'Try other words or clear the search to see every question.';
 }

@@ -3135,6 +3135,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This family already has lifetime access.'**
   String get errorAlreadyLifetime;
+
+  /// No description provided for @helpSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search questions and answers'**
+  String get helpSearchHint;
+
+  /// No description provided for @helpNoResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No answers found'**
+  String get helpNoResultsTitle;
+
+  /// No description provided for @helpNoResultsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Try other words or clear the search to see every question.'**
+  String get helpNoResultsBody;
 }
 
 class _AppLocalizationsDelegate

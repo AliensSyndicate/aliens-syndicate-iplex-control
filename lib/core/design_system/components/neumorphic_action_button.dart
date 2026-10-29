@@ -22,7 +22,8 @@ class NeumorphicActionButton extends StatefulWidget {
     this.width,
   }) : primary = false;
 
-  /// Main action of a screen or sheet: green fill, black text.
+  /// Main action of a screen or sheet: same as the web `.iplex-button-primary`
+  /// (white fill, #0F0F0F text, medium weight).
   const NeumorphicActionButton.primary({
     super.key,
     this.label = '',
@@ -97,14 +98,17 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
     );
     final motionCurve = pressed ? AppMotion.pressCurve : AppMotion.releaseCurve;
 
-    // Destructive: red fill, white text. Primary: green fill, black text.
+    // Destructive: red fill, white text. Primary: white fill, dark text.
     // Default (secondary): grey fill, white text.
     final filled = widget.destructive || widget.primary;
     final defaultColor =
         widget.textColor ??
         (widget.primary ? AppColors.onPrimary : AppColors.textPrimary);
     final fill = widget.destructive ? AppColors.error : AppColors.primary;
-    final effectiveTextColor = enabled || widget.busy
+    // Primary mirrors the web `.iplex-button-primary`: disabled fades the
+    // whole button (opacity 0.45) instead of greying it.
+    final fadesWhenDisabled = widget.primary && !enabled && !widget.busy;
+    final effectiveTextColor = enabled || widget.busy || widget.primary
         ? defaultColor
         : AppColors.textDisabled;
 
@@ -115,7 +119,9 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
             : AppIcon(
                 widget.icon!,
                 size: AppDimensions.icon,
-                color: enabled ? defaultColor : AppColors.textDisabled,
+                color: enabled || widget.primary
+                    ? defaultColor
+                    : AppColors.textDisabled,
               ));
 
     final hasLabel = widget.label.isNotEmpty;
@@ -132,104 +138,110 @@ class _ActionButtonState extends State<NeumorphicActionButton> {
         scale: pressed ? 0.985 : 1,
         duration: motionDuration,
         curve: motionCurve,
-        child: _Fill(
-          filled: filled,
-          color: enabled || widget.busy ? fill : AppColors.disabled,
-          radius: widget.radius,
-          pressed: pressed,
-          child: Material(
-            type: MaterialType.transparency,
-            child: Listener(
-              behavior: HitTestBehavior.translucent,
-              onPointerDown: enabled
-                  ? (_) {
-                      if (!pressed) setState(() => pressed = true);
-                    }
-                  : null,
-              onPointerUp: enabled
-                  ? (_) {
-                      if (pressed) setState(() => pressed = false);
-                    }
-                  : null,
-              onPointerCancel: enabled
-                  ? (_) {
-                      if (pressed) setState(() => pressed = false);
-                    }
-                  : null,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(widget.radius),
-                onTapDown: enabled
+        child: Opacity(
+          opacity: fadesWhenDisabled ? 0.45 : 1,
+          child: _Fill(
+            filled: filled,
+            color: enabled || widget.busy || widget.primary
+                ? fill
+                : AppColors.disabled,
+            pressedColor: widget.primary ? AppColors.primaryPressed : null,
+            radius: widget.radius,
+            pressed: pressed,
+            child: Material(
+              type: MaterialType.transparency,
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: enabled
                     ? (_) {
                         if (!pressed) setState(() => pressed = true);
                       }
                     : null,
-                onTapUp: enabled
+                onPointerUp: enabled
                     ? (_) {
                         if (pressed) setState(() => pressed = false);
                       }
                     : null,
-                onTapCancel: enabled
-                    ? () {
+                onPointerCancel: enabled
+                    ? (_) {
                         if (pressed) setState(() => pressed = false);
                       }
                     : null,
-                onHighlightChanged: (value) {
-                  if (enabled && pressed != value) {
-                    setState(() => pressed = value);
-                  }
-                },
-                onTap: enabled
-                    ? () {
-                        HapticFeedback.selectionClick();
-                        widget.onPressed!();
-                      }
-                    : null,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: minH,
-                    maxHeight: maxH,
-                    minWidth: minW,
-                    maxWidth: maxW,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: hasLabel ? AppSpacing.lg : AppSpacing.sm,
-                      vertical: widget.height != null ? 0 : AppSpacing.md,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(widget.radius),
+                  onTapDown: enabled
+                      ? (_) {
+                          if (!pressed) setState(() => pressed = true);
+                        }
+                      : null,
+                  onTapUp: enabled
+                      ? (_) {
+                          if (pressed) setState(() => pressed = false);
+                        }
+                      : null,
+                  onTapCancel: enabled
+                      ? () {
+                          if (pressed) setState(() => pressed = false);
+                        }
+                      : null,
+                  onHighlightChanged: (value) {
+                    if (enabled && pressed != value) {
+                      setState(() => pressed = value);
+                    }
+                  },
+                  onTap: enabled
+                      ? () {
+                          HapticFeedback.selectionClick();
+                          widget.onPressed!();
+                        }
+                      : null,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: minH,
+                      maxHeight: maxH,
+                      minWidth: minW,
+                      maxWidth: maxW,
                     ),
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: hasLabel && widget.width == null
-                            ? MainAxisSize.max
-                            : MainAxisSize.min,
-                        children: [
-                          if (widget.busy)
-                            SizedBox.square(
-                              dimension: AppDimensions.icon,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: defaultColor,
-                              ),
-                            )
-                          else
-                            ?leading,
-                          if (hasLabel && (widget.busy || leading != null))
-                            const SizedBox(width: AppSpacing.md),
-                          if (hasLabel)
-                            Flexible(
-                              child: Text(
-                                widget.label,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: effectiveTextColor,
-                                  fontSize: 16,
-                                  fontWeight: filled
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: hasLabel ? AppSpacing.lg : AppSpacing.sm,
+                        vertical: widget.height != null ? 0 : AppSpacing.md,
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: hasLabel && widget.width == null
+                              ? MainAxisSize.max
+                              : MainAxisSize.min,
+                          children: [
+                            if (widget.busy)
+                              SizedBox.square(
+                                dimension: AppDimensions.icon,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: defaultColor,
+                                ),
+                              )
+                            else
+                              ?leading,
+                            if (hasLabel && (widget.busy || leading != null))
+                              const SizedBox(width: AppSpacing.md),
+                            if (hasLabel)
+                              Flexible(
+                                child: Text(
+                                  widget.label,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: effectiveTextColor,
+                                    fontSize: 16,
+                                    fontWeight: widget.destructive
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -255,9 +267,11 @@ class _Fill extends StatelessWidget {
     required this.radius,
     required this.pressed,
     required this.child,
+    this.pressedColor,
   });
   final bool filled, pressed;
   final Color color;
+  final Color? pressedColor;
   final double radius;
   final Widget child;
 
@@ -273,7 +287,9 @@ class _Fill extends StatelessWidget {
     }
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: pressed ? Color.lerp(color, Colors.black, 0.15) : color,
+        color: pressed
+            ? pressedColor ?? Color.lerp(color, Colors.black, 0.15)
+            : color,
         borderRadius: BorderRadius.circular(radius),
       ),
       child: child,

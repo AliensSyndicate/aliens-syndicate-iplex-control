@@ -102,6 +102,16 @@ class FirebaseManagerRepository implements ManagerRepository {
   static const String _defaultServerClientId =
       '59148444884-8baaa8slbvov2dhg7d5ig3kv4gnkgv37.apps.googleusercontent.com';
 
+  Future<void> _initializeGoogle() {
+    final serverClientId =
+        const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID').isNotEmpty
+        ? const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID')
+        : _defaultServerClientId;
+    return _googleInitialization ??= GoogleSignIn.instance.initialize(
+      serverClientId: serverClientId,
+    );
+  }
+
   @override
   Future<void> signIn(String provider, {bool reauthenticate = false}) async {
     if (!configured) throw const AppFailure('configuration-required');
@@ -109,13 +119,7 @@ class FirebaseManagerRepository implements ManagerRepository {
       if (provider == 'anonymous') {
         await _auth.signInAnonymously();
       } else if (provider == 'google' && !kIsWeb) {
-        final serverClientId =
-            const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID').isNotEmpty
-            ? const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID')
-            : _defaultServerClientId;
-        await (_googleInitialization ??= GoogleSignIn.instance.initialize(
-          serverClientId: serverClientId,
-        ));
+        await _initializeGoogle();
         final user = await GoogleSignIn.instance.authenticate();
         final credential = GoogleAuthProvider.credential(
           idToken: user.authentication.idToken,
@@ -174,8 +178,14 @@ class FirebaseManagerRepository implements ManagerRepository {
       }
     }
     await _auth.signOut();
-    if (!kIsWeb && _googleInitialization != null) {
-      await GoogleSignIn.instance.signOut();
+    if (!kIsWeb) {
+      // Also after an app restart, so the next login shows the account picker.
+      try {
+        await _initializeGoogle();
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {
+        /* Not signed in with Google on this device. */
+      }
     }
   }
 
@@ -189,21 +199,39 @@ class FirebaseManagerRepository implements ManagerRepository {
                 true
             ? 'apple'
             : 'google');
-    await signIn(provider, reauthenticate: true);
-    // Apple's revocation flow requires the fresh authorization code.
+    // One fresh login. Apple's revocation needs the authorization code of
+    // that same login, so Apple reauthenticates here instead of in signIn.
+    String? appleCode;
     if (provider == 'apple' && !kIsWeb) {
-      final result = await _auth.currentUser!.reauthenticateWithProvider(
-        AppleAuthProvider(),
-      );
-      final code = result.additionalUserInfo?.authorizationCode;
-      if (code != null) {
-        await _auth.revokeTokenWithAuthorizationCode(code);
-      } else {
+      try {
+        final result = await _auth.currentUser!.reauthenticateWithProvider(
+          AppleAuthProvider(),
+        );
+        appleCode = result.additionalUserInfo?.authorizationCode;
+      } on FirebaseAuthException catch (e) {
+        throw AppFailure(e.code);
+      }
+      if (appleCode == null) {
         throw const AppFailure('apple-revocation-required');
       }
+    } else {
+      await signIn(provider, reauthenticate: true);
     }
+    // The backend validates first (recent login, family without members):
+    // nothing is revoked or deleted if it refuses.
     await mutate('prepareDeletion');
-    await _auth.currentUser?.delete();
+    if (appleCode != null) {
+      try {
+        await _auth.revokeTokenWithAuthorizationCode(appleCode);
+      } catch (_) {
+        /* The account is already scheduled for deletion. */
+      }
+    }
+    try {
+      await _auth.currentUser?.delete();
+    } catch (_) {
+      // The scheduled deletion job removes the authentication account too.
+    }
     await signOut();
   }
 

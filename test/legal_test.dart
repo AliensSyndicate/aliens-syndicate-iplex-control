@@ -7,7 +7,7 @@ import 'package:aliens_syndicate_iplex_control/features/legal/domain/enums/legal
 import 'package:aliens_syndicate_iplex_control/features/legal/presentation/pages/legal_webview_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/legal/presentation/widgets/legal_document_error_state.dart';
 import 'package:aliens_syndicate_iplex_control/features/legal/presentation/widgets/legal_document_loading_indicator.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
 import 'package:aliens_syndicate_iplex_control/l10n/generated/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -69,34 +69,37 @@ void main() {
 
         final terms = resolver.resolve(LegalDocumentType.termsOfUse);
         expect(terms.scheme, 'https');
-        expect(terms.host, 'iplex-2c8fc.web.app');
-        expect(terms.path, '/terms');
+        expect(terms.host, 'aliens-syndicate-docs.web.app');
+        expect(terms.path, '/apps/iplex/terms');
 
         final privacy = resolver.resolve(LegalDocumentType.privacyPolicy);
         expect(privacy.scheme, 'https');
-        expect(privacy.host, 'iplex-2c8fc.web.app');
-        expect(privacy.path, '/privacy');
+        expect(privacy.host, 'aliens-syndicate-docs.web.app');
+        expect(privacy.path, '/apps/iplex/policy');
       },
     );
 
-    test('resolves staging and development URLs', () {
+    test('staging and development use the same published pages', () {
       const stagingResolver = LegalDocumentUrlResolver(
         environment: LegalEnvironment.staging,
       );
       final stagingTerms = stagingResolver.resolve(
         LegalDocumentType.termsOfUse,
       );
-      expect(stagingTerms.scheme, 'https');
-      expect(stagingTerms.host, 'iplex-staging.web.app');
-      expect(stagingTerms.path, '/terms');
+      expect(
+        stagingTerms.toString(),
+        'https://aliens-syndicate-docs.web.app/apps/iplex/terms',
+      );
 
       const devResolver = LegalDocumentUrlResolver(
         environment: LegalEnvironment.development,
       );
       final devTerms = devResolver.resolve(LegalDocumentType.termsOfUse);
-      expect(devTerms.scheme, 'http');
-      expect(devTerms.port, 5000);
-      expect(devTerms.path, '/terms');
+      expect(
+        devTerms.toString(),
+        'https://aliens-syndicate-docs.web.app/apps/iplex/terms',
+      );
+      expect(devResolver.isAllowedLegalUrl(devTerms), isTrue);
     });
 
     test('applies supported language locale query parameters', () {
@@ -336,6 +339,8 @@ void main() {
         expect(find.text('Política de privacidade'), findsOneWidget);
 
         // Tap Terms
+        await tester.ensureVisible(find.text('Termos de uso'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Termos de uso'));
         await tester.pumpAndSettle();
 
@@ -346,6 +351,8 @@ void main() {
         await tester.pumpAndSettle();
 
         // Tap Privacy
+        await tester.ensureVisible(find.text('Política de privacidade'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Política de privacidade'));
         await tester.pumpAndSettle();
 
@@ -354,9 +361,9 @@ void main() {
     );
   });
 
-  group('Settings Page Legal Section', () {
+  group('Account Page Legal Section', () {
     testWidgets(
-      'SettingsPage renders Legal section with Terms and Privacy tiles',
+      'AccountPage renders Legal section with Terms and Privacy tiles',
       (tester) async {
         final repo = fixtures.TestRepository(signedIn: true);
         final router = GoRouter(
@@ -364,7 +371,7 @@ void main() {
           routes: [
             GoRoute(
               path: '/settings',
-              builder: (context, state) => const SettingsPage(),
+              builder: (context, state) => const Scaffold(body: AccountPage()),
             ),
             GoRoute(
               path: '/legal/terms',
@@ -398,6 +405,8 @@ void main() {
         expect(find.text('Política de privacidade'), findsOneWidget);
 
         // Tap Terms
+        await tester.ensureVisible(find.text('Termos de uso'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Termos de uso'));
         await tester.pumpAndSettle();
 
@@ -408,6 +417,8 @@ void main() {
         await tester.pumpAndSettle();
 
         // Tap Privacy
+        await tester.ensureVisible(find.text('Política de privacidade'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Política de privacidade'));
         await tester.pumpAndSettle();
 
@@ -638,7 +649,7 @@ void main() {
       expect(find.byType(LegalWebViewPage), findsNothing);
     });
 
-    testWidgets('Back button returns to Settings when opened from Settings', (
+    testWidgets('Back button returns to Account when opened from Account', (
       tester,
     ) async {
       WebViewPlatform.instance = FakeWebViewPlatform();
@@ -647,7 +658,7 @@ void main() {
         routes: [
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const SettingsPage(),
+            builder: (context, state) => const Scaffold(body: AccountPage()),
           ),
           GoRoute(
             path: '/legal/privacy',
@@ -672,6 +683,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap privacy tile
+      await tester.ensureVisible(find.text('Política de privacidade'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Política de privacidade'));
       await tester.pumpAndSettle();
 
@@ -681,8 +694,8 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Voltar'));
       await tester.pumpAndSettle();
 
-      // Should be back on Settings
-      expect(find.byType(SettingsPage), findsOneWidget);
+      // Should be back on Account
+      expect(find.byType(AccountPage), findsOneWidget);
       expect(find.byType(LegalWebViewPage), findsNothing);
     });
   });

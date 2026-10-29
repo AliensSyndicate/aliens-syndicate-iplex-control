@@ -1,7 +1,7 @@
 import 'package:aliens_syndicate_iplex_control/app/router.dart';
 import 'package:aliens_syndicate_iplex_control/core/design_system/components.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/manager/about/about_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_details_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
@@ -57,10 +57,10 @@ void main() {
         location: '/account',
       );
       final router = container.read(routerProvider);
-      router.push('/account/settings');
+      router.push('/account/about');
       await tester.pump();
       await tester.pump();
-      final page = find.byType(SettingsPage);
+      final page = find.byType(AboutPage);
       final parent = find.byType(AccountPage, skipOffstage: false);
       final initial = tester.getTopLeft(page);
       await tester.pump(const Duration(milliseconds: 50));
@@ -128,10 +128,10 @@ void main() {
         location: '/account',
       );
       final router = container.read(routerProvider);
-      router.push('/account/settings');
+      router.push('/account/about');
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      final child = find.byType(SettingsPage);
+      final child = find.byType(AboutPage);
       expect(tester.getTopLeft(child).dx, 0);
       expect(
         find.ancestor(of: child, matching: find.byType(SlideTransition)),
@@ -140,7 +140,7 @@ void main() {
       await tester.pumpAndSettle();
       router.pop();
       await tester.pumpAndSettle();
-      expect(find.byType(SettingsPage), findsNothing);
+      expect(find.byType(AboutPage), findsNothing);
       expect(tester.getTopLeft(find.byType(AccountPage)).dx, 0);
       expect(navigation.path(container), '/account');
     },

@@ -5,7 +5,7 @@ import 'package:aliens_syndicate_iplex_control/core/design_system/components.dar
 import 'package:aliens_syndicate_iplex_control/features/manager/account_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/home/home_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/devices/presentation/pages/device_list_page.dart';
-import 'package:aliens_syndicate_iplex_control/features/manager/settings_page.dart';
+import 'package:aliens_syndicate_iplex_control/features/manager/about/about_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/iptv_source_form.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/list_iptv_page.dart';
 import 'package:aliens_syndicate_iplex_control/features/manager/users_page.dart';
@@ -269,10 +269,10 @@ void main() {
       // On parent screen (/account): BottomNavigation is visible
       expect(find.byType(BottomNavigation), findsOneWidget);
 
-      // Navigate to child screen (/account/settings)
-      router.push('/account/settings');
+      // Navigate to child screen (/account/about)
+      router.push('/account/about');
       await tester.pumpAndSettle();
-      expect(find.byType(SettingsPage), findsOneWidget);
+      expect(find.byType(AboutPage), findsOneWidget);
 
       // BottomNavigation MUST NOT be visible on child screen
       expect(find.byType(BottomNavigation), findsNothing);
@@ -280,7 +280,7 @@ void main() {
       // Pop back to /account
       router.pop();
       await tester.pumpAndSettle();
-      expect(find.byType(SettingsPage), findsNothing);
+      expect(find.byType(AboutPage), findsNothing);
       expect(find.byType(AccountPage), findsOneWidget);
 
       // BottomNavigation is visible again
@@ -310,12 +310,12 @@ void main() {
         );
         final accountTitleY = tester.getTopLeft(accountTitle.first).dy;
 
-        router.push('/account/settings');
+        router.push('/account/about');
         await tester.pumpAndSettle();
 
         final settingsTitle = find.descendant(
           of: find.byType(PageTemplate),
-          matching: find.text(l10n.settings),
+          matching: find.text(l10n.about),
         );
         expect(settingsTitle, findsOneWidget);
         final settingsTitleY = tester.getTopLeft(settingsTitle).dy;
@@ -338,7 +338,7 @@ void main() {
         await tester.tap(backBtn);
         await tester.pumpAndSettle();
 
-        expect(find.byType(SettingsPage), findsNothing);
+        expect(find.byType(AboutPage), findsNothing);
         expect(find.byType(AccountPage), findsOneWidget);
         expect(find.byType(BottomNavigation), findsOneWidget);
       },

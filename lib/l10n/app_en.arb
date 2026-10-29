@@ -502,7 +502,13 @@
   "homeNowPlaying": "Now playing",
   "homeFavorites": "Favorites",
   "homeGreeting": "Hi, {name}",
-  "@homeGreeting": {"placeholders": {"name": {"type": "String"}}},
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeFeaturedRelease": "Featured release",
   "homeReleases": "New releases",
   "homeContinueWatching": "Continue watching",
@@ -704,5 +710,8 @@
   "errorCouponInvalid": "Invalid coupon.",
   "errorCouponExpired": "This coupon has expired.",
   "errorCouponUsed": "This coupon has reached its usage limit.",
-  "errorAlreadyLifetime": "This family already has lifetime access."
+  "errorAlreadyLifetime": "This family already has lifetime access.",
+  "helpSearchHint": "Search questions and answers",
+  "helpNoResultsTitle": "No answers found",
+  "helpNoResultsBody": "Try other words or clear the search to see every question."
 }

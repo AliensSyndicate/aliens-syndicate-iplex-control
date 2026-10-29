@@ -568,5 +568,8 @@
   "errorCouponInvalid": "Cupón no válido.",
   "errorCouponExpired": "Este cupón ha caducado.",
   "errorCouponUsed": "Este cupón alcanzó su límite de usos.",
-  "errorAlreadyLifetime": "Esta familia ya tiene acceso vitalicio."
+  "errorAlreadyLifetime": "Esta familia ya tiene acceso vitalicio.",
+  "helpSearchHint": "Buscar en preguntas y respuestas",
+  "helpNoResultsTitle": "No se encontraron respuestas",
+  "helpNoResultsBody": "Prueba otras palabras o borra la búsqueda para ver todas las preguntas."
 }

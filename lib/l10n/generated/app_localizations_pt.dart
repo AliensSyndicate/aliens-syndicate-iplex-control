@@ -1712,4 +1712,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get errorAlreadyLifetime => 'Esta família já tem acesso vitalício.';
+
+  @override
+  String get helpSearchHint => 'Buscar nas perguntas e respostas';
+
+  @override
+  String get helpNoResultsTitle => 'Nenhuma resposta encontrada';
+
+  @override
+  String get helpNoResultsBody =>
+      'Tente outras palavras ou limpe a busca para ver todas as perguntas.';
 }
