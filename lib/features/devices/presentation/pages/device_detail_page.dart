@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/data/providers.dart';
 import '../../../../core/design_system/components.dart';
 import '../controllers/device_controller.dart';
-import '../widgets/device_unlink_modal.dart';
 
 class DeviceDetailPage extends ConsumerStatefulWidget {
   const DeviceDetailPage({super.key, required this.deviceId});
@@ -17,31 +16,56 @@ class DeviceDetailPage extends ConsumerStatefulWidget {
 }
 
 class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
-  bool unlinking = false;
+  final _form = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _nameFocus = FocusNode();
 
-  Future<void> unlink(String displayName) async {
-    final confirmed = await showDeviceUnlinkModal(
-      context,
-      deviceName: displayName,
-    );
-    if (!confirmed || !mounted) return;
+  /// Last name known to be saved (the stream value or a successful rename).
+  String? _savedName;
 
-    setState(() => unlinking = true);
-    try {
-      final repo = ref.read(deviceRepositoryProvider);
-      await repo.unlinkDevice(widget.deviceId);
-      if (mounted) {
-        context.pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        showFailure(context, e);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => unlinking = false);
-      }
+  @override
+  void initState() {
+    super.initState();
+    // The name is edited in place: leaving the field (or "done" on the
+    // keyboard) saves it.
+    _nameFocus.addListener(() {
+      if (!_nameFocus.hasFocus) _saveName();
+    });
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _nameFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveName() async {
+    final name = _name.text.trim();
+    if (name == _savedName || !(_form.currentState?.validate() ?? false)) {
+      return;
     }
+    try {
+      await ref
+          .read(deviceRepositoryProvider)
+          .renameDevice(widget.deviceId, name);
+      _savedName = name;
+    } catch (e) {
+      if (mounted) showFailure(context, e);
+    }
+  }
+
+  Future<void> unlink() async {
+    final l = context.l;
+    final unlinked = await confirmAndRun(
+      context,
+      title: l.unlinkConfirmTitle,
+      body: l.unlinkConfirmBody,
+      confirmLabel: l.unlinkDevice,
+      operation: () =>
+          ref.read(deviceRepositoryProvider).unlinkDevice(widget.deviceId),
+    );
+    if (unlinked && mounted) context.pop();
   }
 
   @override
@@ -78,6 +102,10 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
           }
 
           final isOnline = device.isOnline(now);
+          if (!_nameFocus.hasFocus && _savedName != device.displayName) {
+            _savedName = device.displayName;
+            _name.text = device.displayName;
+          }
 
           String linkedDateStr = '-';
           if (device.linkedAt != null) {
@@ -106,24 +134,12 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceElevated,
-                                borderRadius: BorderRadius.circular(
-                                  AppRadii.sm,
-                                ),
-                              ),
-                              child: Center(
-                                child: AppIcon(
-                                  AppIcons.devices,
-                                  size: AppSpacing.xxl,
-                                  color: isOnline
-                                      ? AppColors.accent
-                                      : AppColors.textDisabled,
-                                ),
-                              ),
+                            AppIcon(
+                              AppIcons.devices,
+                              size: AppSpacing.xxl,
+                              color: isOnline
+                                  ? AppColors.accent
+                                  : AppColors.textDisabled,
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
@@ -185,21 +201,25 @@ class _DeviceDetailPageState extends ConsumerState<DeviceDetailPage> {
                   ),
                 ),
                 if (admin) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  AppButton(
-                    label: l.editDeviceName,
-                    icon: AppIcons.edit,
-                    onPressed: () => context.push(
-                      '/devices/${device.id}/edit',
-                      extra: device.displayName,
+                  const SizedBox(height: AppSpacing.lg),
+                  Form(
+                    key: _form,
+                    child: AppTextField(
+                      key: const Key('device-name-field'),
+                      label: l.tvNameLabel,
+                      controller: _name,
+                      focusNode: _nameFocus,
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty || v.trim().length > 80
+                          ? l.requiredField
+                          : null,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
                   AppButton(
+                    key: const Key('device-unlink'),
                     label: l.unlinkDevice,
                     icon: AppIcons.delete,
-                    busy: unlinking,
-                    onPressed: () => unlink(device.displayName),
+                    onPressed: unlink,
                   ),
                 ],
               ],

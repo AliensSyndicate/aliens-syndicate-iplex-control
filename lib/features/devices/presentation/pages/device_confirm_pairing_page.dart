@@ -16,13 +16,30 @@ class DeviceConfirmPairingPage extends ConsumerStatefulWidget {
 class _DeviceConfirmPairingPageState
     extends ConsumerState<DeviceConfirmPairingPage> {
   bool busy = false;
+  final _form = GlobalKey<FormState>();
+  late final TextEditingController _name;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(
+      text: ref.read(devicePairingProvider).session?.displayName ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
 
   Future<void> confirm() async {
+    if (!(_form.currentState?.validate() ?? false)) return;
     setState(() => busy = true);
     try {
       final device = await ref
           .read(devicePairingProvider.notifier)
-          .confirmLink();
+          .confirmLink(customName: _name.text.trim());
       if (!mounted) return;
       context.pushReplacement('/devices/success', extra: device.displayName);
     } catch (e) {
@@ -139,20 +156,10 @@ class _DeviceConfirmPairingPageState
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated,
-                          borderRadius: BorderRadius.circular(AppRadii.sm),
-                        ),
-                        child: const Center(
-                          child: AppIcon(
-                            AppIcons.devices,
-                            size: AppSpacing.xl,
-                            color: AppColors.accent,
-                          ),
-                        ),
+                      const AppIcon(
+                        AppIcons.devices,
+                        size: AppSpacing.xl,
+                        color: AppColors.accent,
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
@@ -185,7 +192,6 @@ class _DeviceConfirmPairingPageState
                   const SizedBox(height: AppSpacing.lg),
                   Container(height: 1, color: AppColors.borderDark),
                   const SizedBox(height: AppSpacing.md),
-                  _DetailRow(label: l.tvNameLabel, value: session.displayName),
                   _DetailRow(
                     label: l.platformLabel,
                     value: session.platformLabel,
@@ -207,6 +213,20 @@ class _DeviceConfirmPairingPageState
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
+          // The TV can be renamed before linking (same rule as the backend).
+          if (!isOtherFamily)
+            Form(
+              key: _form,
+              child: AppTextField(
+                key: const Key('pairing-device-name'),
+                label: l.tvNameLabel,
+                controller: _name,
+                validator: (v) =>
+                    v == null || v.trim().isEmpty || v.trim().length > 80
+                    ? l.requiredField
+                    : null,
+              ),
+            ),
           if (!isOtherFamily) ...[
             AppButton.primary(
               label: l.confirmLinkButton,

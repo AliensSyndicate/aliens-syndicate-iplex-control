@@ -15,70 +15,78 @@ class DevicePairingSuccessPage extends ConsumerWidget {
     final pairingState = ref.watch(devicePairingProvider);
     final name = deviceName ?? pairingState.linkedDevice?.displayName ?? 'TV';
     final deviceId = pairingState.linkedDevice?.id;
+    // Back (app bar or system) never returns to the pairing flow: it always
+    // lands on the device list.
+    void backToList() {
+      ref.read(devicePairingProvider.notifier).reset();
+      context.go('/devices');
+    }
 
-    return PageTemplate(
-      title: l.pairingCompleted,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AppSpacing.xl),
-          Center(
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceRecessed,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.success, width: 2),
-              ),
-              child: const Center(
-                child: AppIcon(
-                  AppIcons.check,
-                  size: AppSpacing.xxl,
-                  color: AppColors.success,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) backToList();
+      },
+      child: PageTemplate(
+        title: l.pairingCompleted,
+        showBack: true,
+        onBack: backToList,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSpacing.xl),
+            Center(
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceRecessed,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.success, width: 2),
+                ),
+                child: const Center(
+                  child: AppIcon(
+                    AppIcons.check,
+                    size: AppSpacing.xxl,
+                    color: AppColors.success,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            l.deviceLinked,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              l.deviceLinked,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            l.deviceLinkedBody(name),
-            style: const TextStyle(
-              fontSize: 15,
-              color: AppColors.textSecondary,
-              height: 1.4,
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l.deviceLinkedBody(name),
+              style: const TextStyle(
+                fontSize: 15,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          if (deviceId != null && deviceId.isNotEmpty) ...[
-            AppButton(
-              label: l.viewDetails,
-              onPressed: () {
-                ref.read(devicePairingProvider.notifier).reset();
-                context.go('/devices/$deviceId');
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.xxl),
+            if (deviceId != null && deviceId.isNotEmpty) ...[
+              AppButton(
+                label: l.viewDetails,
+                onPressed: () {
+                  ref.read(devicePairingProvider.notifier).reset();
+                  context.go('/devices/$deviceId');
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            AppButton(label: l.backToDevices, onPressed: backToList),
           ],
-          AppButton(
-            label: l.backToDevices,
-            onPressed: () {
-              ref.read(devicePairingProvider.notifier).reset();
-              context.go('/devices');
-            },
-          ),
-        ],
+        ),
       ),
     );
   }

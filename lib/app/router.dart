@@ -461,20 +461,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                         deviceId: s.pathParameters['id']!,
                       ),
                     ),
-                    routes: [
-                      GoRoute(
-                        path: 'edit',
-                        pageBuilder: (c, s) => _appPage(
-                          key: s.pageKey,
-                          child: NameForm(
-                            title: c.l.edit,
-                            action: 'renameDevice',
-                            id: s.pathParameters['id'],
-                            initial: s.extra as String? ?? '',
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
