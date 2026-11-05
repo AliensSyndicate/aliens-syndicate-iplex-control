@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/data/providers.dart';
 import '../../../core/design_system/components.dart';
 
-const feedbackEmail = 'alienssyndicate@gmail.com';
 const _subjects = ['suggestion', 'bug', 'question', 'praise', 'other'];
 
-/// Feedback form: saves a record in Firebase (`sendFeedback`) and then opens
-/// the user's mail app with the message addressed to the support inbox.
+/// Feedback form: saves a record in Firebase (`sendFeedback`).
 Future<void> showFeedbackSheet(BuildContext context) => showAppModalSheet<void>(
   context: context,
   isDismissible: false,
@@ -53,7 +50,6 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
     final l = context.l;
     final nav = Navigator.of(context, rootNavigator: true);
     final host = nav.context;
-    final subjectLabel = _subjectLabel(subject);
     final locale = Localizations.localeOf(context).toString();
     setState(() => busy = true);
     try {
@@ -69,12 +65,6 @@ class _FeedbackSheetState extends ConsumerState<_FeedbackSheet> {
         'locale': locale,
         'appVersion': ?version,
       });
-      final mail =
-          'mailto:$feedbackEmail?subject=${Uri.encodeComponent('iPlex – $subjectLabel')}'
-          '&body=${Uri.encodeComponent('$text\n\n— iPlex ${version ?? ''}')}';
-      try {
-        await launchUrl(Uri.parse(mail), mode: LaunchMode.externalApplication);
-      } catch (_) {}
       if (!mounted) return;
       nav.pop();
       if (host.mounted) {
