@@ -79,6 +79,18 @@ class FakePlatformWebViewController extends PlatformWebViewController {
 
   @override
   Future<bool> canGoBack() async => false;
+
+  String? loadedHtml;
+
+  @override
+  Future<void> loadHtmlString(String html, {String? baseUrl}) async {
+    loadedHtml = html;
+  }
+
+  @override
+  Future<void> addJavaScriptChannel(
+    JavaScriptChannelParams javaScriptChannelParams,
+  ) async {}
 }
 
 class FakePlatformNavigationDelegate extends PlatformNavigationDelegate {

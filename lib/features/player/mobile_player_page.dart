@@ -13,6 +13,7 @@ import '../../core/domain/models.dart';
 import '../../core/domain/repository.dart';
 import '../home/home_data.dart';
 import '../home/home_providers.dart';
+import '../home/metadata_service.dart';
 import '../manager/widgets/profile_library.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'playback_engine.dart';
@@ -59,9 +60,12 @@ Future<void> openMobilePlayer(
 ///    shows it again. −10 s, play/pause, +10 s, timeline, quality seal,
 ///    audio and subtitles. Live channels: no timeline or jumps.
 /// 5. Progress: VOD only, never adult or live (same rules as the TV).
-/// 6. Series: "Próximo episódio" in the last 30 s; the end plays it.
+/// 6. Series: "Próximo episódio" in the last 30 s; the end plays it. The
+///    overlay also lists the episodes of the season being played.
 /// 7. "Continuar na TV": saves the position, a TV is chosen and resumes
 ///    there at the same point; the phone stops.
+/// 8. Movies: "Marcar como finalizado" past 4/5 of the duration, in the place
+///    of "Próximo episódio".
 /// The app is portrait; only this page turns to landscape.
 class MobilePlayerPage extends ConsumerStatefulWidget {
   const MobilePlayerPage({super.key, required this.args});
@@ -133,6 +137,13 @@ class _MobilePlayerPageState extends ConsumerState<MobilePlayerPage> {
 
   /// The phone handed the title to a TV (closing does not save again).
   bool handedOff = false;
+
+  /// The movie was marked as finished (nothing is saved after that).
+  bool markedFinished = false;
+
+  /// TMDB names and frames of the season being played, by episode number.
+  Map<int, EpisodeInfo> seasonInfo = const {};
+  int? infoSeason;
 
   Entry get item => widget.args.item;
   bool get live => item.isChannel;
@@ -346,6 +357,25 @@ class _MobilePlayerPageState extends ConsumerState<MobilePlayerPage> {
     });
     if (mounted) setState(() => preparing = false);
     _showOverlay();
+    unawaited(_loadSeasonInfo());
+  }
+
+  /// Names and frames only: the row works without them.
+  Future<void> _loadSeasonInfo() async {
+    final season = episode?.season;
+    if (season == null || season == infoSeason) return;
+    infoSeason = season;
+    try {
+      final metadata = container.read(metadataServiceProvider);
+      final tmdbId = (await metadata.summary(item))?.tmdbId;
+      if (tmdbId == null) return;
+      final info = await metadata.season(item, tmdbId, season);
+      if (mounted && season == episode?.season) {
+        setState(() => seasonInfo = {for (final e in info) e.number: e});
+      }
+    } catch (_) {
+      infoSeason = null;
+    }
   }
 
   String _newPlayId() {
@@ -383,20 +413,21 @@ class _MobilePlayerPageState extends ConsumerState<MobilePlayerPage> {
     }
   }
 
-  Future<void> _saveProgress() async {
+  Future<void> _saveProgress({Duration? at}) async {
     final id = profileId;
     if (!persistent ||
         id == null ||
         sessionId == null ||
         duration <= Duration.zero ||
-        playId.isEmpty) {
+        playId.isEmpty ||
+        (markedFinished && at == null)) {
       return;
     }
     try {
       await _call('watchProgress', {
         'profileId': id,
         'contentId': contentId,
-        'position': position.inMilliseconds / 1000,
+        'position': (at ?? position).inMilliseconds / 1000,
         'duration': duration.inMilliseconds / 1000,
         'generation': generations['progress'] ?? 0,
         'watchedGeneration': ?generations['watched'],
@@ -422,6 +453,17 @@ class _MobilePlayerPageState extends ConsumerState<MobilePlayerPage> {
       return;
     }
     await _playEpisode(next);
+  }
+
+  /// Same as the natural end: the whole duration is saved and the player
+  /// closes.
+  Future<void> _markFinished() async {
+    if (markedFinished) return;
+    markedFinished = true;
+    progressTimer?.cancel();
+    await engine.pause();
+    await _saveProgress(at: duration);
+    if (mounted) unawaited(_leave());
   }
 
   Future<void> _playEpisode(TvEpisode next) async {
@@ -535,6 +577,8 @@ class _MobilePlayerPageState extends ConsumerState<MobilePlayerPage> {
     final failure = this.failure;
     final next = series ? findNextEpisode(episodes, episode?.id) : null;
     final countdown = live ? null : nextEpisodeCountdown(position, duration);
+    final finishable =
+        persistent && !series && !live && canMarkFinished(position, duration);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -577,6 +621,12 @@ class _MobilePlayerPageState extends ConsumerState<MobilePlayerPage> {
                       quality: qualityLabel(size.$1, size.$2),
                       hasAudio: audio.length > 1,
                       hasSubtitles: subtitles.isNotEmpty,
+                      episodes: seasonEpisodes(episodes, episode?.season),
+                      seasonInfo: seasonInfo,
+                      onPlayEpisode: (picked) {
+                        if (picked.id == episode?.id) return;
+                        unawaited(_playEpisode(picked));
+                      },
                       onBack: _leave,
                       onContinueOnTv: preparing ? null : _continueOnTv,
                       onToggle: () {
@@ -610,6 +660,18 @@ class _MobilePlayerPageState extends ConsumerState<MobilePlayerPage> {
                     onPressed: () => _playEpisode(next),
                   ),
                 ),
+              if (failure == null && finishable)
+                Positioned(
+                  right: AppSpacing.lg,
+                  bottom: AppSpacing.xxl * 2,
+                  child: AppButton.primary(
+                    key: const Key('player-mark-finished'),
+                    width: 320,
+                    icon: AppIcons.check,
+                    label: l.markFinished,
+                    onPressed: _markFinished,
+                  ),
+                ),
             ],
           ),
         ),
@@ -632,6 +694,9 @@ class _Overlay extends StatelessWidget {
     required this.quality,
     required this.hasAudio,
     required this.hasSubtitles,
+    required this.episodes,
+    required this.seasonInfo,
+    required this.onPlayEpisode,
     required this.onBack,
     required this.onContinueOnTv,
     required this.onToggle,
@@ -650,6 +715,12 @@ class _Overlay extends StatelessWidget {
   final VoidCallback? onContinueOnTv;
   final ValueChanged<bool> onSkip;
   final ValueChanged<Duration> onScrub, onScrubEnd;
+  final List<TvEpisode> episodes;
+  final Map<int, EpisodeInfo> seasonInfo;
+  final ValueChanged<TvEpisode> onPlayEpisode;
+
+  /// Below this height (landscape) the row would squeeze the controls.
+  static const _episodesMinHeight = 340.0;
 
   @override
   Widget build(BuildContext context) {
@@ -831,11 +902,131 @@ class _Overlay extends StatelessWidget {
                 ],
               ],
             ),
+            if (episodes.length > 1 &&
+                MediaQuery.sizeOf(context).height >= _episodesMinHeight)
+              _EpisodeRow(
+                episodes: episodes,
+                current: episode?.id,
+                info: seasonInfo,
+                onPlay: onPlayEpisode,
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Episodes of the season being played, opened at the current one.
+class _EpisodeRow extends StatefulWidget {
+  const _EpisodeRow({
+    required this.episodes,
+    required this.current,
+    required this.info,
+    required this.onPlay,
+  });
+  final List<TvEpisode> episodes;
+  final String? current;
+  final Map<int, EpisodeInfo> info;
+  final ValueChanged<TvEpisode> onPlay;
+
+  @override
+  State<_EpisodeRow> createState() => _EpisodeRowState();
+}
+
+class _EpisodeRowState extends State<_EpisodeRow> {
+  static const _width = 112.0, _frame = 63.0, _height = 90.0;
+  late final scroll = ScrollController(
+    initialScrollOffset:
+        widget.episodes
+            .indexWhere((e) => e.id == widget.current)
+            .clamp(0, widget.episodes.length) *
+        (_width + AppSpacing.sm),
+  );
+
+  @override
+  void dispose() {
+    scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.sm),
+    child: SizedBox(
+      key: const Key('player-episodes'),
+      height: _height,
+      child: ListView.separated(
+        controller: scroll,
+        scrollDirection: Axis.horizontal,
+        itemCount: widget.episodes.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, i) {
+          final episode = widget.episodes[i];
+          final number = int.tryParse(episode.number);
+          final info = widget.info[number];
+          final current = episode.id == widget.current;
+          final still = tmdbSized(info?.still, 'w300');
+          final name = info?.name.isNotEmpty == true
+              ? info!.name
+              : episode.title;
+          return GestureDetector(
+            key: Key('player-episode-${episode.id}'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => widget.onPlay(episode),
+            child: SizedBox(
+              width: _width,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: _width,
+                    height: _frame,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDefault,
+                      borderRadius: BorderRadius.circular(AppRadii.xs),
+                      border: Border.all(
+                        color: current
+                            ? AppColors.textPrimary
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: still == null
+                        ? Text(episodeCode(episode))
+                        : Image(
+                            image: CachedNetworkImage(still, decodeWidth: 240),
+                            width: _width,
+                            height: _frame,
+                            fit: BoxFit.cover,
+                            excludeFromSemantics: true,
+                          ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      if (episode.number.isNotEmpty) episode.number,
+                      name,
+                    ].where((t) => t.isNotEmpty).join('. '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: current
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
 }
 
 /// Technical seal (quality, "Ao vivo").

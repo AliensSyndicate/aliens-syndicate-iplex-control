@@ -42,6 +42,7 @@ import 'route_access_page.dart';
 import 'router_refresh.dart';
 import 'session_loading_page.dart';
 import '../features/player/mobile_player_page.dart';
+import '../features/player/trailer_player_page.dart';
 
 // Defaults to Home; explicit platform deep links still take precedence in go_router.
 final initialRouteProvider = Provider<String>((ref) => '/home');
@@ -258,6 +259,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             final args? => MobilePlayerPage(args: args),
             null => const ColoredBox(color: Colors.black),
           },
+        ),
+      ),
+      // Trailer: its own player, as a movie (the id survives a rebuilt page).
+      GoRoute(
+        path: '/trailer/:key',
+        pageBuilder: (c, s) => _appPage(
+          key: s.pageKey,
+          child: TrailerPlayerPage(videoKey: s.pathParameters['key']!),
         ),
       ),
       GoRoute(

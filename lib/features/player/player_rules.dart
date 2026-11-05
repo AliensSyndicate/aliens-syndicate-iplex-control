@@ -59,6 +59,16 @@ int? nextEpisodeCountdown(Duration position, Duration duration) {
   return (remaining.inMilliseconds / 1000).ceil().clamp(0, 1 << 30);
 }
 
+/// A movie past 4/5 of its real duration can be marked as finished.
+bool canMarkFinished(Duration position, Duration duration) =>
+    duration > Duration.zero && position * 5 >= duration * 4;
+
+/// Episodes of [season], in play order (see [parseEpisodes]).
+List<TvEpisode> seasonEpisodes(List<TvEpisode> episodes, int? season) => [
+  for (final e in episodes)
+    if (e.season == season) e,
+];
+
 /// Next playable episode: only what the IPTV source lists (already in play
 /// order, see [parseEpisodes]).
 TvEpisode? findNextEpisode(List<TvEpisode> episodes, String? current) {

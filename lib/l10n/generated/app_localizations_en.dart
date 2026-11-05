@@ -1738,6 +1738,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextEpisode => 'Next episode';
 
   @override
+  String get markFinished => 'Mark as finished';
+
+  @override
+  String get watchTrailer => 'Watch trailer';
+
+  @override
+  String get trailerUnavailable => 'This trailer cannot be played right now.';
+
+  @override
   String get playerAudio => 'Audio';
 
   @override

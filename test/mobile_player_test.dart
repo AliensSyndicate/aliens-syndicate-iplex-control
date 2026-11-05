@@ -283,6 +283,47 @@ void main() {
     );
   });
 
+  testWidgets('series: the overlay lists the season and a tap plays the '
+      'episode from the start', (tester) async {
+    final repo = _PlayerRepo();
+    final series = Entry('se1', {
+      'title': 'Série',
+      'kind': 'series',
+      'sourceId': 's',
+      'providerRef': '77',
+      'category': 'Séries',
+    });
+    await open(tester, repo, MobilePlayerArgs(series, episodeId: 'e1'));
+    final engine = FakePlaybackEngine.last!;
+    expect(find.byKey(const Key('player-episodes')), findsOneWidget);
+    expect(find.text('2. Segundo'), findsOneWidget);
+    // The current episode does nothing.
+    await tester.tap(find.byKey(const Key('player-episode-e1')));
+    await tester.pump();
+    expect(engine.opened, hasLength(1));
+    await tester.tap(find.byKey(const Key('player-episode-e2')));
+    await tester.pumpAndSettle();
+    expect(engine.opened.last, ('https://example.com/e2.mp4', null));
+  });
+
+  testWidgets('movie: "Mark as finished" past 4/5 saves the whole duration and '
+      'closes', (tester) async {
+    final repo = _PlayerRepo();
+    await open(tester, repo, MobilePlayerArgs(_movie()));
+    final engine = FakePlaybackEngine.last!;
+    engine.emitDuration(const Duration(minutes: 100));
+    engine.emitPosition(const Duration(minutes: 79));
+    await tester.pump();
+    expect(find.byKey(const Key('player-mark-finished')), findsNothing);
+    expect(find.byKey(const Key('player-episodes')), findsNothing);
+    engine.emitPosition(const Duration(minutes: 80));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('player-mark-finished')));
+    await tester.pumpAndSettle();
+    expect(repo.called('watchProgress').last['position'], 6000);
+    expect(find.byKey(const Key('mobile-player')), findsNothing);
+  });
+
   testWidgets('"Continue on TV" saves the position, a TV takes over and the '
       'phone stops', (tester) async {
     final repo = _PlayerRepo();

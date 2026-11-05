@@ -739,6 +739,9 @@
     "description": "Player button: stops here and continues on a linked TV at the same point."
   },
   "nextEpisode": "Next episode",
+  "markFinished": "Mark as finished",
+  "watchTrailer": "Watch trailer",
+  "trailerUnavailable": "This trailer cannot be played right now.",
   "playerAudio": "Audio",
   "playerSubtitles": "Subtitles",
   "playerSubtitlesOff": "Off",

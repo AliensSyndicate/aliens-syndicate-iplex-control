@@ -43,6 +43,8 @@ dependencies:
   media_kit_libs_video: ^1.0.7
   # Keeps the native splash (logo) until the app draws its loading page.
   flutter_native_splash: ^2.4.8
+  webview_flutter_android: ^4.14.1
+  webview_flutter_wkwebview: ^3.27.2
 
 dev_dependencies:
   flutter_test:

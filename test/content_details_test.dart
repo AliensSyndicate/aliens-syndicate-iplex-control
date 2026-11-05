@@ -1010,7 +1010,7 @@ void main() {
   });
 
   testWidgets(
-    'title in progress offers Continue and Start over (same episode)',
+    'series in progress offers Continue, without Start over',
     (tester) async {
       final series = item('se1', 'Série Exemplo', 'series');
       final repo = LibraryRepo()
@@ -1024,14 +1024,10 @@ void main() {
       await launchWith(tester, repo, metadataFixture());
       await tapKey(tester, const ValueKey('home-card-se1'));
       expect(find.text('Continue'), findsOneWidget);
-      expect(find.byKey(const Key('details-restart')), findsOneWidget);
-      // On this phone: restart and continue open the player.
+      // A series starts over from the episode list, never from here.
+      expect(find.byKey(const Key('details-restart')), findsNothing);
       MobilePlayerArgs args() =>
           tester.widget<MobilePlayerPage>(find.byType(MobilePlayerPage)).args;
-      await tapKey(tester, const Key('details-restart'));
-      expect([args().resume, args().episodeId], [false, '3012']);
-      GoRouter.of(tester.element(find.byType(MobilePlayerPage))).pop();
-      await tester.pumpAndSettle();
       await tapKey(tester, const Key('details-continue'));
       expect([args().resume, args().episodeId], [true, '3012']);
       GoRouter.of(tester.element(find.byType(MobilePlayerPage))).pop();
@@ -1042,7 +1038,30 @@ void main() {
       expect([sheet.resume, sheet.episodeId], [true, '3012']);
       Navigator.of(tester.element(find.byType(WatchOnTvSheet))).pop();
       await tester.pumpAndSettle();
-      await fixtures.screenshot(tester, 'details/series-continue-restart');
+    },
+  );
+
+  testWidgets(
+    'movie in progress offers Continue and Start over in the action row',
+    (tester) async {
+      final movie = item('m1', 'Filme Exemplo', 'movie');
+      final repo = LibraryRepo()
+        ..recentMovies = [
+          {
+            ...movie,
+            'progress': {'position': 10, 'duration': 100},
+          },
+        ];
+      await launchWith(tester, repo, metadataFixture());
+      await tapKey(tester, const ValueKey('home-card-m1'));
+      expect(find.text('Continue'), findsOneWidget);
+      MobilePlayerArgs args() =>
+          tester.widget<MobilePlayerPage>(find.byType(MobilePlayerPage)).args;
+      await tapKey(tester, const Key('details-restart'));
+      expect(args().resume, isFalse);
+      GoRouter.of(tester.element(find.byType(MobilePlayerPage))).pop();
+      await tester.pumpAndSettle();
+      await fixtures.screenshot(tester, 'details/movie-continue-restart');
       // Continuar (green) and Recomeçar in the action row.
       final cont = tester.getRect(find.byKey(const Key('details-continue')));
       final restart = tester.getRect(find.byKey(const Key('details-restart')));

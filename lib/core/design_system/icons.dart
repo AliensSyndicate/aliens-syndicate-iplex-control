@@ -69,5 +69,6 @@ abstract final class AppIcons {
       server = HugeIcons.strokeRoundedServer,
       link = HugeIcons.strokeRoundedLink01,
       check = HugeIcons.strokeRoundedCheckmarkCircle01,
+      trailer = HugeIcons.strokeRoundedPlaySquare,
       channels = HugeIcons.strokeRoundedPlaylist01;
 }

@@ -3208,6 +3208,24 @@ abstract class AppLocalizations {
   /// **'Next episode'**
   String get nextEpisode;
 
+  /// No description provided for @markFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as finished'**
+  String get markFinished;
+
+  /// No description provided for @watchTrailer.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch trailer'**
+  String get watchTrailer;
+
+  /// No description provided for @trailerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This trailer cannot be played right now.'**
+  String get trailerUnavailable;
+
   /// No description provided for @playerAudio.
   ///
   /// In en, this message translates to:

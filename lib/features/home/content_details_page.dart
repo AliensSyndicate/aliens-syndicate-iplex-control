@@ -7,6 +7,7 @@ import '../../core/data/providers.dart';
 import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../player/mobile_player_page.dart';
+import '../player/trailer_player_page.dart';
 import '../watch_on_tv/watch_on_tv_sheet.dart';
 import 'details_layout.dart';
 import 'home_data.dart';
@@ -338,6 +339,10 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
         ..._summary(context, shown, meta),
         const SizedBox(height: AppSpacing.lg),
         _actions(context, shown, home),
+        if (meta?.trailerKey != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _trailerButton(context, meta!.trailerKey!),
+        ],
         ..._availability(context, shown),
         if (series) ...[
           const SizedBox(height: AppSpacing.lg),
@@ -442,7 +447,16 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     ];
   }
 
+  Widget _trailerButton(BuildContext context, String key) => AppButton(
+    key: const Key('details-trailer-button'),
+    height: 44,
+    icon: AppIcons.trailer,
+    label: context.l.watchTrailer,
+    onPressed: () => openTrailer(context, key),
+  );
+
   /// Playback fills the content width; resume and restart share it equally.
+  /// A series has no restart here: starting over belongs to the episode list.
   Widget _actions(BuildContext context, Entry shown, HomeData? home) {
     final l = context.l;
     final target = _withProgress(home);
@@ -472,7 +486,7 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
                       ),
               ),
             ),
-            if (resume && target != null) ...[
+            if (resume && target != null && shown.kind != 'series') ...[
               const SizedBox(width: AppSpacing.md),
               AppButton(
                 key: const Key('details-restart'),

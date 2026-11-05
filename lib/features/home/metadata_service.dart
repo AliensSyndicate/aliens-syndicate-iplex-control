@@ -12,6 +12,10 @@ import '../../core/data/providers.dart';
 import '../../core/domain/models.dart';
 import 'home_data.dart';
 
+/// YouTube id of the trailer (the only video host TMDB offers).
+String? _trailerKey(Object? v) =>
+    v is String && RegExp(r'^[A-Za-z0-9_-]{6,20}$').hasMatch(v) ? v : null;
+
 String? _tmdbImage(Object? v) =>
     v is String && v.startsWith('https://image.tmdb.org/') ? v : null;
 String? _text(Object? v) =>
@@ -114,6 +118,7 @@ class ContentMetadata {
     this.crew = const [],
     this.seasons = const [],
     this.recommendations = const [],
+    this.trailerKey,
   });
 
   factory ContentMetadata.fromJson(Map<String, dynamic> json) {
@@ -143,6 +148,7 @@ class ContentMetadata {
         for (final d in (json['certificationDescriptors'] as List? ?? const []))
           ?_text(d),
       ],
+      trailerKey: _trailerKey(json['trailerKey']),
       seasonCount: (json['seasonCount'] as num?)?.toInt(),
       episodeCount: (json['episodeCount'] as num?)?.toInt(),
       cast: people('cast'),
@@ -168,6 +174,9 @@ class ContentMetadata {
   }
 
   final int? tmdbId;
+
+  /// YouTube id of the trailer; null when TMDB has none.
+  final String? trailerKey;
   final String? title, originalTitle, poster, backdrop, certification;
 
   /// Original-resolution poster: background of the details page.

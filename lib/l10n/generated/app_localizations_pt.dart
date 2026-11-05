@@ -1753,6 +1753,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get nextEpisode => 'Próximo episódio';
 
   @override
+  String get markFinished => 'Marcar como finalizado';
+
+  @override
+  String get watchTrailer => 'Assistir trailer';
+
+  @override
+  String get trailerUnavailable =>
+      'Este trailer não pode ser reproduzido agora.';
+
+  @override
   String get playerAudio => 'Áudio';
 
   @override
