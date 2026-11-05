@@ -275,6 +275,9 @@ service cloud.firestore {
     match /play_purchases/{tokenHash} { allow read, write: if false; }
     match /coupons/{path=**} { allow read, write: if false; }
 
+    // Feedback das contas: escrito só pelo backend (`sendFeedback`), nunca lido pelo cliente.
+    match /feedback/{id} { allow read, write: if false; }
+
     // Fallback catch-all
     match /{document=**} {
       allow read, write: if false;

@@ -53,6 +53,7 @@ abstract final class AppIcons {
       help = HugeIcons.strokeRoundedHelpCircle,
       info = HugeIcons.strokeRoundedInformationCircle,
       share = HugeIcons.strokeRoundedShare01,
+      feedback = HugeIcons.strokeRoundedBubbleChat,
       language = HugeIcons.strokeRoundedLanguageCircle,
       terms = HugeIcons.strokeRoundedLegalDocument01,
       privacy = HugeIcons.strokeRoundedShield01;

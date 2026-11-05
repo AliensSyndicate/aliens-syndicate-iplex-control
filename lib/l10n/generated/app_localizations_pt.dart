@@ -1817,4 +1817,37 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get loadingSettings => 'Carregando configurações';
+
+  @override
+  String get sendFeedback => 'Enviar feedback';
+
+  @override
+  String get feedbackSubject => 'Assunto';
+
+  @override
+  String get feedbackMessage => 'Mensagem';
+
+  @override
+  String get feedbackSuggestion => 'Sugestão';
+
+  @override
+  String get feedbackBug => 'Problema';
+
+  @override
+  String get feedbackQuestion => 'Dúvida';
+
+  @override
+  String get feedbackPraise => 'Elogio';
+
+  @override
+  String get feedbackOther => 'Outro';
+
+  @override
+  String get feedbackSend => 'Enviar';
+
+  @override
+  String get feedbackSent => 'Obrigado! Seu feedback foi enviado.';
+
+  @override
+  String get feedbackHint => 'Escreva sua mensagem';
 }

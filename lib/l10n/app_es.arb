@@ -600,5 +600,16 @@
   "errorFeatureUnavailable": "Esta función aún no está disponible en el servidor. Inténtalo más tarde.",
   "errorProfileUnavailable": "Tu perfil no está disponible para reproducir. Revisa tu perfil en la pestaña Familia.",
   "playbackStreamUnreachable": "El proveedor de tu lista IPTV no entregó el video (dirección fuera de línea). Prueba otro contenido o contacta al proveedor.",
-  "loadingSettings": "Cargando configuración"
+  "loadingSettings": "Cargando configuración",
+  "sendFeedback": "Enviar comentarios",
+  "feedbackSubject": "Asunto",
+  "feedbackMessage": "Mensaje",
+  "feedbackSuggestion": "Sugerencia",
+  "feedbackBug": "Problema",
+  "feedbackQuestion": "Duda",
+  "feedbackPraise": "Elogio",
+  "feedbackOther": "Otro",
+  "feedbackSend": "Enviar",
+  "feedbackSent": "¡Gracias! Tus comentarios fueron enviados.",
+  "feedbackHint": "Escribe tu mensaje"
 }

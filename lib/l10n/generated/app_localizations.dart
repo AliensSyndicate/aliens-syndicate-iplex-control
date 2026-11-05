@@ -3327,6 +3327,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loading settings'**
   String get loadingSettings;
+
+  /// No description provided for @sendFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback'**
+  String get sendFeedback;
+
+  /// No description provided for @feedbackSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'Subject'**
+  String get feedbackSubject;
+
+  /// No description provided for @feedbackMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get feedbackMessage;
+
+  /// No description provided for @feedbackSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestion'**
+  String get feedbackSuggestion;
+
+  /// No description provided for @feedbackBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem'**
+  String get feedbackBug;
+
+  /// No description provided for @feedbackQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get feedbackQuestion;
+
+  /// No description provided for @feedbackPraise.
+  ///
+  /// In en, this message translates to:
+  /// **'Praise'**
+  String get feedbackPraise;
+
+  /// No description provided for @feedbackOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get feedbackOther;
+
+  /// No description provided for @feedbackSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get feedbackSend;
+
+  /// No description provided for @feedbackSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you! Your feedback was sent.'**
+  String get feedbackSent;
+
+  /// No description provided for @feedbackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write your message'**
+  String get feedbackHint;
 }
 
 class _AppLocalizationsDelegate

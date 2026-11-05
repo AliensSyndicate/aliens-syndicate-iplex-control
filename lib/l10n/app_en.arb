@@ -770,5 +770,16 @@
   "loadingSettings": "Loading settings",
   "@loadingSettings": {
     "description": "Boot: the IPTV lists and settings are loading before Home opens."
-  }
+  },
+  "sendFeedback": "Send feedback",
+  "feedbackSubject": "Subject",
+  "feedbackMessage": "Message",
+  "feedbackSuggestion": "Suggestion",
+  "feedbackBug": "Problem",
+  "feedbackQuestion": "Question",
+  "feedbackPraise": "Praise",
+  "feedbackOther": "Other",
+  "feedbackSend": "Send",
+  "feedbackSent": "Thank you! Your feedback was sent.",
+  "feedbackHint": "Write your message"
 }

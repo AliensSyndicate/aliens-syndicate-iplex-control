@@ -1799,4 +1799,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loadingSettings => 'Loading settings';
+
+  @override
+  String get sendFeedback => 'Send feedback';
+
+  @override
+  String get feedbackSubject => 'Subject';
+
+  @override
+  String get feedbackMessage => 'Message';
+
+  @override
+  String get feedbackSuggestion => 'Suggestion';
+
+  @override
+  String get feedbackBug => 'Problem';
+
+  @override
+  String get feedbackQuestion => 'Question';
+
+  @override
+  String get feedbackPraise => 'Praise';
+
+  @override
+  String get feedbackOther => 'Other';
+
+  @override
+  String get feedbackSend => 'Send';
+
+  @override
+  String get feedbackSent => 'Thank you! Your feedback was sent.';
+
+  @override
+  String get feedbackHint => 'Write your message';
 }

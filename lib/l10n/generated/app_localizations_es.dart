@@ -1821,4 +1821,37 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get loadingSettings => 'Cargando configuración';
+
+  @override
+  String get sendFeedback => 'Enviar comentarios';
+
+  @override
+  String get feedbackSubject => 'Asunto';
+
+  @override
+  String get feedbackMessage => 'Mensaje';
+
+  @override
+  String get feedbackSuggestion => 'Sugerencia';
+
+  @override
+  String get feedbackBug => 'Problema';
+
+  @override
+  String get feedbackQuestion => 'Duda';
+
+  @override
+  String get feedbackPraise => 'Elogio';
+
+  @override
+  String get feedbackOther => 'Otro';
+
+  @override
+  String get feedbackSend => 'Enviar';
+
+  @override
+  String get feedbackSent => '¡Gracias! Tus comentarios fueron enviados.';
+
+  @override
+  String get feedbackHint => 'Escribe tu mensaje';
 }

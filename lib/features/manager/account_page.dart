@@ -8,6 +8,7 @@ import '../../core/design_system/components.dart';
 import '../../core/domain/models.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'widgets/account_avatar.dart';
+import 'widgets/feedback_sheet.dart';
 import 'widgets/public_identity_sheet.dart';
 
 class AccountPage extends ConsumerStatefulWidget {
@@ -185,6 +186,12 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                 if (context.mounted) showFailure(context, e);
               }
             },
+          ),
+          EntryTile(
+            key: const Key('send-feedback'),
+            title: l.sendFeedback,
+            icon: AppIcons.feedback,
+            onTap: () => showFeedbackSheet(context),
           ),
           SectionHeader(l.legal),
           EntryTile(

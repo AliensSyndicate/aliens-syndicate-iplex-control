@@ -19,6 +19,7 @@ class NeumorphicTextField extends StatefulWidget {
     this.focusNode,
     this.height = AppDimensions.input,
     this.bottomSpacing = AppSpacing.md,
+    this.maxLines = 1,
   });
 
   final String label;
@@ -32,6 +33,7 @@ class NeumorphicTextField extends StatefulWidget {
   final FocusNode? focusNode;
   final double height;
   final double bottomSpacing;
+  final int maxLines;
 
   @override
   State<NeumorphicTextField> createState() => _NeumorphicTextFieldState();
@@ -80,7 +82,9 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
           obscureText: widget.secret,
           enableSuggestions: !widget.secret,
           autocorrect: !widget.secret,
-          keyboardType: widget.keyboardType,
+          keyboardType:
+              widget.keyboardType ??
+              (widget.maxLines > 1 ? TextInputType.multiline : null),
           onChanged: (value) {
             final field = _fieldKey.currentState;
             // TextFormField also calls onChanged on reset. Keep its form value
@@ -98,8 +102,10 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
             _refreshValidation();
             return error;
           },
-          maxLines: 1,
-          textAlignVertical: TextAlignVertical.center,
+          maxLines: widget.maxLines,
+          textAlignVertical: widget.maxLines > 1
+              ? TextAlignVertical.top
+              : TextAlignVertical.center,
           errorBuilder: (_, _) => const SizedBox.shrink(),
           maxLength: widget.secret ? 512 : 2048,
           cursorColor: Colors.white,

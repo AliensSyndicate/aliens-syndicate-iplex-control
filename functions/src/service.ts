@@ -456,6 +456,13 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
  if(action==='savePreferences') {
   required(!a.deviceId);const locale=z.enum(['system','en','pt_BR','es']).parse(p.locale);await db().doc(`users/${a.uid}`).set({locale},{merge:true});return {ok:true};
  }
+ if(action==='sendFeedback') {
+  // Registro do feedback enviado pela conta (o e-mail sai do aparelho do usuario).
+  required(!a.deviceId);
+  const input=z.object({subject:z.enum(['suggestion','bug','question','praise','other']),message:z.string().trim().min(1).max(2000),requestId:idSchema,appVersion:z.string().max(40).optional(),locale:z.string().max(10).optional()}).parse(p);
+  await db().doc(`feedback/${a.uid}_${input.requestId}`).set({uid:a.uid,subject:input.subject,message:input.message,appVersion:input.appVersion??null,locale:input.locale??null,createdAt:now},{merge:true});
+  return {ok:true};
+ }
  // TV wishlist uses the same collection and generation as the Control, but
  // requires an active device/profile lease and an authorized catalog title.
  if(action==='wishlist'){
