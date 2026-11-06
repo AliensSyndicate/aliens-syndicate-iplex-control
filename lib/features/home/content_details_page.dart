@@ -338,11 +338,7 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
       children: [
         ..._summary(context, shown, meta),
         const SizedBox(height: AppSpacing.lg),
-        _actions(context, shown, home),
-        if (meta?.trailerKey != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          _trailerButton(context, meta!.trailerKey!),
-        ],
+        _actions(context, shown, home, meta?.trailerKey),
         ..._availability(context, shown),
         if (series) ...[
           const SizedBox(height: AppSpacing.lg),
@@ -447,17 +443,14 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
     ];
   }
 
-  Widget _trailerButton(BuildContext context, String key) => AppButton(
-    key: const Key('details-trailer-button'),
-    height: 44,
-    icon: AppIcons.trailer,
-    label: context.l.watchTrailer,
-    onPressed: () => openTrailer(context, key),
-  );
-
   /// Playback fills the content width; resume and restart share it equally.
   /// A series has no restart here: starting over belongs to the episode list.
-  Widget _actions(BuildContext context, Entry shown, HomeData? home) {
+  Widget _actions(
+    BuildContext context,
+    Entry shown,
+    HomeData? home,
+    String? trailerKey,
+  ) {
     final l = context.l;
     final target = _withProgress(home);
     final resume = target?.progress != null && !shown.isChannel;
@@ -499,6 +492,17 @@ class _ContentDetailsPageState extends ConsumerState<ContentDetailsPage> {
                   target,
                   episodeId: target.episodeId ?? episode?.id,
                 ),
+              ),
+            ],
+            if (trailerKey != null) ...[
+              const SizedBox(width: AppSpacing.md),
+              AppButton(
+                key: const Key('details-trailer-button'),
+                height: actionHeight,
+                width: actionHeight,
+                semanticsLabel: l.watchTrailer,
+                icon: AppIcons.trailer,
+                onPressed: () => openTrailer(context, trailerKey),
               ),
             ],
             const SizedBox(width: AppSpacing.md),
