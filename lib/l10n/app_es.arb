@@ -611,5 +611,18 @@
   "feedbackOther": "Otro",
   "feedbackSend": "Enviar",
   "feedbackSent": "¡Gracias! Tus comentarios fueron enviados.",
-  "feedbackHint": "Escribe tu mensaje"
+  "feedbackHint": "Escribe tu mensaje",
+  "authEmail": "Correo electrónico",
+  "authPassword": "Contraseña",
+  "authSignIn": "Iniciar sesión",
+  "authForgotPassword": "Olvidé mi contraseña",
+  "authResetSent": "Si existe una cuenta con este correo, enviamos un enlace para restablecer la contraseña.",
+  "errorWrongCredentials": "Correo o contraseña incorrectos.",
+  "errorInvalidEmail": "Introduce un correo válido.",
+  "errorTooManyRequests": "Demasiados intentos. Inténtalo de nuevo en unos minutos.",
+  "errorAccountDisabled": "Esta cuenta está desactivada.",
+  "deletePasswordTitle": "Confirma tu contraseña",
+  "deletePasswordBody": "Introduce tu contraseña para eliminar la cuenta.",
+  "authEmailButton": "Continuar con correo",
+  "authEmailTitle": "Acceso con correo"
 }

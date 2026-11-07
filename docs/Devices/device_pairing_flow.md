@@ -114,5 +114,5 @@ cd functions && FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HO
 
 O comando imprime o QR no terminal, grava `build/dev-pairing/pairing-qr.{png,svg}` (`iplex://pair?token=<64 hex>`) e o código manual. Com `--wait`, aguarda a confirmação no Gestor e executa a troca de credencial do Player. `npm run dev:pairing-qr -- cleanup` remove as TVs simuladas.
 
-O Gestor alcança os emuladores com `flutter run --dart-define=USE_EMULATORS=true --dart-define=FIREBASE_PROJECT_ID=demo-iplex` (somente debug). Em simuladores sem conta Google/Apple, `--dart-define=EMULATOR_TEST_SIGN_IN=true` faz login anônimo apenas no Auth Emulator.
+O Gestor alcança os emuladores com `flutter run --dart-define=USE_EMULATORS=true --dart-define=FIREBASE_PROJECT_ID=demo-iplex` (somente debug). Em simuladores sem conta Google/Apple/e-mail, `--dart-define=EMULATOR_TEST_SIGN_IN=true` faz login anônimo apenas no Auth Emulator (o e-mail de verificação do emulador aparece no Auth Emulator UI, porta 4000).
 

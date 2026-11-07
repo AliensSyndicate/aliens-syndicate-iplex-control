@@ -634,7 +634,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap terms
+      // Tap terms (below the form on a short screen: the page scrolls)
+      await tester.ensureVisible(find.text('Termos de uso'));
       await tester.tap(find.text('Termos de uso'));
       await tester.pumpAndSettle();
 

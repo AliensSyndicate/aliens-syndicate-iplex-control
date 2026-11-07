@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {networkKey,playerIdentity,PLAYER_DEVICE_ACTIONS,PLAYER_PUBLIC_ACTIONS,runPlayer,type PlayerDeps,type QuotaRule} from '../src/player';
+import {networkKey,playerIdentity,PLAYER_DEVICE_ACTIONS,PLAYER_PUBLIC_ACTIONS,runPlayer,tokenFailureCode,type PlayerDeps,type QuotaRule} from '../src/player';
 
 const device=(over:Record<string,unknown>={},uid='tv_dev1')=>({uid,token:{deviceId:'dev1',familyId:'fam1',firebase:{sign_in_provider:'custom'},auth_time:1,...over}});
 function deps(){
@@ -14,6 +14,11 @@ test('player: device actions require the pairing credential, never the request b
  await runPlayer({action:'listPlayerProfiles',payload:{deviceId:'outro',familyId:'outra'},auth:device(),ip:'1.1.1.1'},'k',d);
  assert.deepEqual(calls[0]!.actor,{uid:'tv_dev1',deviceId:'dev1',familyId:'fam1',authTime:1});
  await assert.rejects(runPlayer({action:'listPlayerProfiles',payload:{},auth:undefined,ip:'1.1.1.1'},'k',d),/unauthenticated/);
+});
+
+test('player: only a confirmed revocation unlinks the TV; other token failures are retryable',()=>{
+ for(const code of ['auth/id-token-revoked','auth/user-disabled','auth/user-not-found'])assert.equal(tokenFailureCode({code}),'device-revoked');
+ for(const error of [{code:'auth/id-token-expired'},{code:'auth/internal-error'},{code:'app/network-error'},new Error('boom'),null])assert.equal(tokenFailureCode(error),'unauthenticated');
 });
 
 test('player: person accounts, inconsistent uid, missing claims or non-custom sign-in are refused',()=>{

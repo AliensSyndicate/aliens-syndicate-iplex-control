@@ -12,7 +12,7 @@ import {defineSecret} from 'firebase-functions/params';
 import {ZodError} from 'zod';
 import {DomainError} from './domain';
 import {execute,Identity} from './service';
-import {firestoreQuota,runPlayer,PLAYER_PUBLIC_ACTIONS,consumePlayerRequest} from './player';
+import {firestoreQuota,runPlayer,PLAYER_PUBLIC_ACTIONS,consumePlayerRequest,tokenFailureCode} from './player';
 import {scheduleDailySync, DAILY_SCHEDULE, DAILY_TIME_ZONE} from './iptv_jobs';
 import {dispatchSyncCompletionNotification, retryPushNotifications} from './iptv_notifications';
 import {syncDueSources, syncIptvCatalog} from './iptv_sync';
@@ -41,7 +41,8 @@ export const player=onCall({region:'us-central1',enforceAppCheck:false,memory:'1
    const bearer=/^Bearer (.+)$/.exec(request.rawRequest.get('authorization')??'')?.[1];
    if(!bearer)throw new DomainError('unauthenticated');
    try{const token=await getAuth().verifyIdToken(bearer,true);verified={uid:token.uid,token,rawToken:bearer};}
-   catch{throw new DomainError('device-revoked');}
+   // Only a confirmed revocation unlinks the TV; a transient failure must never cost the pairing.
+   catch(e){throw new DomainError(tokenFailureCode(e));}
   }
   return await runPlayer({action:request.data?.action,payload:request.data?.payload,auth:verified?{uid:verified.uid,token:verified.token as Record<string,unknown>}:undefined,ip:request.rawRequest?.ip},
    credentialKey.value(),{execute,quota:firestoreQuota,consume:consumePlayerRequest,now:Date.now});

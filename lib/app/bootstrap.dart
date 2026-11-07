@@ -55,7 +55,7 @@ Future<bool> initializeServices() async {
       FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
       FirebaseFunctions.instanceFor(region: 'us-central1')
           .useFunctionsEmulator(host, 5001);
-      // Debug + emulator only: lets simulators without a Google/Apple account
+      // Debug + emulator only: lets simulators without a verified e-mail account
       // reach Home. Release builds never get here (see the guard above).
       if (const bool.fromEnvironment('EMULATOR_TEST_SIGN_IN') &&
           FirebaseAuth.instance.currentUser == null) {

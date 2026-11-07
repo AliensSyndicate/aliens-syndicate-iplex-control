@@ -1854,4 +1854,46 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get feedbackHint => 'Escribe tu mensaje';
+
+  @override
+  String get authEmail => 'Correo electrónico';
+
+  @override
+  String get authPassword => 'Contraseña';
+
+  @override
+  String get authSignIn => 'Iniciar sesión';
+
+  @override
+  String get authForgotPassword => 'Olvidé mi contraseña';
+
+  @override
+  String get authResetSent =>
+      'Si existe una cuenta con este correo, enviamos un enlace para restablecer la contraseña.';
+
+  @override
+  String get errorWrongCredentials => 'Correo o contraseña incorrectos.';
+
+  @override
+  String get errorInvalidEmail => 'Introduce un correo válido.';
+
+  @override
+  String get errorTooManyRequests =>
+      'Demasiados intentos. Inténtalo de nuevo en unos minutos.';
+
+  @override
+  String get errorAccountDisabled => 'Esta cuenta está desactivada.';
+
+  @override
+  String get deletePasswordTitle => 'Confirma tu contraseña';
+
+  @override
+  String get deletePasswordBody =>
+      'Introduce tu contraseña para eliminar la cuenta.';
+
+  @override
+  String get authEmailButton => 'Continuar con correo';
+
+  @override
+  String get authEmailTitle => 'Acceso con correo';
 }

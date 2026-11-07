@@ -50,6 +50,12 @@ String failureText(BuildContext context, Object error) {
     ),
     'permission-denied' => l.accessDenied,
     'unauthenticated' || 'requires-recent-login' => l.requiresLogin,
+    'invalid-credential' ||
+    'wrong-password' ||
+    'user-not-found' => l.errorWrongCredentials,
+    'invalid-email' => l.errorInvalidEmail,
+    'too-many-requests' => l.errorTooManyRequests,
+    'user-disabled' => l.errorAccountDisabled,
     'app-verification-failed' => l.appVerificationFailed,
     'family-has-members' => l.familyHasMembers,
     'device-offline' || 'tv-profile-required' => l.tvNotReady,

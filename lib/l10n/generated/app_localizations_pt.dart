@@ -1850,4 +1850,45 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get feedbackHint => 'Escreva sua mensagem';
+
+  @override
+  String get authEmail => 'E-mail';
+
+  @override
+  String get authPassword => 'Senha';
+
+  @override
+  String get authSignIn => 'Entrar';
+
+  @override
+  String get authForgotPassword => 'Esqueci minha senha';
+
+  @override
+  String get authResetSent =>
+      'Se existir uma conta para este e-mail, enviamos um link para redefinir a senha.';
+
+  @override
+  String get errorWrongCredentials => 'E-mail ou senha incorretos.';
+
+  @override
+  String get errorInvalidEmail => 'Informe um e-mail válido.';
+
+  @override
+  String get errorTooManyRequests =>
+      'Muitas tentativas. Tente de novo em alguns minutos.';
+
+  @override
+  String get errorAccountDisabled => 'Esta conta está desativada.';
+
+  @override
+  String get deletePasswordTitle => 'Confirme sua senha';
+
+  @override
+  String get deletePasswordBody => 'Digite sua senha para excluir a conta.';
+
+  @override
+  String get authEmailButton => 'Continuar com e-mail';
+
+  @override
+  String get authEmailTitle => 'Entrar com e-mail';
 }

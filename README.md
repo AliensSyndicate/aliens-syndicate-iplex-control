@@ -9,7 +9,7 @@ flutter pub get
 flutter run
 ```
 
-O Firebase configurado é `iplex-2c8fc`. As opções nativas existentes são carregadas por `lib/firebase_options.dart`. É possível fornecer opções por `--dart-define-from-file`; veja [configuração e operação](docs/ARCHITECTURE.md). O aplicativo apresenta erro de configuração quando a inicialização não está disponível. Autenticação Google/Apple e operações de backend precisam dos respectivos serviços configurados.
+O Firebase configurado é `iplex-2c8fc`. As opções nativas existentes são carregadas por `lib/firebase_options.dart`. É possível fornecer opções por `--dart-define-from-file`; veja [configuração e operação](docs/ARCHITECTURE.md). O aplicativo apresenta erro de configuração quando a inicialização não está disponível. Autenticação Google/Apple e operações de backend precisam dos respectivos serviços configurados. O provedor E-mail/senha também precisa estar ativo no Firebase Authentication.
 
 ## Verificar
 

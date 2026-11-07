@@ -24,6 +24,7 @@ class FirebaseManagerRepository implements ManagerRepository {
   String? _pushToken;
   Future<void>? _googleInitialization;
   @override
+  @override
   Stream<String?> authChanges() => configured
       ? _auth.authStateChanges().map((u) => u?.uid)
       : Stream.value(null);
@@ -154,6 +155,45 @@ class FirebaseManagerRepository implements ManagerRepository {
   }
 
   @override
+  Future<void> signInWithEmail(String email, String password) async {
+    if (!configured) throw const AppFailure('configuration-required');
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      throw AppFailure(e.code);
+    }
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    if (!configured) throw const AppFailure('configuration-required');
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      throw AppFailure(e.code);
+    }
+  }
+
+  @override
+  Future<void> reauthenticate(String password) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw const AppFailure('requires-recent-login');
+    }
+    try {
+      await user.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: email, password: password),
+      );
+    } on FirebaseAuthException catch (e) {
+      throw AppFailure(e.code);
+    }
+  }
+
+  @override
   Future<void> initializeAccount(String uid) async {
     if (!configured) throw const AppFailure('configuration-required');
     final user = _auth.currentUser;
@@ -190,7 +230,23 @@ class FirebaseManagerRepository implements ManagerRepository {
   }
 
   @override
+  bool get signedInWithPassword =>
+      _auth.currentUser?.providerData.any((p) => p.providerId == 'password') ==
+      true;
+
+  @override
   Future<void> deleteAccount() async {
+    if (signedInWithPassword) {
+      // The app has just called reauthenticate with the password.
+      await mutate('prepareDeletion');
+      try {
+        await _auth.currentUser?.delete();
+      } catch (_) {
+        // The scheduled deletion job removes the authentication account too.
+      }
+      await signOut();
+      return;
+    }
     final provider =
         _provider ??
         (_auth.currentUser?.providerData.any(

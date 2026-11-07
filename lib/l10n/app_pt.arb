@@ -611,5 +611,18 @@
   "feedbackOther": "Outro",
   "feedbackSend": "Enviar",
   "feedbackSent": "Obrigado! Seu feedback foi enviado.",
-  "feedbackHint": "Escreva sua mensagem"
+  "feedbackHint": "Escreva sua mensagem",
+  "authEmail": "E-mail",
+  "authPassword": "Senha",
+  "authSignIn": "Entrar",
+  "authForgotPassword": "Esqueci minha senha",
+  "authResetSent": "Se existir uma conta para este e-mail, enviamos um link para redefinir a senha.",
+  "errorWrongCredentials": "E-mail ou senha incorretos.",
+  "errorInvalidEmail": "Informe um e-mail válido.",
+  "errorTooManyRequests": "Muitas tentativas. Tente de novo em alguns minutos.",
+  "errorAccountDisabled": "Esta conta está desativada.",
+  "deletePasswordTitle": "Confirme sua senha",
+  "deletePasswordBody": "Digite sua senha para excluir a conta.",
+  "authEmailButton": "Continuar com e-mail",
+  "authEmailTitle": "Entrar com e-mail"
 }

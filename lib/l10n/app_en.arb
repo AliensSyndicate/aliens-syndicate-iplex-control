@@ -781,5 +781,18 @@
   "feedbackOther": "Other",
   "feedbackSend": "Send",
   "feedbackSent": "Thank you! Your feedback was sent.",
-  "feedbackHint": "Write your message"
+  "feedbackHint": "Write your message",
+  "authEmail": "E-mail",
+  "authPassword": "Password",
+  "authSignIn": "Sign in",
+  "authForgotPassword": "Forgot my password",
+  "authResetSent": "If an account exists for this e-mail, we sent a link to reset the password.",
+  "errorWrongCredentials": "Incorrect e-mail or password.",
+  "errorInvalidEmail": "Enter a valid e-mail.",
+  "errorTooManyRequests": "Too many attempts. Try again in a few minutes.",
+  "errorAccountDisabled": "This account is disabled.",
+  "deletePasswordTitle": "Confirm your password",
+  "deletePasswordBody": "Enter your password to delete the account.",
+  "authEmailButton": "Continue with e-mail",
+  "authEmailTitle": "E-mail sign in"
 }

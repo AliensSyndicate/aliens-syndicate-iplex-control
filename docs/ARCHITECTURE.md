@@ -38,7 +38,7 @@ As páginas principais das cinco abas mantêm `NoTransitionPage`. Telas filhas u
 
 ## Autenticação e Identidade Pública
 
-Google usa `google_sign_in` 7 no mobile e popup Firebase na Web; Apple usa o provedor Firebase. UID é o identificador interno de autenticação, e-mail é metadado.
+Há três formas de entrar: Google (`google_sign_in` 7 no mobile e popup Firebase na Web), Apple (provedor Firebase) e e-mail e senha do Firebase Auth. A tela de login (`LoginPage`) mostra Google, Apple e o botão **Continuar com e-mail**, que abre a tela própria `/login/email` (`EmailAuthPage`) só para entrar com e-mail e senha e redefinir a senha. Não há cadastro no app: essas contas são criadas pelo operador no Firebase (contas de teste das lojas), e o cadastro por e-mail deve ficar desativado em Authentication > Configurações > Ações do usuário. Excluir conta por senha pede a senha (`reauthenticate`); Google e Apple reautenticam pelo próprio provedor. UID é o identificador interno de autenticação, e-mail é metadado.
 Cada usuário recebe um identificador público único alfanumérico persistente de 12 caracteres (ex: `A7K9M2P4X8Q3`), gerado de forma segura no backend (com garantia de unicidade via reserva `public_user_codes/{code}`). O identificador público não é senha nem token.
 Na Home, um botão de QR Code na AppBar apresenta o QR Code e o código alfanumérico do usuário com botão de cópia.
 `accountProvider` inicializa a conta uma vez por UID autenticado, via `initializeAccount`, e observa seu documento; isso atende tanto login quanto restauração. `bootstrap` persiste os metadados da conta e garante o código público, sem criar família automaticamente.

@@ -117,6 +117,14 @@ class IptvMockRepository implements ManagerRepository {
   }) async => const CatalogPage([], null, false);
 
   @override
+  bool get signedInWithPassword => false;
+  @override
+  Future<void> signInWithEmail(String email, String password) async {}
+  @override
+  Future<void> sendPasswordReset(String email) async {}
+  @override
+  Future<void> reauthenticate(String password) async {}
+  @override
   Future<void> signIn(String provider, {bool reauthenticate = false}) async {}
 
   @override

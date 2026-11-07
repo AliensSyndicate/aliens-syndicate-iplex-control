@@ -62,6 +62,13 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
   }
 
+  /// Password sheet used to confirm a fresh login before deleting the account.
+  static Future<String?> _askPassword(BuildContext context) =>
+      showAppModalSheet<String>(
+        context: context,
+        builder: (_) => const _PasswordSheet(),
+      );
+
   Future<void> operation(bool deletion) async {
     // An administrator must remove the members first: say so before asking
     // for a new login (the backend enforces the same rule).
@@ -82,9 +89,18 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         )) {
       return;
     }
+    if (!mounted) return;
+    String? password;
+    if (deletion && ref.read(repositoryProvider).signedInWithPassword) {
+      password = await _askPassword(context);
+      if (password == null || !mounted) return;
+    }
     setState(() => busy = true);
     try {
       if (deletion) {
+        if (password != null) {
+          await ref.read(repositoryProvider).reauthenticate(password);
+        }
         await ref.read(repositoryProvider).deleteAccount();
       } else {
         await ref.read(repositoryProvider).signOut();
@@ -218,6 +234,50 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PasswordSheet extends StatefulWidget {
+  const _PasswordSheet();
+  @override
+  State<_PasswordSheet> createState() => _PasswordSheetState();
+}
+
+class _PasswordSheetState extends State<_PasswordSheet> {
+  final password = TextEditingController();
+
+  @override
+  void dispose() {
+    password.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    return AppModalSheet(
+      title: l.deletePasswordTitle,
+      description: l.deletePasswordBody,
+      content: AppTextField(
+        key: const Key('delete-password'),
+        label: l.authPassword,
+        controller: password,
+        secret: true,
+        onChanged: (_) => setState(() {}),
+      ),
+      actions: [
+        AppButton.red(
+          label: l.deleteAccount,
+          onPressed: password.text.isEmpty
+              ? null
+              : () => Navigator.of(context).pop(password.text),
+        ),
+        AppButton(
+          label: l.cancel,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
     );
   }
 }

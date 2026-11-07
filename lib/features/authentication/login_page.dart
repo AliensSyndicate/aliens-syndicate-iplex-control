@@ -97,6 +97,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     ? () => login('apple')
                                     : null,
                               ),
+                              const SizedBox(height: AppSpacing.md),
+                              AppButton(
+                                key: const Key('login-email'),
+                                label: l.authEmailButton,
+                                icon: AppIcons.mail,
+                                onPressed: busy == null
+                                    ? () => context.push('/login/email')
+                                    : null,
+                              ),
                               if (!ref
                                   .watch(repositoryProvider)
                                   .configured) ...[

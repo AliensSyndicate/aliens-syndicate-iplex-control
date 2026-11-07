@@ -33,6 +33,7 @@ abstract final class AppIcons {
       settings = HugeIcons.strokeRoundedSettings01;
   static const google = HugeIcons.strokeRoundedGoogle,
       apple = HugeIcons.strokeRoundedApple,
+      mail = HugeIcons.strokeRoundedMail01,
       add = HugeIcons.strokeRoundedPlusSign,
       qr = HugeIcons.strokeRoundedQrCode,
       favorite = HugeIcons.strokeRoundedFavourite,

@@ -1832,4 +1832,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get feedbackHint => 'Write your message';
+
+  @override
+  String get authEmail => 'E-mail';
+
+  @override
+  String get authPassword => 'Password';
+
+  @override
+  String get authSignIn => 'Sign in';
+
+  @override
+  String get authForgotPassword => 'Forgot my password';
+
+  @override
+  String get authResetSent =>
+      'If an account exists for this e-mail, we sent a link to reset the password.';
+
+  @override
+  String get errorWrongCredentials => 'Incorrect e-mail or password.';
+
+  @override
+  String get errorInvalidEmail => 'Enter a valid e-mail.';
+
+  @override
+  String get errorTooManyRequests =>
+      'Too many attempts. Try again in a few minutes.';
+
+  @override
+  String get errorAccountDisabled => 'This account is disabled.';
+
+  @override
+  String get deletePasswordTitle => 'Confirm your password';
+
+  @override
+  String get deletePasswordBody => 'Enter your password to delete the account.';
+
+  @override
+  String get authEmailButton => 'Continue with e-mail';
+
+  @override
+  String get authEmailTitle => 'E-mail sign in';
 }

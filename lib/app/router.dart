@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/data/providers.dart';
 import '../core/design_system/components.dart';
+import '../features/authentication/email_auth_page.dart';
 import '../features/authentication/login_page.dart';
 import '../features/manager/account_page.dart';
 import '../features/home/content_details_page.dart';
@@ -48,7 +49,8 @@ import '../features/player/trailer_player_page.dart';
 final initialRouteProvider = Provider<String>((ref) => '/home');
 
 String? _requestedDestination(Uri location) {
-  final String? raw = ['/login', '/loading'].contains(location.path)
+  final String? raw =
+      ['/login', '/login/email', '/loading'].contains(location.path)
       ? location.queryParameters['from']
       : location.toString();
   if (raw == null || !raw.startsWith('/') || raw.startsWith('//')) return null;
@@ -57,7 +59,12 @@ String? _requestedDestination(Uri location) {
       destination.hasScheme ||
       destination.hasAuthority ||
       destination.path.isEmpty ||
-      ['/login', '/loading', '/access'].contains(destination.path) ||
+      [
+        '/login',
+        '/login/email',
+        '/loading',
+        '/access',
+      ].contains(destination.path) ||
       destination.path.startsWith('/legal')) {
     return null;
   }
@@ -174,7 +181,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           justSignedOut = false;
           return null;
         }
-        return path == '/login' ? null : _gateLocation('/login', destination);
+        return path == '/login' || path == '/login/email'
+            ? null
+            : _gateLocation('/login', destination);
       }
       if (account.isLoading ||
           account.hasError ||
@@ -193,7 +202,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return path == '/loading' ? null : gate;
         }
       }
-      final target = ['/login', '/loading'].contains(path)
+      final target = ['/login', '/login/email', '/loading'].contains(path)
           ? destination ?? '/home'
           : state.uri.toString();
       final targetPath = Uri.parse(target).path;
@@ -222,7 +231,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           return '/access?reason=permission';
         }
       }
-      if (path == '/login' || path == '/loading' || path == '/') {
+      if (path == '/login' ||
+          path == '/login/email' ||
+          path == '/loading' ||
+          path == '/') {
         return target == '/' ? '/home' : target;
       }
       return null;
@@ -243,6 +255,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         pageBuilder: (c, s) =>
             _appPage(key: s.pageKey, child: const LoginPage()),
+      ),
+      GoRoute(
+        path: '/login/email',
+        pageBuilder: (c, s) =>
+            _appPage(key: s.pageKey, child: const EmailAuthPage()),
       ),
       GoRoute(
         path: '/loading',

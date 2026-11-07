@@ -3393,6 +3393,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Write your message'**
   String get feedbackHint;
+
+  /// No description provided for @authEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'E-mail'**
+  String get authEmail;
+
+  /// No description provided for @authPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authPassword;
+
+  /// No description provided for @authSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get authSignIn;
+
+  /// No description provided for @authForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot my password'**
+  String get authForgotPassword;
+
+  /// No description provided for @authResetSent.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists for this e-mail, we sent a link to reset the password.'**
+  String get authResetSent;
+
+  /// No description provided for @errorWrongCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect e-mail or password.'**
+  String get errorWrongCredentials;
+
+  /// No description provided for @errorInvalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid e-mail.'**
+  String get errorInvalidEmail;
+
+  /// No description provided for @errorTooManyRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again in a few minutes.'**
+  String get errorTooManyRequests;
+
+  /// No description provided for @errorAccountDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This account is disabled.'**
+  String get errorAccountDisabled;
+
+  /// No description provided for @deletePasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your password'**
+  String get deletePasswordTitle;
+
+  /// No description provided for @deletePasswordBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password to delete the account.'**
+  String get deletePasswordBody;
+
+  /// No description provided for @authEmailButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with e-mail'**
+  String get authEmailButton;
+
+  /// No description provided for @authEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'E-mail sign in'**
+  String get authEmailTitle;
 }
 
 class _AppLocalizationsDelegate

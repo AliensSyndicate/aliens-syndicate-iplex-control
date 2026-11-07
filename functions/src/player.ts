@@ -82,6 +82,19 @@ export function playerIdentity(auth: PlayerAuth | undefined): Identity {
   return {uid: auth.uid, deviceId, familyId, ...(typeof auth.token.credentialVersion==='string'?{credentialVersion:auth.token.credentialVersion}:{}), authTime: typeof auth.token.auth_time === 'number' ? auth.token.auth_time : undefined};
 }
 
+/** Firebase Auth codes that prove the device credential is gone for good. */
+const REVOKED_TOKEN_CODES = new Set(['auth/id-token-revoked', 'auth/user-disabled', 'auth/user-not-found']);
+
+/**
+ * Domain code for a failed verifyIdToken. Expired tokens and backend hiccups are
+ * retryable ('unauthenticated': the TV renews its token and tries again); only a
+ * real revocation is 'device-revoked', which makes the TV forget its pairing.
+ */
+export function tokenFailureCode(error: unknown): 'device-revoked' | 'unauthenticated' {
+  const code = (error as {code?: unknown} | null)?.code;
+  return typeof code === 'string' && REVOKED_TOKEN_CODES.has(code) ? 'device-revoked' : 'unauthenticated';
+}
+
 export interface QuotaRule {
   bucket: string;
   max: number;

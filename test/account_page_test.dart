@@ -14,6 +14,8 @@ class _AccountRepository extends fixtures.TestRepository {
   final bool otherMembers;
   final payloads = <Map<String, dynamic>>[];
   var deletions = 0;
+  bool passwordAccount = false;
+  String? reauthPassword;
 
   @override
   Stream<List<Entry>> watchEntries(String familyId, String collection) =>
@@ -34,6 +36,13 @@ class _AccountRepository extends fixtures.TestRepository {
     payloads.add({'action': action, ...payload});
     return super.mutate(action, payload);
   }
+
+  @override
+  bool get signedInWithPassword => passwordAccount;
+
+  @override
+  Future<void> reauthenticate(String password) async =>
+      reauthPassword = password;
 
   @override
   Future<void> deleteAccount() async => deletions++;
@@ -89,12 +98,39 @@ void main() {
     expect(find.text('Remove'), findsNothing, reason: 'no confirmation sheet');
   });
 
-  testWidgets('account without members confirms and deletes', (tester) async {
+  testWidgets('social account confirms and deletes without a password', (
+    tester,
+  ) async {
     final repo = _AccountRepository();
     await tester.pumpWidget(fixtures.host(const AccountPage(), repo: repo));
     await tester.pumpAndSettle();
     await _tap(tester, find.text('Delete account'));
     await _tap(tester, find.text('Remove'));
+    expect(repo.deletions, 1);
+    expect(repo.reauthPassword, isNull);
+  });
+
+  testWidgets('e-mail account asks for the password before deleting', (
+    tester,
+  ) async {
+    final repo = _AccountRepository()..passwordAccount = true;
+    await tester.pumpWidget(fixtures.host(const AccountPage(), repo: repo));
+    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Delete account'));
+    await _tap(tester, find.text('Remove'));
+    // A fresh login with the password comes before the deletion.
+    expect(repo.deletions, 0);
+    await tester.enterText(find.byKey(const Key('delete-password')), 'secret1');
+    await tester.pump();
+    // The focused field's cursor keeps blinking: no settle before the tap.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppModalSheet),
+        matching: find.widgetWithText(AppButton, 'Delete account'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(repo.reauthPassword, 'secret1');
     expect(repo.deletions, 1);
   });
 
