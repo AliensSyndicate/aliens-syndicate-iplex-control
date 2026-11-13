@@ -78,8 +78,14 @@ export function playerIdentity(auth: PlayerAuth | undefined): Identity {
   const {deviceId, familyId} = auth.token;
   const provider = (auth.token.firebase as {sign_in_provider?: unknown} | undefined)?.sign_in_provider;
   if (typeof deviceId !== 'string' || typeof familyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(deviceId) || !/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) throw new DomainError('device-required');
-  if (auth.uid !== `tv_${deviceId}` || provider !== 'custom') throw new DomainError('device-required');
-  return {uid: auth.uid, deviceId, familyId, ...(typeof auth.token.credentialVersion==='string'?{credentialVersion:auth.token.credentialVersion}:{}), authTime: typeof auth.token.auth_time === 'number' ? auth.token.auth_time : undefined};
+  // Duas formas de credencial de pareamento (sempre custom token do backend, com as claims do dispositivo):
+  // - legada: uid `tv_<deviceId>` (um usuário do Auth por TV);
+  // - atual: uid da conta que vinculou a TV + claim `player` (nenhum usuário novo no Auth).
+  // Nas duas, a identidade no backend é a do DISPOSITIVO (`tv_<deviceId>`), nunca a da conta: a TV não ganha os
+  // poderes da pessoa e o que é por aparelho (sessão, limites, pedidos) continua com a mesma chave.
+  const paired = auth.uid === `tv_${deviceId}` || auth.token.player === true;
+  if (!paired || provider !== 'custom') throw new DomainError('device-required');
+  return {uid: `tv_${deviceId}`, deviceId, familyId, ...(typeof auth.token.credentialVersion==='string'?{credentialVersion:auth.token.credentialVersion}:{}), authTime: typeof auth.token.auth_time === 'number' ? auth.token.auth_time : undefined};
 }
 
 /** Firebase Auth codes that prove the device credential is gone for good. */

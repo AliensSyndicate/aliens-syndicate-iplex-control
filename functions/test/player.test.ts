@@ -29,6 +29,17 @@ test('player: person accounts, inconsistent uid, missing claims or non-custom si
  assert.throws(()=>playerIdentity(undefined),/unauthenticated/);
 });
 
+test('player: credencial atual (uid da conta + claim player) é a identidade do DISPOSITIVO, nunca a da conta',()=>{
+ const id=playerIdentity(device({player:true},'conta-do-dono'));
+ assert.equal(id.uid,'tv_dev1');
+ assert.equal(id.deviceId,'dev1');
+ assert.equal(id.familyId,'fam1');
+ // Uid de pessoa com claims de dispositivo mas sem o marcador do backend: recusado.
+ assert.throws(()=>playerIdentity(device({},'conta-do-dono')),/device-required/);
+ // O marcador não vale fora de um custom token.
+ assert.throws(()=>playerIdentity(device({player:true,firebase:{sign_in_provider:'google.com'}},'conta-do-dono')),/device-required/);
+});
+
 test('player: closed action list — administrative actions do not exist here',async()=>{
  const {d,calls}=deps();
  for(const action of ['linkDevice','deleteDevice','saveProfile','setProfilePermissions','saveSource','verifyPlayPurchase','prepareDeletion','sendCommand','ackCommand','requestPlayback','setParentalPin','createFamily','bootstrap','inspectPairingSession',''])

@@ -32,6 +32,10 @@ test('real backend session: QR inspect, link into the individual family, rename,
  // The Player exchanges the consumed session once for its own credential.
  const minted=await execute('finishDevicePair',{token:session.token},undefined) as {customToken:string};
  assert.ok(minted.customToken.length>20);
+ // The TV signs in as the account that linked it (no extra Auth user), marked as a device.
+ const payload=JSON.parse(Buffer.from(minted.customToken.split('.')[1]!,'base64url').toString('utf8')) as {uid:string;claims:Record<string,unknown>};
+ assert.equal(payload.uid,a.uid);
+ assert.equal(payload.claims.player,true);assert.equal(payload.claims.deviceId,linked.id);assert.equal(payload.claims.familyId,scope);
  await assert.rejects(execute('finishDevicePair',{token:session.token},undefined),/invalid-token/);
  await assert.rejects(execute('linkDevice',{token:session.token,contextFamilyId:null},a),/pairing-expired/);
  await assert.rejects(execute('inspectPairingSession',{token:session.token,contextFamilyId:null},a),/pairing-expired/);

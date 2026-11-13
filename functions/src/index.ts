@@ -25,7 +25,9 @@ const enforceAppCheck=process.env.FUNCTIONS_EMULATOR!=='true';
 export const manager=onCall({region:'us-central1',enforceAppCheck,memory:'1GiB',cpu:1,concurrency:8,secrets:[credentialKey],timeoutSeconds:60},async request=>{
  try {
   const token=request.auth?.token;
-  const actor:Identity|undefined=request.auth?{uid:request.auth.uid,deviceId:token?.deviceId as string|undefined,familyId:token?.familyId as string|undefined,credentialVersion:token?.credentialVersion as string|undefined,authTime:token?.auth_time}:undefined;
+  // A TV token (deviceId claim) never acts as the person whose uid it carries: it is the device here too.
+  const deviceUid=typeof token?.deviceId==='string'?`tv_${token.deviceId}`:undefined;
+  const actor:Identity|undefined=request.auth?{uid:deviceUid??request.auth.uid,deviceId:token?.deviceId as string|undefined,familyId:token?.familyId as string|undefined,credentialVersion:token?.credentialVersion as string|undefined,authTime:token?.auth_time}:undefined;
   const result=await execute(request.data?.action,request.data?.payload??{},actor,credentialKey.value());
   return result;
  }catch(error){

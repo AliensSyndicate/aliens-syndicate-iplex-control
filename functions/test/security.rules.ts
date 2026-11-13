@@ -13,6 +13,16 @@ test('unauthenticated and foreign users cannot read family',async()=>{for(const 
 test('members can read metadata but not billing, secrets or tokens',async()=>{const db=env.authenticatedContext('member').firestore();await assertSucceeds(getDoc(doc(db,'families/f')));for(const p of ['families/f/private/subscription','source_secrets/f_s','link_tokens/token','users/admin'])await assertFails(getDoc(doc(db,p)));});
 test('administrator can read subscription but cannot change it',async()=>{const db=env.authenticatedContext('admin').firestore();await assertSucceeds(getDoc(doc(db,'families/f/private/subscription')));await assertFails(setDoc(doc(db,'families/f/private/subscription'),{status:'active'}));});
 test('all clients denied privileged writes and command injection',async()=>{for(const user of ['admin','member']){const db=env.authenticatedContext(user).firestore();for(const path of ['families/f','families/f/devices/tv','families/f/profiles/p','families/f/devices/tv/commands/c','users/admin'])await assertFails(setDoc(doc(db,path),{role:'admin'}));}});
+test('TV with the admin account uid (player claim) is the device, never the admin person',async()=>{
+ const db=env.authenticatedContext('admin',{deviceId:'tv',familyId:'f',player:true}).firestore();
+ await assertSucceeds(getDoc(doc(db,'families/f/devices/tv')));
+ // Same uid as the family admin, but a device token: no family metadata, billing, members or the admin's user doc.
+ for(const path of ['families/f','families/f/private/subscription','families/f/devices/other','users/admin'])await assertFails(getDoc(doc(db,path)));
+ await assertFails(getDocs(collection(db,'families/f/members')));
+ // Device claims without the backend marker and with a person's uid: not a player.
+ const fake=env.authenticatedContext('admin',{deviceId:'tv',familyId:'f'}).firestore();
+ await assertFails(getDoc(doc(fake,'families/f/devices/tv')));
+});
 test('player scoped to its own device; no family billing or sources',async()=>{const db=env.authenticatedContext('tv_tv',{deviceId:'tv',familyId:'f'}).firestore();await assertSucceeds(getDoc(doc(db,'families/f/devices/tv')));for(const path of ['families/f','families/f/devices/other','families/f/private/subscription','families/f/sources/s'])await assertFails(getDoc(doc(db,path)));await assertFails(getDocs(collection(db,'families/f/members')));});
 
 test('catalog reads require an active source binding and current published version',async()=>{const db=env.authenticatedContext('member').firestore();await assertSucceeds(getDoc(doc(db,'families/f/catalog/current')));await assertFails(getDoc(doc(db,'families/f/catalog/old')));await assertFails(getDoc(doc(db,'families/f/catalog/revoked')));});

@@ -24,7 +24,8 @@ service cloud.firestore {
         get(/databases/$(database)/documents/families/$(fid)).data.get('adminId', '')) == request.auth.uid;
     }
     function isPlayer(fid, did) {
-      return isAuth() && request.auth.uid == 'tv_' + did
+      // Legacy TV credential (uid tv_<deviceId>) or the current one (account uid + `player` claim minted by the backend).
+      return isAuth() && (request.auth.uid == 'tv_' + did || request.auth.token.get('player', false) == true)
         && request.auth.token.get('familyId', '') == fid && request.auth.token.get('deviceId', '') == did
         && exists(/databases/$(database)/documents/families/$(fid)/devices/$(did))
         && !get(/databases/$(database)/documents/families/$(fid)).data.get('deleting', false)

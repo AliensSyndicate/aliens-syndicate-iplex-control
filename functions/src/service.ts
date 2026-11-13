@@ -114,7 +114,11 @@ export async function execute(action:string,input:unknown,actor:Identity|undefin
    return d!;
   });
   // A failed token mint requires pairing again; tokens are never reusable.
-  return {customToken:await getAuth().createCustomToken(`tv_${data.deviceId}`,{deviceId:data.deviceId,familyId:data.familyId,credentialVersion:data.credentialVersion})};
+  // The TV signs in as the account that linked it (no extra Auth user per TV), marked as a device (`player` +
+  // deviceId/familyId/credentialVersion). Rules and the backend treat it as the device, never as the person.
+  // Revoking one TV is done by its credentialVersion (device doc), not by revoking the account's tokens.
+  const accountUid=typeof data.claimedByUid==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(data.claimedByUid)?data.claimedByUid:`tv_${data.deviceId}`;
+  return {customToken:await getAuth().createCustomToken(accountUid,{deviceId:data.deviceId,familyId:data.familyId,credentialVersion:data.credentialVersion,player:true})};
  }
  required(actor,'unauthenticated'); const a:Identity={...actor!,
   ...(!actor!.deviceId&&Object.prototype.hasOwnProperty.call(p,'contextFamilyId')?
